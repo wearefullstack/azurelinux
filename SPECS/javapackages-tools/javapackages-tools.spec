@@ -9,7 +9,7 @@
 Summary:        Macros and scripts for Java packaging support
 Name:           javapackages-tools
 Version:        6.0.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        BSD
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -52,6 +52,24 @@ This package provides macros and scripts to support Java packaging.
 %package -n javapackages-filesystem
 Summary:        Java packages filesystem layout
 Provides:       eclipse-filesystem = %{version}-%{release}
+
+%package -n maven-local
+Summary:        Macros and scripts for Maven packaging support
+Requires:       %{name} = %{version}-%{release}
+Requires:       javapackages-local-bootstrap = %{version}-%{release}
+# %if %{without bootstrap}
+# Requires:       %{_bindir}/xmvn
+# Requires:       mvn(org.fedoraproject.xmvn:xmvn-mojo)
+# # Common Maven plugins required by almost every build. It wouldn't make
+# # sense to explicitly require them in every package built with Maven.
+# Requires:       mvn(org.apache.maven.plugins:maven-compiler-plugin)
+# Requires:       mvn(org.apache.maven.plugins:maven-jar-plugin)
+# Requires:       mvn(org.apache.maven.plugins:maven-resources-plugin)
+# Requires:       mvn(org.apache.maven.plugins:maven-surefire-plugin)
+# %endif
+ 
+%description -n maven-local
+This package provides macros and scripts to support packaging Maven artifacts.
 
 %description -n javapackages-filesystem
 This package provides some basic directories into which Java packages
@@ -124,6 +142,8 @@ pip3 install -r test-requirements.txt
 
 %files -n javapackages-filesystem -f files-filesystem
 
+%files -n maven-local
+
 %files -n javapackages-generators -f files-generators
 
 %files -n javapackages-local-bootstrap -f files-local
@@ -134,6 +154,9 @@ pip3 install -r test-requirements.txt
 %license LICENSE
 
 %changelog
+* Mon Feb 27 2023 Riken Maharjan <rmaharjan@microsoft.com> - 6.0.0-2
+- Add maven-local.
+
 * Thu Feb 24 2022 Cameron Baird <cameronbaird@microsoft.com> - 6.0.0-1
 - Update source to v6.0.0
 - Update remove-headless-from-java-requires.patch
