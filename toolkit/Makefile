@@ -106,7 +106,7 @@ SOURCE_URL         ?= https://cblmarinerstorage.blob.core.windows.net/sources/co
 PACKAGE_URL_LIST   ?= https://packages.microsoft.com/cbl-mariner/$(RELEASE_MAJOR_ID)/prod/base/$(build_arch)
 PACKAGE_URL_LIST   += https://packages.microsoft.com/cbl-mariner/$(RELEASE_MAJOR_ID)/prod/base/debuginfo/$(build_arch)
 PACKAGE_URL_LIST   += https://packages.microsoft.com/cbl-mariner/$(RELEASE_MAJOR_ID)/prod/Microsoft/$(build_arch)
-REPO_LIST          ?=
+REPO_LIST          ?= $(PROJECT_ROOT)/SPECS/mariner-repos/mariner-official-base.repo
 SRPM_URL_LIST      ?= https://packages.microsoft.com/cbl-mariner/$(RELEASE_MAJOR_ID)/prod/base/srpms
 
 ifeq ($(USE_PREVIEW_REPO),y)

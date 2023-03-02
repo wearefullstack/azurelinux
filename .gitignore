@@ -9,7 +9,6 @@ SPECS*/**/*.deb
 SPECS*/**/*.dmg
 SPECS*/**/*.egg
 SPECS*/**/*.gem
-SPECS*/**/*.gz
 SPECS*/**/*.gzip
 SPECS*/**/*.iso
 SPECS*/**/*.jar
