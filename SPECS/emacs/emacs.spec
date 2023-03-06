@@ -1,7 +1,7 @@
 Summary:        GNU Emacs text editor
 Name:           emacs
 Version:        28.1
-Release:        5%{?dist}
+Release:        6%{?dist}
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
 License:        GPLv3+ and CC0-1.0
@@ -9,6 +9,9 @@ URL:            https://www.gnu.org/software/emacs/
 Group:          Applications/Editors
 Source0:        https://ftp.gnu.org/gnu/%{name}/%{name}-%{version}.tar.xz
 Patch0:         CVE-2022-45939.patch
+Patch1:         CVE-2022-48339.patch
+Patch2:         CVE-2022-48338.patch
+Patch3:         CVE-2022-48337.patch
 
 BuildRequires:  gcc
 BuildRequires:  glibc-devel
@@ -86,6 +89,9 @@ mkdir -p %{buildroot}%{_datadir}/emacs/site-lisp/site-start.d
 %dir %{_datadir}/emacs/site-lisp/site-start.d
 
 %changelog
+* Mon Mar 06 2023 Nan Liu <liunan@microsoft.com> - 28.1-6
+- Apply upstream patches for CVE-2022-48337, CVE-2022-48338, CVE-2022-48339
+
 * Wed Dec 07 2022 Henry Beberman <henry.beberman@microsoft.com> - 28.1-5
 - Apply upstream patch for CVE-2022-45939
 
