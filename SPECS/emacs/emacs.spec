@@ -9,7 +9,7 @@ URL:            https://www.gnu.org/software/emacs/
 Group:          Applications/Editors
 Source0:        https://ftp.gnu.org/gnu/%{name}/%{name}-%{version}.tar.xz
 Patch0:         CVE-2022-45939.patch
-Patch0:         CVE-2022-48337.patch
+Patch1:         CVE-2022-48337.patch
 
 BuildRequires:  gcc
 BuildRequires:  glibc-devel
