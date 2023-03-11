@@ -9,7 +9,7 @@
 Summary:        Rust Programming Language
 Name:           rust
 Version:        1.59.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        ASL 2.0 AND MIT
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
