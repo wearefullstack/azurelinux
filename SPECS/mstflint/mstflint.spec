@@ -36,6 +36,7 @@ Requires:       kernel
 %global debug_package %{nil}
 %global kernel_source() %{ksrc}
 %global kernel_release() %{kver}
+%global flavors_to_build default
 %global install_mod_dir extra/%{_name}
 
 %description
@@ -51,7 +52,6 @@ This package contains mstflint kernel module for secure boot.
 
 %prep
 %autosetup -p1
-
 find . -type f -iname '*.[ch]' -exec chmod a-x '{}' ';'
 find . -type f -iname '*.cpp' -exec chmod a-x '{}' ';'
 
@@ -61,10 +61,21 @@ find . -type f -iname '*.cpp' -exec chmod a-x '{}' ';'
 %make_build
 
 #Compile mstflint driver
-export K_BUILD=%{kernel_source $flavor}
-export KVERSION=%{kernel_release $K_BUILD}
+export EXTRA_CFLAGS='-DVERSION=\"%version\"'
 cd kernel
-make KPVER=$KVERSION
+set -- *
+mkdir source
+mv "$@" source/
+mkdir obj
+for flavor in %flavors_to_build; do
+  rm -rf obj/$flavor
+	cp -a source obj/$flavor
+	cd $PWD/obj/$flavor
+  export K_BUILD=%{kernel_source $flavor}
+  export KVERSION=%{kernel_release $K_BUILD}
+  make KPVER=$KVERSION
+  cd -
+done
 cd -
 
 %install
@@ -76,10 +87,14 @@ find %{buildroot} -type f -name '*.a' -delete
 
 export INSTALL_MOD_PATH=$RPM_BUILD_ROOT
 mkdir -p %{install_mod_dir}
-export KSRC=%{kernel_source $flavor}
-export KVERSION=%{kernel_release $KSRC}
-install -d $INSTALL_MOD_PATH/lib/modules/$KVERSION/%{install_mod_dir}
-cp $PWD/kernel/mstflint_access.ko $INSTALL_MOD_PATH/lib/modules/$KVERSION/%{install_mod_dir}
+cd kernel
+for flavor in %{flavors_to_build}; do
+  export KSRC=%{kernel_source $flavor}
+  export KVERSION=%{kernel_release $KSRC}
+  install -d $INSTALL_MOD_PATH/lib/modules/$KVERSION/%{install_mod_dir}
+  cp $PWD/obj/$flavor/mstflint_access.ko $INSTALL_MOD_PATH/lib/modules/$KVERSION/%{install_mod_dir}
+done
+cd -
 
 %files
 %license COPYING
