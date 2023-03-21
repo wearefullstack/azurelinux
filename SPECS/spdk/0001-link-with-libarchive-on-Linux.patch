@@ -1,0 +1,24 @@
+From 47a00ada59ac0bb80e4d8211225ba63b6c5af6ca Mon Sep 17 00:00:00 2001
+From: Sriram Nambakam <snambakam@microsoft.com>
+Date: Mon, 3 Oct 2022 21:41:37 -0700
+Subject: [PATCH] link with libarchive on Linux
+
+---
+ mk/spdk.common.mk | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/mk/spdk.common.mk b/mk/spdk.common.mk
+index b84ac222f..89f7e1f3f 100644
+--- a/mk/spdk.common.mk
++++ b/mk/spdk.common.mk
+@@ -311,6 +311,7 @@ SYS_LIBS += -luuid
+ SYS_LIBS += -lssl
+ SYS_LIBS += -lcrypto
+ SYS_LIBS += -lm
++SYS_LIBS += -larchive
+ 
+ PKGCONF ?= pkg-config
+ ifneq ($(strip $(CONFIG_OPENSSL_PATH)),)
+-- 
+2.34.1
+
