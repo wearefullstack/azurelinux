@@ -1,26 +1,25 @@
-From 7f97d98125938d065c2025716f041a1dbde326c2 Mon Sep 17 00:00:00 2001
-From: Mikolaj Izdebski <mizdebsk@redhat.com>
-Date: Fri, 22 Apr 2022 11:15:38 +0200
-Subject: [PATCH 6/6] Restore DefaultModelValidator compatibility with Maven
- 3.5.4
- 
+From 39a39fb72dc9d392fc9a4ccf5e2f96e0d35cfb09 Mon Sep 17 00:00:00 2001
+From: mbykhovtsev-ms <mbykhovtsev@microsoft.com>
+Date: Thu, 23 Mar 2023 15:39:16 -0700
+Subject: [PATCH 6/6] Restore DefaultModelValidator compatibility with Maven 3.5.4
+
 ---
  .../maven/model/validation/DefaultModelValidator.java       | 6 ++++++
  1 file changed, 6 insertions(+)
- 
+
 diff --git a/maven-model-builder/src/main/java/org/apache/maven/model/validation/DefaultModelValidator.java b/maven-model-builder/src/main/java/org/apache/maven/model/validation/DefaultModelValidator.java
-index f77321c16..4ed22f3ed 100644
+index 9f11fa2..e9cb37e 100644
 --- a/maven-model-builder/src/main/java/org/apache/maven/model/validation/DefaultModelValidator.java
 +++ b/maven-model-builder/src/main/java/org/apache/maven/model/validation/DefaultModelValidator.java
-@@ -44,6 +44,7 @@
+@@ -40,6 +40,7 @@ import org.apache.maven.model.Reporting;
+ import org.apache.maven.model.Repository;
+ import org.apache.maven.model.Resource;
+ import org.apache.maven.model.building.ModelBuildingRequest;
++import org.apache.maven.model.interpolation.DefaultModelVersionProcessor;
+ import org.apache.maven.model.building.ModelProblem.Severity;
  import org.apache.maven.model.building.ModelProblem.Version;
  import org.apache.maven.model.building.ModelProblemCollector;
- import org.apache.maven.model.building.ModelProblemCollectorRequest;
-+import org.apache.maven.model.interpolation.DefaultModelVersionProcessor;
- import org.apache.maven.model.interpolation.ModelVersionProcessor;
- import org.codehaus.plexus.util.StringUtils;
- 
-@@ -85,6 +86,11 @@
+@@ -85,6 +86,11 @@ public class DefaultModelValidator
  
      private ModelVersionProcessor versionProcessor;
  
@@ -33,5 +32,5 @@ index f77321c16..4ed22f3ed 100644
      public DefaultModelValidator(  ModelVersionProcessor versionProcessor )
      {
 -- 
-2.35.1
- 
+2.25.1
+

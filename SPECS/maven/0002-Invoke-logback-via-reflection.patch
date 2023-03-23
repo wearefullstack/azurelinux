@@ -1,21 +1,20 @@
-From 4d0c432cf88f2f70e6f793569d3dedace062fdef Mon Sep 17 00:00:00 2001
-From: Michael Simacek <msimacek@redhat.com>
-Date: Tue, 6 Jun 2017 13:47:43 +0200
+From a5266b4377f4ec9f146fc9613c5c9ea8a2108e09 Mon Sep 17 00:00:00 2001
+From: mbykhovtsev-ms <mbykhovtsev@microsoft.com>
+Date: Thu, 23 Mar 2023 15:30:31 -0700
 Subject: [PATCH 2/6] Invoke logback via reflection
- 
+
 ---
- .../logging/impl/LogbackConfiguration.java    | 19 ++++++++++++++-----
- 1 file changed, 14 insertions(+), 5 deletions(-)
- 
+ .../cli/logging/impl/LogbackConfiguration.java | 18 ++++++++++++++----
+ 1 file changed, 14 insertions(+), 4 deletions(-)
+
 diff --git a/maven-embedder/src/main/java/org/apache/maven/cli/logging/impl/LogbackConfiguration.java b/maven-embedder/src/main/java/org/apache/maven/cli/logging/impl/LogbackConfiguration.java
-index 5d9fab744..ced38cb5a 100644
+index d16eaa9..05a511a 100644
 --- a/maven-embedder/src/main/java/org/apache/maven/cli/logging/impl/LogbackConfiguration.java
 +++ b/maven-embedder/src/main/java/org/apache/maven/cli/logging/impl/LogbackConfiguration.java
-@@ -35,22 +35,31 @@
-     @Override
+@@ -36,21 +36,31 @@ public class LogbackConfiguration
      public void setRootLoggerLevel( Level level )
      {
--        ch.qos.logback.classic.Level value;
+         ch.qos.logback.classic.Level value;
 +        String value;
          switch ( level )
          {
@@ -49,5 +48,5 @@ index 5d9fab744..ced38cb5a 100644
  
      @Override
 -- 
-2.35.1
- 
+2.25.1
+

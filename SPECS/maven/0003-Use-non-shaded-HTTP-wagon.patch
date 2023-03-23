@@ -1,15 +1,15 @@
-From 81328d875bca5aae7d26e2058f4568a610c680d4 Mon Sep 17 00:00:00 2001
-From: Mikolaj Izdebski <mizdebsk@redhat.com>
-Date: Mon, 1 Jul 2019 09:51:56 +0200
+From eb03dee07122280fe8b7dcc4036061870ca59cc1 Mon Sep 17 00:00:00 2001
+From: mbykhovtsev-ms <mbykhovtsev@microsoft.com>
+Date: Thu, 23 Mar 2023 15:34:05 -0700
 Subject: [PATCH 3/6] Use non-shaded HTTP wagon
- 
+
 ---
  apache-maven/pom.xml | 15 ---------------
  pom.xml              |  1 -
  2 files changed, 16 deletions(-)
- 
+
 diff --git a/apache-maven/pom.xml b/apache-maven/pom.xml
-index 7ff412767..b15091576 100644
+index 13c957b..2e158fd 100644
 --- a/apache-maven/pom.xml
 +++ b/apache-maven/pom.xml
 @@ -63,21 +63,6 @@ under the License.
@@ -35,17 +35,17 @@ index 7ff412767..b15091576 100644
      <dependency>
        <groupId>org.slf4j</groupId>
 diff --git a/pom.xml b/pom.xml
-index c319cae26..42afab5f1 100644
+index 1572d19..10f280c 100644
 --- a/pom.xml
 +++ b/pom.xml
-@@ -333,7 +333,6 @@ under the License.
+@@ -340,7 +340,6 @@ under the License.
          <groupId>org.apache.maven.wagon</groupId>
          <artifactId>wagon-http</artifactId>
          <version>${wagonVersion}</version>
 -        <classifier>shaded</classifier>
-         <exclusions>
-           <exclusion>
-             <groupId>commons-logging</groupId>
+       </dependency>
+       <!--  Repository -->
+       <dependency>
 -- 
-2.35.1
- 
+2.25.1
+

@@ -1,5 +1,9 @@
 %bcond_without bootstrap
 
+%global bundled_slf4j_version 1.7.36
+%global homedir %{_datadir}/%{name}%{?maven_version_suffix}
+%global confdir %{_sysconfdir}/%{name}%{?maven_version_suffix}
+
 Summary:        Apache Maven
 Name:           maven
 Version:        3.8.7
@@ -110,7 +114,7 @@ Summary:        MSOpenJDK 11 binding for Maven
 RemovePathPostfixes: -openjdk11
 Provides: maven-jdk-binding = %{version}-%{release}
 Requires: maven = %{version}-%{release}
-Requires: msopenjdk-11-11
+Requires: msopenjdk-11
  
 %description openjdk11
 Configures Maven to run with MSOpenJDK 11.
@@ -120,7 +124,7 @@ Summary:        MSOpenJDK 17 binding for Maven
 RemovePathPostfixes: -openjdk17
 Provides: maven-jdk-binding = %{version}-%{release}
 Requires: maven = %{version}-%{release}
-Requires: msopenjdk-17-17
+Requires: msopenjdk-17
  
 %description openjdk17
 Configures Maven to run with MSOpenJDK 17.
