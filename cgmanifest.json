@@ -13412,6 +13412,26 @@
       "component": {
         "type": "other",
         "other": {
+          "name": "msopenjdk-17",
+          "version": "17.0.6-1.aarch64",
+          "downloadUrl": "https://packages.microsoft.com/cbl-mariner/2.0/preview/Microsoft/aarch64/msopenjdk-17-17.0.6-1.aarch64.rpm"
+        }
+      }
+    },
+    {
+      "component": {
+        "type": "other",
+        "other": {
+          "name": "msopenjdk-17",
+          "version": "17.0.6-1.x86_64.rpm",
+          "downloadUrl": "https://packages.microsoft.com/cbl-mariner/2.0/preview/Microsoft/x86_64/msopenjdk-17-17.0.6-1.x86_64.rpm"
+        }
+      }
+    },
+    {
+      "component": {
+        "type": "other",
+        "other": {
           "name": "msr-tools",
           "version": "1.3",
           "downloadUrl": "https://01.org/sites/default/files/downloads/msr-tools/msr-tools-1.3.zip"
