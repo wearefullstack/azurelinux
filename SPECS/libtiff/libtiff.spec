@@ -16,6 +16,7 @@ Patch2:         CVE-2022-2953.patch
 Patch3:         CVE-2022-3570.patch
 # Also fixes CVE-2022-3626 and CVE-2022-3627
 Patch4:         CVE-2022-3597.patch
+# Also fixes CVE-2022-3599
 Patch5:         CVE-2022-3599.patch
 Patch6:         CVE-2022-3970.patch
 Patch7:         CVE-2022-48281.patch
