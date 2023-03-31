@@ -1,5 +1,4 @@
-Vendor:         Microsoft Corporation
-Distribution:   Mariner
+%bcond_with bootstrap
 #
 # spec file for package guava
 #
@@ -17,23 +16,30 @@ Distribution:   Mariner
 # Please submit bugfixes or comments via https://bugs.opensuse.org/
 #
 
-
 Name:           guava
-Version:        25.0
-Release:        6%{?dist}
+Version:        30.1
+Release:        1%{?dist}
 Summary:        Google Core Libraries for Java
 License:        Apache-2.0 AND CC0-1.0
+Vendor:         Microsoft Corporation
+Distribution:   Mariner
 Group:          Development/Libraries/Java
 URL:            https://github.com/google/guava
 Source0:        https://github.com/google/guava/archive/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
-Source1:        %{name}-build.tar.xz
-Patch0:         %{name}-%{version}-java8compat.patch
-BuildRequires:  ant
-BuildRequires:  fdupes
+Patch1:         0001-Remove-multi-line-annotations.patch
+
 BuildRequires:  javapackages-local-bootstrap
-BuildRequires:  jsr-305
-BuildRequires:  junit
-Requires:       mvn(com.google.code.findbugs:jsr305)
+%if %{with bootstrap}
+BuildRequires:  javapackages-bootstrap
+%else
+BuildRequires:  maven-local
+BuildRequires:  mvn(com.google.code.findbugs:jsr305)
+BuildRequires:  mvn(junit:junit)
+BuildRequires:  mvn(org.apache.felix:maven-bundle-plugin)
+BuildRequires:  mvn(org.apache.maven.plugins:maven-enforcer-plugin)
+%endif
+BuildRequires:  msopenjdk-11
+
 Provides:       mvn(com.google.guava:guava)
 BuildArch:      noarch
 
@@ -45,100 +51,85 @@ This project is a complete packaging of all the Guava libraries
 into a single jar.  Individual portions of Guava can be used
 by downloading the appropriate module and its dependencies.
 
-%package javadoc
-Summary:        Javadoc for %{name}
-Group:          Documentation/HTML
-
-%description javadoc
-API documentation for %{name}.
+%{?javadoc_package}
 
 %package testlib
 Summary:        The guava-testlib artifact
 Group:          Development/Libraries/Java
-Requires:       mvn(com.google.code.findbugs:jsr305)
-Requires:       mvn(com.google.guava:guava)
-Requires:       mvn(junit:junit)
 
 %description testlib
 guava-testlib provides additional functionality for conveninent unit testing
 
 %prep
-%setup -q -a1
-%patch0 -p1
-
+%setup -q
+ 
 find . -name '*.jar' -delete
-
+ 
+%pom_remove_parent guava-bom
+ 
 %pom_disable_module guava-gwt
 %pom_disable_module guava-tests
-
+ 
+%pom_xpath_inject pom:modules "<module>futures/failureaccess</module>"
+%pom_xpath_inject pom:parent "<relativePath>../..</relativePath>" futures/failureaccess
+%pom_xpath_set pom:parent/pom:version %{version}-jre futures/failureaccess
+ 
 %pom_remove_plugin -r :animal-sniffer-maven-plugin
 # Downloads JDK source for doc generation
 %pom_remove_plugin :maven-dependency-plugin guava
-
+ 
+%pom_remove_dep :caliper guava-tests
+ 
+%mvn_package :guava-parent guava
+ 
+# javadoc generation fails due to strict doclint in JDK 1.8.0_45
+%pom_remove_plugin -r :maven-javadoc-plugin
+ 
 %pom_xpath_inject /pom:project/pom:build/pom:plugins/pom:plugin/pom:configuration/pom:instructions "<_nouses>true</_nouses>" guava/pom.xml
-
-%pom_remove_dep -r :animal-sniffer-annotations
+ 
 %pom_remove_dep -r :error_prone_annotations
 %pom_remove_dep -r :j2objc-annotations
 %pom_remove_dep -r org.checkerframework:
-
+%pom_remove_dep -r :listenablefuture
+ 
 annotations=$(
     find -name '*.java' \
-    | xargs grep -F -h \
+    | xargs fgrep -h \
         -e 'import com.google.j2objc.annotations' \
         -e 'import com.google.errorprone.annotation' \
+        -e 'import com.google.errorprone.annotations' \
+        -e 'import com.google.common.annotations' \
         -e 'import org.codehaus.mojo.animal_sniffer' \
         -e 'import org.checkerframework' \
     | sort -u \
     | sed 's/.*\.\([^.]*\);/\1/' \
     | paste -sd\|
 )
+ 
 # guava started using quite a few annotation libraries for code quality, which
 # we don't have. This ugly regex is supposed to remove their usage from the code
 find -name '*.java' | xargs sed -ri \
     "s/^import .*\.($annotations);//;s/@($annotations)"'\>\s*(\((("[^"]*")|([^)]*))\))?//g'
+ 
+%patch1 -p1
+ 
+%mvn_package "com.google.guava:failureaccess" guava
+ 
+%mvn_package "com.google.guava:guava-bom" __noinstall
 
-for mod in guava guava-testlib; do
-  %pom_remove_parent ${mod}
-  %pom_xpath_inject pom:project '
-    <groupId>com.google.guava</groupId>
-    <version>%{version}</version>' ${mod}
-done
-
-%pom_change_dep -r -f ::::: :::::
-
+ 
 %build
-mkdir -p lib
-build-jar-repository -s lib junit jsr-305
-%ant -Dtest.skip=true package javadoc
-
+# Tests fail on Koji due to insufficient memory,
+# see https://bugzilla.redhat.com/show_bug.cgi?id=1332971
+%mvn_build -s -f
+ 
 %install
-# jars
-install -dm 0755 %{buildroot}%{_javadir}/%{name}
-install -pm 0644 %{name}/target/%{name}-%{version}*.jar %{buildroot}%{_javadir}/%{name}/%{name}.jar
-install -pm 0644 %{name}-testlib/target/%{name}-testlib-%{version}*.jar %{buildroot}%{_javadir}/%{name}/%{name}-testlib.jar
-
-# poms
-install -dm 0755 %{buildroot}%{_mavenpomdir}/%{name}
-install -pm 0644 %{name}/pom.xml %{buildroot}%{_mavenpomdir}/%{name}/%{name}.pom
-%add_maven_depmap %{name}/%{name}.pom %{name}/%{name}.jar -f %{name}
-install -pm 0644 %{name}-testlib/pom.xml %{buildroot}%{_mavenpomdir}/%{name}/%{name}-testlib.pom
-%add_maven_depmap %{name}/%{name}-testlib.pom %{name}/%{name}-testlib.jar -f %{name}-testlib
-
-# javadoc
-install -dm 0755 %{buildroot}%{_javadocdir}/%{name}
-cp -r %{name}/target/site/apidocs %{buildroot}%{_javadocdir}/%{name}/%{name}
-cp -r %{name}-testlib/target/site/apidocs %{buildroot}%{_javadocdir}/%{name}/%{name}-testlib
-%fdupes -s %{buildroot}%{_javadocdir}
-
+%mvn_install
+ 
 %files -f .mfiles-guava
 %doc CONTRIBUTORS README*
 %license COPYING
-
-%files javadoc
-%{_javadocdir}/%{name}
-%license COPYING
-
+ 
 %files testlib -f .mfiles-guava-testlib
 
 %changelog

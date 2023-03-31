@@ -1,0 +1,342 @@
+From c5d3a8295d62ede99b5e4c7c6ef63c14819ec112 Mon Sep 17 00:00:00 2001
+From: Marian Koncek <mkoncek@redhat.com>
+Date: Mon, 18 Jan 2021 12:39:46 +0100
+Subject: [PATCH] Remove multi-line annotations
+
+---
+ .../guava/src/com/google/common/collect/CompactHashMap.java   | 2 --
+ .../guava/src/com/google/common/collect/CompactHashSet.java   | 2 --
+ android/guava/src/com/google/common/graph/Traverser.java      | 3 ---
+ android/guava/src/com/google/common/primitives/Doubles.java   | 4 ----
+ android/guava/src/com/google/common/primitives/Floats.java    | 4 ----
+ android/guava/src/com/google/common/primitives/Ints.java      | 4 ----
+ android/guava/src/com/google/common/primitives/Shorts.java    | 4 ----
+ .../src/com/google/common/util/concurrent/ClosingFuture.java  | 3 ---
+ .../common/util/concurrent/ListeningExecutorService.java      | 4 ----
+ guava/src/com/google/common/collect/CompactHashMap.java       | 2 --
+ guava/src/com/google/common/collect/CompactHashSet.java       | 2 --
+ guava/src/com/google/common/graph/Traverser.java              | 3 ---
+ guava/src/com/google/common/primitives/Doubles.java           | 4 ----
+ guava/src/com/google/common/primitives/Floats.java            | 4 ----
+ guava/src/com/google/common/primitives/Ints.java              | 4 ----
+ guava/src/com/google/common/primitives/Shorts.java            | 4 ----
+ .../src/com/google/common/util/concurrent/ClosingFuture.java  | 3 ---
+ .../common/util/concurrent/ListeningExecutorService.java      | 4 ----
+ 18 files changed, 60 deletions(-)
+
+diff --git a/android/guava/src/com/google/common/collect/CompactHashMap.java b/android/guava/src/com/google/common/collect/CompactHashMap.java
+index 69e1412..e6cba86 100644
+--- a/android/guava/src/com/google/common/collect/CompactHashMap.java
++++ b/android/guava/src/com/google/common/collect/CompactHashMap.java
+@@ -105,8 +105,6 @@ class CompactHashMap<K, V> extends AbstractMap<K, V> implements Serializable {
+    * Maximum allowed false positive probability of detecting a hash flooding attack given random
+    * input.
+    */
+-  (
+-      )
+   static final double HASH_FLOODING_FPP = 0.001;
+ 
+   /**
+diff --git a/android/guava/src/com/google/common/collect/CompactHashSet.java b/android/guava/src/com/google/common/collect/CompactHashSet.java
+index 43072b6..85debcd 100644
+--- a/android/guava/src/com/google/common/collect/CompactHashSet.java
++++ b/android/guava/src/com/google/common/collect/CompactHashSet.java
+@@ -122,8 +122,6 @@ class CompactHashSet<E> extends AbstractSet<E> implements Serializable {
+    * Maximum allowed false positive probability of detecting a hash flooding attack given random
+    * input.
+    */
+-  (
+-      )
+   static final double HASH_FLOODING_FPP = 0.001;
+ 
+   /**
+diff --git a/android/guava/src/com/google/common/graph/Traverser.java b/android/guava/src/com/google/common/graph/Traverser.java
+index 7a40bdd..2b3f60c 100644
+--- a/android/guava/src/com/google/common/graph/Traverser.java
++++ b/android/guava/src/com/google/common/graph/Traverser.java
+@@ -60,9 +60,6 @@ import java.util.Set;
+  * @since 23.1
+  */
+ 
+-(
+-    "Call forGraph or forTree, passing a lambda or a Graph with the desired edges (built with"
+-        + " GraphBuilder)")
+ public abstract class Traverser<N> {
+   private final SuccessorsFunction<N> successorFunction;
+ 
+diff --git a/android/guava/src/com/google/common/primitives/Doubles.java b/android/guava/src/com/google/common/primitives/Doubles.java
+index d99300b..2cab6b8 100644
+--- a/android/guava/src/com/google/common/primitives/Doubles.java
++++ b/android/guava/src/com/google/common/primitives/Doubles.java
+@@ -208,8 +208,6 @@ public final class Doubles extends DoublesMethodsForWeb {
+    *     the array
+    * @throws IllegalArgumentException if {@code array} is empty
+    */
+-  (
+-      "Available in GWT! Annotation is to avoid conflict with GWT specialization of base class.")
+   public static double min(double... array) {
+     checkArgument(array.length > 0);
+     double min = array[0];
+@@ -228,8 +226,6 @@ public final class Doubles extends DoublesMethodsForWeb {
+    *     in the array
+    * @throws IllegalArgumentException if {@code array} is empty
+    */
+-  (
+-      "Available in GWT! Annotation is to avoid conflict with GWT specialization of base class.")
+   public static double max(double... array) {
+     checkArgument(array.length > 0);
+     double max = array[0];
+diff --git a/android/guava/src/com/google/common/primitives/Floats.java b/android/guava/src/com/google/common/primitives/Floats.java
+index 6166813..aa293dc 100644
+--- a/android/guava/src/com/google/common/primitives/Floats.java
++++ b/android/guava/src/com/google/common/primitives/Floats.java
+@@ -205,8 +205,6 @@ public final class Floats extends FloatsMethodsForWeb {
+    *     the array
+    * @throws IllegalArgumentException if {@code array} is empty
+    */
+-  (
+-      "Available in GWT! Annotation is to avoid conflict with GWT specialization of base class.")
+   public static float min(float... array) {
+     checkArgument(array.length > 0);
+     float min = array[0];
+@@ -225,8 +223,6 @@ public final class Floats extends FloatsMethodsForWeb {
+    *     in the array
+    * @throws IllegalArgumentException if {@code array} is empty
+    */
+-  (
+-      "Available in GWT! Annotation is to avoid conflict with GWT specialization of base class.")
+   public static float max(float... array) {
+     checkArgument(array.length > 0);
+     float max = array[0];
+diff --git a/android/guava/src/com/google/common/primitives/Ints.java b/android/guava/src/com/google/common/primitives/Ints.java
+index 511ec2b..f7f5ce3 100644
+--- a/android/guava/src/com/google/common/primitives/Ints.java
++++ b/android/guava/src/com/google/common/primitives/Ints.java
+@@ -219,8 +219,6 @@ public final class Ints extends IntsMethodsForWeb {
+    *     the array
+    * @throws IllegalArgumentException if {@code array} is empty
+    */
+-  (
+-      "Available in GWT! Annotation is to avoid conflict with GWT specialization of base class.")
+   public static int min(int... array) {
+     checkArgument(array.length > 0);
+     int min = array[0];
+@@ -240,8 +238,6 @@ public final class Ints extends IntsMethodsForWeb {
+    *     in the array
+    * @throws IllegalArgumentException if {@code array} is empty
+    */
+-  (
+-      "Available in GWT! Annotation is to avoid conflict with GWT specialization of base class.")
+   public static int max(int... array) {
+     checkArgument(array.length > 0);
+     int max = array[0];
+diff --git a/android/guava/src/com/google/common/primitives/Shorts.java b/android/guava/src/com/google/common/primitives/Shorts.java
+index f07c59d..7ebc7de 100644
+--- a/android/guava/src/com/google/common/primitives/Shorts.java
++++ b/android/guava/src/com/google/common/primitives/Shorts.java
+@@ -218,8 +218,6 @@ public final class Shorts extends ShortsMethodsForWeb {
+    *     the array
+    * @throws IllegalArgumentException if {@code array} is empty
+    */
+-  (
+-      "Available in GWT! Annotation is to avoid conflict with GWT specialization of base class.")
+   public static short min(short... array) {
+     checkArgument(array.length > 0);
+     short min = array[0];
+@@ -239,8 +237,6 @@ public final class Shorts extends ShortsMethodsForWeb {
+    *     in the array
+    * @throws IllegalArgumentException if {@code array} is empty
+    */
+-  (
+-      "Available in GWT! Annotation is to avoid conflict with GWT specialization of base class.")
+   public static short max(short... array) {
+     checkArgument(array.length > 0);
+     short max = array[0];
+diff --git a/android/guava/src/com/google/common/util/concurrent/ClosingFuture.java b/android/guava/src/com/google/common/util/concurrent/ClosingFuture.java
+index f1d1250..ca89d9d 100644
+--- a/android/guava/src/com/google/common/util/concurrent/ClosingFuture.java
++++ b/android/guava/src/com/google/common/util/concurrent/ClosingFuture.java
+@@ -1203,9 +1203,6 @@ public final class ClosingFuture<V> {
+    *           .closing(executor);
+    * }</pre>
+    */
+-  // TODO(cpovirk): Use simple name instead of fully qualified after we stop building with JDK 8.
+-  @com.google.errorprone.annotations.DoNotMock(
+-      "Use ClosingFuture.whenAllSucceed() or .whenAllComplete() instead.")
+   public static class Combiner {
+ 
+     private final CloseableList closeables = new CloseableList();
+diff --git a/android/guava/src/com/google/common/util/concurrent/ListeningExecutorService.java b/android/guava/src/com/google/common/util/concurrent/ListeningExecutorService.java
+index 241242a..6ada4e9 100644
+--- a/android/guava/src/com/google/common/util/concurrent/ListeningExecutorService.java
++++ b/android/guava/src/com/google/common/util/concurrent/ListeningExecutorService.java
+@@ -32,10 +32,6 @@ import java.util.concurrent.TimeUnit;
+  * @author Chris Povirk
+  * @since 10.0
+  */
+-(
+-    "Use TestingExecutors.sameThreadScheduledExecutor, or wrap a real Executor from "
+-        + "java.util.concurrent.Executors with MoreExecutors.listeningDecorator")
+-
+ public interface ListeningExecutorService extends ExecutorService {
+   /**
+    * @return a {@code ListenableFuture} representing pending completion of the task
+diff --git a/guava/src/com/google/common/collect/CompactHashMap.java b/guava/src/com/google/common/collect/CompactHashMap.java
+index fbf1d4d..8a88a9f 100644
+--- a/guava/src/com/google/common/collect/CompactHashMap.java
++++ b/guava/src/com/google/common/collect/CompactHashMap.java
+@@ -109,8 +109,6 @@ class CompactHashMap<K, V> extends AbstractMap<K, V> implements Serializable {
+    * Maximum allowed false positive probability of detecting a hash flooding attack given random
+    * input.
+    */
+-  (
+-      )
+   static final double HASH_FLOODING_FPP = 0.001;
+ 
+   /**
+diff --git a/guava/src/com/google/common/collect/CompactHashSet.java b/guava/src/com/google/common/collect/CompactHashSet.java
+index 9f6b3b9..7237175 100644
+--- a/guava/src/com/google/common/collect/CompactHashSet.java
++++ b/guava/src/com/google/common/collect/CompactHashSet.java
+@@ -126,8 +126,6 @@ class CompactHashSet<E> extends AbstractSet<E> implements Serializable {
+    * Maximum allowed false positive probability of detecting a hash flooding attack given random
+    * input.
+    */
+-  (
+-      )
+   static final double HASH_FLOODING_FPP = 0.001;
+ 
+   /**
+diff --git a/guava/src/com/google/common/graph/Traverser.java b/guava/src/com/google/common/graph/Traverser.java
+index 7a40bdd..2b3f60c 100644
+--- a/guava/src/com/google/common/graph/Traverser.java
++++ b/guava/src/com/google/common/graph/Traverser.java
+@@ -60,9 +60,6 @@ import java.util.Set;
+  * @since 23.1
+  */
+ 
+-(
+-    "Call forGraph or forTree, passing a lambda or a Graph with the desired edges (built with"
+-        + " GraphBuilder)")
+ public abstract class Traverser<N> {
+   private final SuccessorsFunction<N> successorFunction;
+ 
+diff --git a/guava/src/com/google/common/primitives/Doubles.java b/guava/src/com/google/common/primitives/Doubles.java
+index 8317163..3b157ba 100644
+--- a/guava/src/com/google/common/primitives/Doubles.java
++++ b/guava/src/com/google/common/primitives/Doubles.java
+@@ -210,8 +210,6 @@ public final class Doubles extends DoublesMethodsForWeb {
+    *     the array
+    * @throws IllegalArgumentException if {@code array} is empty
+    */
+-  (
+-      "Available in GWT! Annotation is to avoid conflict with GWT specialization of base class.")
+   public static double min(double... array) {
+     checkArgument(array.length > 0);
+     double min = array[0];
+@@ -230,8 +228,6 @@ public final class Doubles extends DoublesMethodsForWeb {
+    *     in the array
+    * @throws IllegalArgumentException if {@code array} is empty
+    */
+-  (
+-      "Available in GWT! Annotation is to avoid conflict with GWT specialization of base class.")
+   public static double max(double... array) {
+     checkArgument(array.length > 0);
+     double max = array[0];
+diff --git a/guava/src/com/google/common/primitives/Floats.java b/guava/src/com/google/common/primitives/Floats.java
+index 7578aa8..60a6da3 100644
+--- a/guava/src/com/google/common/primitives/Floats.java
++++ b/guava/src/com/google/common/primitives/Floats.java
+@@ -205,8 +205,6 @@ public final class Floats extends FloatsMethodsForWeb {
+    *     the array
+    * @throws IllegalArgumentException if {@code array} is empty
+    */
+-  (
+-      "Available in GWT! Annotation is to avoid conflict with GWT specialization of base class.")
+   public static float min(float... array) {
+     checkArgument(array.length > 0);
+     float min = array[0];
+@@ -225,8 +223,6 @@ public final class Floats extends FloatsMethodsForWeb {
+    *     in the array
+    * @throws IllegalArgumentException if {@code array} is empty
+    */
+-  (
+-      "Available in GWT! Annotation is to avoid conflict with GWT specialization of base class.")
+   public static float max(float... array) {
+     checkArgument(array.length > 0);
+     float max = array[0];
+diff --git a/guava/src/com/google/common/primitives/Ints.java b/guava/src/com/google/common/primitives/Ints.java
+index f2a0cad..0e4ea1f 100644
+--- a/guava/src/com/google/common/primitives/Ints.java
++++ b/guava/src/com/google/common/primitives/Ints.java
+@@ -221,8 +221,6 @@ public final class Ints extends IntsMethodsForWeb {
+    *     the array
+    * @throws IllegalArgumentException if {@code array} is empty
+    */
+-  (
+-      "Available in GWT! Annotation is to avoid conflict with GWT specialization of base class.")
+   public static int min(int... array) {
+     checkArgument(array.length > 0);
+     int min = array[0];
+@@ -242,8 +240,6 @@ public final class Ints extends IntsMethodsForWeb {
+    *     in the array
+    * @throws IllegalArgumentException if {@code array} is empty
+    */
+-  (
+-      "Available in GWT! Annotation is to avoid conflict with GWT specialization of base class.")
+   public static int max(int... array) {
+     checkArgument(array.length > 0);
+     int max = array[0];
+diff --git a/guava/src/com/google/common/primitives/Shorts.java b/guava/src/com/google/common/primitives/Shorts.java
+index f07c59d..7ebc7de 100644
+--- a/guava/src/com/google/common/primitives/Shorts.java
++++ b/guava/src/com/google/common/primitives/Shorts.java
+@@ -218,8 +218,6 @@ public final class Shorts extends ShortsMethodsForWeb {
+    *     the array
+    * @throws IllegalArgumentException if {@code array} is empty
+    */
+-  (
+-      "Available in GWT! Annotation is to avoid conflict with GWT specialization of base class.")
+   public static short min(short... array) {
+     checkArgument(array.length > 0);
+     short min = array[0];
+@@ -239,8 +237,6 @@ public final class Shorts extends ShortsMethodsForWeb {
+    *     in the array
+    * @throws IllegalArgumentException if {@code array} is empty
+    */
+-  (
+-      "Available in GWT! Annotation is to avoid conflict with GWT specialization of base class.")
+   public static short max(short... array) {
+     checkArgument(array.length > 0);
+     short max = array[0];
+diff --git a/guava/src/com/google/common/util/concurrent/ClosingFuture.java b/guava/src/com/google/common/util/concurrent/ClosingFuture.java
+index 0a867aa..fdb3887 100644
+--- a/guava/src/com/google/common/util/concurrent/ClosingFuture.java
++++ b/guava/src/com/google/common/util/concurrent/ClosingFuture.java
+@@ -1201,9 +1201,6 @@ public final class ClosingFuture<V> {
+    *           .closing(executor);
+    * }</pre>
+    */
+-  // TODO(cpovirk): Use simple name instead of fully qualified after we stop building with JDK 8.
+-  @com.google.errorprone.annotations.DoNotMock(
+-      "Use ClosingFuture.whenAllSucceed() or .whenAllComplete() instead.")
+   public static class Combiner {
+ 
+     private final CloseableList closeables = new CloseableList();
+diff --git a/guava/src/com/google/common/util/concurrent/ListeningExecutorService.java b/guava/src/com/google/common/util/concurrent/ListeningExecutorService.java
+index 241242a..6ada4e9 100644
+--- a/guava/src/com/google/common/util/concurrent/ListeningExecutorService.java
++++ b/guava/src/com/google/common/util/concurrent/ListeningExecutorService.java
+@@ -32,10 +32,6 @@ import java.util.concurrent.TimeUnit;
+  * @author Chris Povirk
+  * @since 10.0
+  */
+-(
+-    "Use TestingExecutors.sameThreadScheduledExecutor, or wrap a real Executor from "
+-        + "java.util.concurrent.Executors with MoreExecutors.listeningDecorator")
+-
+ public interface ListeningExecutorService extends ExecutorService {
+   /**
+    * @return a {@code ListenableFuture} representing pending completion of the task
+-- 
+2.29.2
