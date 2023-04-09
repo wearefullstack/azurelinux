@@ -57,7 +57,7 @@ find . -type f -iname '*.cpp' -exec chmod a-x '{}' ';'
 
 # Compile mstflint driver
 cd kernel
-EXTRA_CFLAGS='-DVERSION=\"%{version}\"' make KPVER=%{kver}
+EXTRA_CFLAGS='-DVERSION=\"%{version}\"' make KVER=%{kver}
 
 %install
 %make_install
