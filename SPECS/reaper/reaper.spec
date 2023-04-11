@@ -32,8 +32,6 @@ Source1:        %{bower_components}
 Source2:        %{srcui_node_modules}
 # bower cache
 Source3:        %{bower_cache}
-# m2 cache
-Source4:        %{maven_cache}
 # npm cache
 Source5:        %{npm_cache}
 # node_modules downloaded to /usr/local/lib
@@ -43,11 +41,15 @@ Source7:        %{local_n}
 
 BuildRequires:  git
 BuildRequires:  javapackages-tools
-BuildRequires:  maven
-BuildRequires:  msopenjdk-11
 BuildRequires:  nodejs
 BuildRequires:  python3
 BuildRequires:  systemd-rpm-macros
+
+BuildRequires:  maven-local
+BuildRequires:  mvn(com.google.code.findbugs:jsr305)
+BuildRequires:  mvn(com.google.guava:guava)
+BuildRequires:  mvn(org.slf4j:slf4j-api)
+
 Requires:       msopenjdk-11
 Requires(pre):  %{_sbindir}/groupadd
 Requires(pre):  %{_sbindir}/useradd
@@ -66,9 +68,6 @@ export LD_LIBRARY_PATH="%{_libdir}/jvm/msopenjdk-11/lib/jli"
 pushd "$HOME"
 echo "Installing bower cache."
 tar xf %{SOURCE3}
-
-echo "Installing m2 cache."
-tar xf %{SOURCE4}
 
 echo "Installing npm cache"
 tar xf %{SOURCE5}
@@ -109,10 +108,10 @@ echo "Installing npm_modules"
 tar fx %{SOURCE2}
 popd
 
-# Building using maven in offline mode.
-mvn -DskipTests package -o
+%mvn_build
 
 %install
+%mvn_install
 mkdir -p %{buildroot}%{_datadir}/cassandra-%{name}
 mkdir -p %{buildroot}%{_sbindir}
 mkdir -p %{buildroot}%{_sysconfdir}/init.d

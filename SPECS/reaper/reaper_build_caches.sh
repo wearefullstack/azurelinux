@@ -25,7 +25,6 @@ SOURCE_URL="https://github.com/thelastpickle/cassandra-reaper/archive/refs/tags/
 BOWER_COMPONENTS="reaper-bower-components-${VERSION}.tar.gz"
 SRC_UI_NODE_MODULES="reaper-srcui-node-modules-${VERSION}.tar.gz"
 BOWER_CACHE="reaper-bower-cache-${VERSION}.tar.gz"
-MAVEN_CACHE="reaper-m2-cache-${VERSION}.tar.gz"
 NPM_CACHE="reaper-npm-cache-${VERSION}.tar.gz"
 LOCAL_LIB_NODE_MODULES="reaper-local-lib-node-modules-${VERSION}.tar.gz"
 LOCAL_N="reaper-local-n-${VERSION}.tar.gz"
@@ -96,7 +95,6 @@ function buildReaperSources {
 	export JAVA_HOME="/usr/lib/jvm/msopenjdk-11"
 	export LD_LIBRARY_PATH="/usr/lib/jvm/msopenjdk-11/lib/jli"
 	echo "Building reaper in online mode."
-	mvn -DskipTests package
 	popd
 }
 
@@ -106,10 +104,6 @@ function createCacheTars {
 	echo "creating bower_cache tar..."
 	tar -cf ${BOWER_CACHE} .cache
 	mv ${BOWER_CACHE} ${reaperCacheDir}
-
-	echo "creating maven_cache tar..."
-	tar -cf ${MAVEN_CACHE} .m2
-	mv ${MAVEN_CACHE} ${reaperCacheDir}
 
 	echo "creating npm_cache tar..."
 	tar -cf ${NPM_CACHE} .npm
