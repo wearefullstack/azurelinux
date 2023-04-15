@@ -43,7 +43,7 @@ version_release_matching_groups = [
         "SPECS/cyrus-sasl-bootstrap/cyrus-sasl-bootstrap.spec"
     ]),
     frozenset([
-        "SPECS-SIGNED/mstflint-driver-signed/mstflint-signed.spec",
+        "SPECS-SIGNED/kernel-mstflint-signed/kernel-mstflint-signed.spec",
         "SPECS/mstflint/mstflint.spec"
     ])
 ]
