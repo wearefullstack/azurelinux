@@ -13,7 +13,7 @@ Vendor:         Microsoft Corporation
 Distribution:   Mariner
 Group:          System Environment/Kernel
 URL:            https://github.com/Mellanox/%{name}
-Source0:        https://github.com/Mellanox/%{name}/releases/download/v%{version}-1/%{name}-%{version}-1.tar.gz#%{mstflint_module_name}
+Source0:        https://github.com/Mellanox/%{name}/releases/download/v%{version}-1/%{name}-%{version}-1.tar.gz#/%{mstflint_module_name}
 BuildRequires:  kernel-devel >= %{lb_kver}
 BuildRequires:  kernel-devel < %{ub_kver}
 
