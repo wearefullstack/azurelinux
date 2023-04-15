@@ -2127,6 +2127,7 @@
                 "keras",
                 "kernel-azure-signed",
                 "kernel-hci-signed",
+                "kernel-mstflint-signed",
                 "kernel-signed",
                 "KeysInUse-OpenSSL",
                 "kpatch",
