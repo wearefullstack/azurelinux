@@ -70,10 +70,8 @@ rm -fr %{buildroot}%{_includedir}
 find %{buildroot} -type f -name "*.la" -delete -print
 find %{buildroot} -type f -name '*.a' -delete
 
-export INSTALL_MOD_PATH=%{buildroot}
-cd kernel
-install -d $INSTALL_MOD_PATH/%{install_mod_dir}
-cp $PWD/mstflint_access.ko $INSTALL_MOD_PATH/%{install_mod_dir}
+install -dm 755 %{buildroot}%{install_mod_dir}
+install -m 644 kernel/mstflint_access.ko %{buildroot}%{install_mod_dir}
 
 %files
 %license COPYING
