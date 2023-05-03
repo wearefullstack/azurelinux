@@ -128,7 +128,7 @@ TLS_CERT    ?=
 TLS_KEY     ?=
 
 # panic,fatal,error,warn,info,debug,trace
-LOG_LEVEL          ?= info
+LOG_LEVEL          ?= warn
 STOP_ON_WARNING    ?= n
 STOP_ON_PKG_FAIL   ?= n
 STOP_ON_FETCH_FAIL ?= n

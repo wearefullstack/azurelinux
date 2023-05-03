@@ -184,18 +184,18 @@ func PrintBuildSummary(pkgGraph *pkggraph.PkgGraph, graphMutex *sync.RWMutex, bu
 		}
 	}
 
-	logger.Log.Info("---------------------------")
-	logger.Log.Info("--------- Summary ---------")
-	logger.Log.Info("---------------------------")
+	logger.Log.Warn("---------------------------")
+	logger.Log.Warn("--------- Summary ---------")
+	logger.Log.Warn("---------------------------")
 
-	logger.Log.Infof("Number of built SRPMs:             %d", len(builtSRPMs))
-	logger.Log.Infof("Number of prebuilt SRPMs:          %d", len(prebuiltSRPMs))
-	logger.Log.Infof("Number of failed SRPMs:            %d", len(failures))
-	logger.Log.Infof("Number of blocked SRPMs:           %d", len(unbuiltSRPMs))
-	logger.Log.Infof("Number of unresolved dependencies: %d", len(unresolvedDependencies))
+	logger.Log.Warnf("Number of built SRPMs:             %d", len(builtSRPMs))
+	logger.Log.Warnf("Number of prebuilt SRPMs:          %d", len(prebuiltSRPMs))
+	logger.Log.Warnf("Number of failed SRPMs:            %d", len(failures))
+	logger.Log.Warnf("Number of blocked SRPMs:           %d", len(unbuiltSRPMs))
+	logger.Log.Warnf("Number of unresolved dependencies: %d", len(unresolvedDependencies))
 
 	if allowToolchainRebuilds && (len(rpmConflicts) > 0 || len(srpmConflicts) > 0) {
-		logger.Log.Infof("Toolchain RPMs conflicts are ignored since ALLOW_TOOLCHAIN_REBUILDS=y")
+		logger.Log.Warnf("Toolchain RPMs conflicts are ignored since ALLOW_TOOLCHAIN_REBUILDS=y")
 	}
 
 	if len(rpmConflicts) > 0 || len(srpmConflicts) > 0 {
@@ -204,37 +204,37 @@ func PrintBuildSummary(pkgGraph *pkggraph.PkgGraph, graphMutex *sync.RWMutex, bu
 	}
 
 	if len(builtSRPMs) != 0 {
-		logger.Log.Info("Built SRPMs:")
+		logger.Log.Warn("Built SRPMs:")
 		for srpm := range builtSRPMs {
-			logger.Log.Infof("--> %s", filepath.Base(srpm))
+			logger.Log.Warnf("--> %s", filepath.Base(srpm))
 		}
 	}
 
 	if len(prebuiltSRPMs) != 0 {
-		logger.Log.Info("Prebuilt SRPMs:")
+		logger.Log.Warn("Prebuilt SRPMs:")
 		for srpm := range prebuiltSRPMs {
-			logger.Log.Infof("--> %s", filepath.Base(srpm))
+			logger.Log.Warnf("--> %s", filepath.Base(srpm))
 		}
 	}
 
 	if len(failures) != 0 {
-		logger.Log.Info("Failed SRPMs:")
+		logger.Log.Warn("Failed SRPMs:")
 		for _, failure := range failures {
-			logger.Log.Infof("--> %s , error: %s, for details see: %s", failure.Node.SRPMFileName(), failure.Err, failure.LogFile)
+			logger.Log.Warnf("--> %s , error: %s, for details see: %s", failure.Node.SRPMFileName(), failure.Err, failure.LogFile)
 		}
 	}
 
 	if len(unbuiltSRPMs) != 0 {
-		logger.Log.Info("Blocked SRPMs:")
+		logger.Log.Warn("Blocked SRPMs:")
 		for srpm := range unbuiltSRPMs {
-			logger.Log.Infof("--> %s", filepath.Base(srpm))
+			logger.Log.Warnf("--> %s", filepath.Base(srpm))
 		}
 	}
 
 	if len(unresolvedDependencies) != 0 {
-		logger.Log.Info("Unresolved dependencies:")
+		logger.Log.Warn("Unresolved dependencies:")
 		for dependency := range unresolvedDependencies {
-			logger.Log.Infof("--> %s", dependency)
+			logger.Log.Warnf("--> %s", dependency)
 		}
 	}
 
