@@ -39,6 +39,7 @@ Source1:        config
 Source2:        config_aarch64
 Source3:        sha512hmac-openssl.sh
 Source4:        cbl-mariner-ca-20211013.pem
+Source5:        https://github.com/Mellanox/mstflint/releases/download/v4.21.0-1/mstflint-4.21.0-1.tar.gz#/mstflint-4.21.0-1.tar.gz
 BuildRequires:  audit-devel
 BuildRequires:  bash
 BuildRequires:  bc
@@ -157,6 +158,15 @@ Summary:        Inspection and simple manipulation of eBPF programs and maps
 This package contains the bpftool, which allows inspection and simple
 manipulation of eBPF programs and maps.
 
+%package -n kernel-mstflint
+Summary:        mstflint Kernel Modules
+Group:          System Environment/Kernel
+Requires:       %{name} = %{version}-%{release}
+
+%description -n kernel-mstflint
+This package contains mstflint kernel module for secure boot.
+
+
 %prep
 %setup -q -n CBL-Mariner-Linux-Kernel-rolling-lts-mariner-2-%{version}
 
@@ -200,6 +210,13 @@ make -C tools turbostat cpupower
 #Compile bpftool
 make -C tools/bpf/bpftool
 
+### Compile OOT kernel modules
+#Compile mstflint
+tar xzf %{SOURCE5}
+kernel_src=$PWD
+cd mstflint-4.21.0/kernel
+EXTRA_CFLAGS='-DVERSION=\"4.21.0\"' make KPVER=%{version} KSRC=$kernel_src
+
 %define __modules_install_post \
 for MODULE in `find %{buildroot}/lib/modules/%{uname_r} -name *.ko` ; do \
     ./scripts/sign-file sha512 certs/signing_key.pem certs/signing_key.x509 $MODULE \
@@ -223,6 +240,8 @@ install -vdm 700 %{buildroot}/boot
 install -vdm 755 %{buildroot}%{_defaultdocdir}/linux-%{uname_r}
 install -vdm 755 %{buildroot}%{_prefix}/src/linux-headers-%{uname_r}
 install -vdm 755 %{buildroot}%{_libdir}/debug/lib/modules/%{uname_r}
+install -vdm 755 %{buildroot}/lib/modules/%{uname_r}/extra
+cp mstflint-4.21.0/kernel/mstflint_access.ko %{buildroot}/lib/modules/%{uname_r}/extra
 make INSTALL_MOD_PATH=%{buildroot} modules_install
 
 %ifarch x86_64
@@ -338,6 +357,9 @@ ln -sf linux-%{uname_r}.cfg /boot/mariner.cfg
 %post drivers-sound
 /sbin/depmod -a %{uname_r}
 
+%post -n kernel-mstflint
+/sbin/depmod -a %{uname_r}
+
 %files
 %defattr(-,root,root)
 %license COPYING
@@ -355,6 +377,7 @@ ln -sf linux-%{uname_r}.cfg /boot/mariner.cfg
 %exclude /lib/modules/%{uname_r}/kernel/drivers/accessibility
 %exclude /lib/modules/%{uname_r}/kernel/drivers/gpu
 %exclude /lib/modules/%{uname_r}/kernel/sound
+%exclude /lib/modules/%{uname_r}/extra
 
 %files docs
 %defattr(-,root,root)
@@ -418,6 +441,10 @@ ln -sf linux-%{uname_r}.cfg /boot/mariner.cfg
 %files -n bpftool
 %{_sbindir}/bpftool
 %{_sysconfdir}/bash_completion.d/bpftool
+
+%files -n kernel-mstflint
+%defattr(-,root,root,-)
+/lib/modules/%{uname_r}/extra/*
 
 %changelog
 * Wed Apr 19 2023 Rachel Menge <rachelmenge@microsoft.com> - 5.15.107.1-2
