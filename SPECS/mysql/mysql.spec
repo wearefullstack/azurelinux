@@ -1,14 +1,13 @@
 Summary:        MySQL.
 Name:           mysql
 Version:        8.0.33
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        GPLv2 with exceptions AND LGPLv2 AND BSD
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
 Group:          Applications/Databases
 URL:            https://www.mysql.com
 Source0:        https://dev.mysql.com/get/Downloads/MySQL-8.0/%{name}-boost-%{version}.tar.gz
-Patch0:         CVE-2012-5627.nopatch
 BuildRequires:  cmake
 BuildRequires:  libtirpc-devel
 BuildRequires:  openssl-devel
@@ -42,13 +41,14 @@ cmake . \
       -DWITH_EMBEDDED_SERVER=OFF \
       -DFORCE_INSOURCE_BUILD=1
 
-make %{?_smp_mflags}
+%make_build
 
 %install
-make DESTDIR=%{buildroot} install
+%make_install
 
 %check
-make test
+%make_build test --output-on-failure
+cat ./Testing/Temporary/LastTest.log
 
 %files
 %defattr(-,root,root)
@@ -80,6 +80,9 @@ make test
 %{_libdir}/pkgconfig/mysqlclient.pc
 
 %changelog
+* Thu May 04 2023 Olivia Crain <oliviacrain@microsoft.com> - 8.0.33-2
+- Fix package test
+
 * Mon Apr 24 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 8.0.33-1
 - Auto-upgrade to 8.0.33 - address CVE-2023-21976, CVE-2023-21972, CVE-2023-21982, CVE-2023-21977, CVE-2023-21980
 
