@@ -292,7 +292,9 @@ func umount(path string) (err error) {
 // PackageNamesFromSingleSystemConfig goes through the "PackageLists" and "Packages" fields in the "SystemConfig" object, extracting
 // from packageList JSONs and packages listed in config itself to create one comprehensive package list.
 // NOTE: the package list contains the versions restrictions for the packages, if present, in the form "[package][condition][version]".
-//       Example: gcc=9.1.0
+//
+//	Example: gcc=9.1.0
+//
 // - systemConfig is the systemconfig field from the config file
 // Since kernel is not part of the packagelist, it is added separately from KernelOptions.
 func PackageNamesFromSingleSystemConfig(systemConfig configuration.SystemConfig) (finalPkgList []string, err error) {
@@ -386,17 +388,6 @@ func PopulateInstallRoot(installChroot *safechroot.Chroot, packagesToInstall []s
 	ReportAction("Initializing RPM Database")
 
 	installRoot := filepath.Join(rootMountPoint, installChroot.RootDir())
-
-	if len(config.PackageRepos) > 0 {
-		if config.IsIsoInstall {
-			err = configuration.UpdatePackageRepo(installChroot, config)
-			if err != nil {
-				return
-			}
-		} else {
-			return fmt.Errorf("custom package repos should not be specified unless performing ISO installation")
-		}
-	}
 
 	// Initialize RPM Database so we can install RPMs into the installroot
 	err = initializeRpmDatabase(installRoot, diffDiskBuild)
@@ -977,7 +968,7 @@ func addEntryToCrypttab(installRoot string, devicePath string, encryptedRoot dis
 	return
 }
 
-//InstallGrubEnv installs an empty grubenv f
+// InstallGrubEnv installs an empty grubenv f
 func InstallGrubEnv(installRoot string) (err error) {
 	const (
 		assetGrubEnvFile = "/installer/grub2/grubenv"
@@ -1065,6 +1056,12 @@ func InstallGrubCfg(installRoot, rootDevice, bootUUID, bootPrefix string, encryp
 	err = setGrubCfgSELinux(installGrubCfgFile, kernelCommandLine)
 	if err != nil {
 		logger.Log.Warnf("Failed to set SELinux in grub.cfg: %v", err)
+		return
+	}
+
+	err = setGrubCfgCGroup(installGrubCfgFile, kernelCommandLine)
+	if err != nil {
+		logger.Log.Warnf("Failed to set CGroup configuration in grub.cfg: %v", err)
 		return
 	}
 
@@ -1607,7 +1604,7 @@ func selinuxRelabelFiles(systemConfig configuration.SystemConfig, installChroot 
 	//     only supports the below cases:
 	for mount, fsType := range mountPointToFsTypeMap {
 		switch fsType {
-		case "ext2", "ext3", "ext4":
+		case "ext2", "ext3", "ext4", "xfs":
 			listOfMountsToLabel = append(listOfMountsToLabel, mount)
 		case "fat32", "fat16", "vfat":
 			logger.Log.Debugf("SELinux will not label mount at (%s) of type (%s), skipping", mount, fsType)
@@ -1780,7 +1777,8 @@ func GetPartLabel(device string) (stdout string, err error) {
 }
 
 // FormatMountIdentifier finds the requested identifier type for the given device, and formats it for use
-//  ie "UUID=12345678-abcd..."
+//
+//	ie "UUID=12345678-abcd..."
 func FormatMountIdentifier(identifier configuration.MountIdentifier, device string) (identifierString string, err error) {
 	var id string
 	switch identifier {
@@ -2073,6 +2071,32 @@ func setGrubCfgSELinux(grubPath string, kernelCommandline configuration.KernelCo
 	return
 }
 
+func setGrubCfgCGroup(grubPath string, kernelCommandline configuration.KernelCommandLine) (err error) {
+	const (
+		cgroupPattern     = "{{.CGroup}}"
+		cgroupv1FlagValue = "systemd.unified_cgroup_hierarchy=0"
+		cgroupv2FlagValue = "systemd.unified_cgroup_hierarchy=1"
+	)
+	var cgroup string
+
+	switch kernelCommandline.CGroup {
+	case configuration.CGroupV2:
+		cgroup = fmt.Sprintf("%s", cgroupv2FlagValue)
+	case configuration.CGroupV1:
+		cgroup = fmt.Sprintf("%s", cgroupv1FlagValue)
+	case configuration.CGroupDefault:
+		cgroup = ""
+	}
+
+	logger.Log.Debugf("Adding CGroupConfiguration('%s') to '%s'", cgroup, grubPath)
+	err = sed(cgroupPattern, cgroup, kernelCommandline.GetSedDelimeter(), grubPath)
+	if err != nil {
+		logger.Log.Warnf("Failed to set grub.cfg's CGroup setting: %v", err)
+	}
+
+	return
+}
+
 // setGrubCfgReadOnlyVerityRoot populates the arguments needed to boot with a dm-verity read-only root partition
 func setGrubCfgReadOnlyVerityRoot(grubPath string, readOnlyRoot diskutils.VerityDevice) (err error) {
 	var (
@@ -2357,7 +2381,7 @@ func createRDiffArtifact(workDirPath, devPath, rDiffBaseImage, name string) (err
 	return shell.ExecuteLive(squashErrors, "rdiff", rdiffArgs...)
 }
 
-//KernelPackages returns a list of kernel packages obtained from KernelOptions in the config's SystemConfigs
+// KernelPackages returns a list of kernel packages obtained from KernelOptions in the config's SystemConfigs
 func KernelPackages(config configuration.Config) []*pkgjson.PackageVer {
 	var packageList []*pkgjson.PackageVer
 	// Add all the provided kernels to the package list

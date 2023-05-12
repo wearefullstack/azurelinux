@@ -17,6 +17,7 @@ INCREMENTAL_TOOLCHAIN=${8:-n}
 MARINER_INPUT_SRPMS_DIR=$9
 MARINER_OUTPUT_SRPMS_DIR=${10}
 MARINER_REHYDRATED_RPMS_DIR=${11}
+MARINER_TOOLCHAIN_MANIFESTS_FILE=${12}
 
 MARINER_LOGS=$MARINER_BUILD_DIR/logs
 TOOLCHAIN_LOGS=$MARINER_LOGS/toolchain
@@ -75,8 +76,24 @@ touch $TOOLCHAIN_FAILURES
 # If we're incrementally building and there are RPMs available to rehydrate from the repo, copy to the proper chroot RPM folder.
 # Empty files are indicative of a failure to download or a disabling of repo rehydration, so filter out empty RPMs.
 if [ "$INCREMENTAL_TOOLCHAIN" = "y" ]; then
-find $MARINER_REHYDRATED_RPMS_DIR -name "*.$(uname -m).rpm" -size +0 -exec cp {} $CHROOT_RPMS_DIR_ARCH ';'
-find $MARINER_REHYDRATED_RPMS_DIR -name "*.noarch.rpm" -size +0 -exec cp {} $CHROOT_RPMS_DIR_NOARCH ';'
+    # Lines with 'noarch' in them are noarch RPMs, otherwise they're arch-specific RPMs.
+    ARCH_RPMS=$(grep -v 'noarch' "$MARINER_TOOLCHAIN_MANIFESTS_FILE")
+    NOARCH_RPMS=$(grep 'noarch' "$MARINER_TOOLCHAIN_MANIFESTS_FILE")
+
+    for rpm in $ARCH_RPMS; do
+        # If the file exists and is not empty (test -s), copy it to the chroot RPM folder.
+        if [ -s "$MARINER_REHYDRATED_RPMS_DIR/$rpm" ]; then
+            echo "Copying $MARINER_REHYDRATED_RPMS_DIR/$rpm to $CHROOT_RPMS_DIR_ARCH"
+            cp "$MARINER_REHYDRATED_RPMS_DIR/$rpm" "$CHROOT_RPMS_DIR_ARCH"
+        fi
+    done
+    for rpm in $NOARCH_RPMS; do
+        # If the file exists and is not empty (test -s), copy it to the chroot RPM folder.
+        if [ -s "$MARINER_REHYDRATED_RPMS_DIR/$rpm" ]; then
+            echo "Copying $MARINER_REHYDRATED_RPMS_DIR/$rpm to $CHROOT_RPMS_DIR_NOARCH"
+            cp "$MARINER_REHYDRATED_RPMS_DIR/$rpm" "$CHROOT_RPMS_DIR_NOARCH"
+        fi
+    done
 fi
 
 chroot_mount () {
@@ -284,6 +301,7 @@ build_rpm_in_chroot_no_install procps-ng
 build_rpm_in_chroot_no_install sed
 build_rpm_in_chroot_no_install check
 build_rpm_in_chroot_no_install cpio
+build_rpm_in_chroot_no_install nghttp2
 
 # perl needs gdbm, bzip2, zlib
 chroot_and_install_rpms gdbm
@@ -393,9 +411,10 @@ build_rpm_in_chroot_no_install kbd
 chroot_and_install_rpms e2fsprogs
 build_rpm_in_chroot_no_install krb5
 
-# curl needs libssh2, krb5
+# curl needs libssh2, krb5, nghttp2
 chroot_and_install_rpms libssh2
 chroot_and_install_rpms krb5
+chroot_and_install_rpms nghttp2
 build_rpm_in_chroot_no_install curl
 
 # cracklib needs python3-setuptools (installed with python3)

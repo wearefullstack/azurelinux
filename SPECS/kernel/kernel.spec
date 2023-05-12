@@ -2,6 +2,16 @@
 %global sha512hmac bash %{_sourcedir}/sha512hmac-openssl.sh
 %define uname_r %{version}-%{release}
 
+# find_debuginfo.sh arguments are set by default in rpm's macros.
+# The default arguments regenerate the build-id for vmlinux in the 
+# debuginfo package causing a mismatch with the build-id for vmlinuz in
+# the kernel package. Therefore, explicilty set the relevant default 
+# settings to prevent this behavior.
+%undefine _unique_build_ids
+%undefine _unique_debug_names
+%global _missing_build_ids_terminate_build 1
+%global _no_recompute_build_ids 1
+
 %ifarch x86_64
 %define arch x86_64
 %define archdir x86
@@ -17,8 +27,8 @@
 
 Summary:        Linux Kernel
 Name:           kernel
-Version:        5.15.85.1
-Release:        1%{?dist}
+Version:        5.15.107.1
+Release:        2%{?dist}
 License:        GPLv2
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -32,12 +42,16 @@ Source4:        cbl-mariner-ca-20211013.pem
 BuildRequires:  audit-devel
 BuildRequires:  bash
 BuildRequires:  bc
+BuildRequires:  build-essential
 BuildRequires:  diffutils
 BuildRequires:  dwarves
 BuildRequires:  elfutils-libelf-devel
+BuildRequires:  flex
+BuildRequires:  gettext
 BuildRequires:  glib-devel
 BuildRequires:  kbd
 BuildRequires:  kmod-devel
+BuildRequires:  libcap-devel
 BuildRequires:  libdnet-devel
 BuildRequires:  libmspack-devel
 BuildRequires:  openssl
@@ -224,7 +238,7 @@ install -D -m 640 arch/arm64/boot/dts/freescale/imx8mq-evk.dtb %{buildroot}/boot
 install -vm 400 System.map %{buildroot}/boot/System.map-%{uname_r}
 install -vm 600 .config %{buildroot}/boot/config-%{uname_r}
 cp -r Documentation/*        %{buildroot}%{_defaultdocdir}/linux-%{uname_r}
-install -vm 644 vmlinux %{buildroot}%{_libdir}/debug/lib/modules/%{uname_r}/vmlinux-%{uname_r}
+install -vm 744 vmlinux %{buildroot}%{_libdir}/debug/lib/modules/%{uname_r}/vmlinux-%{uname_r}
 # `perf test vmlinux` needs it
 ln -s vmlinux-%{uname_r} %{buildroot}%{_libdir}/debug/lib/modules/%{uname_r}/vmlinux
 
@@ -406,6 +420,57 @@ ln -sf linux-%{uname_r}.cfg /boot/mariner.cfg
 %{_sysconfdir}/bash_completion.d/bpftool
 
 %changelog
+* Wed Apr 19 2023 Rachel Menge <rachelmenge@microsoft.com> - 5.15.107.1-2
+- Disable rpm's debuginfo defaults which regenerate build-ids
+
+* Tue Apr 18 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.107.1-1
+- Auto-upgrade to 5.15.107.1
+
+* Tue Apr 11 2023 Rachel Menge <rachelmenge@microsoft.com> - 5.15.102.1-5
+- Enable CONFIG_HIST_TRIGGERS
+
+* Wed Mar 29 2023 Kanika Nema <kanikanema@microsoft.com> - 5.15.102.1-4
+- Enable nvme-tcp and nvme-rdma modules
+
+* Wed Mar 29 2023 Rachel Menge <rachelmenge@microsoft.com> - 5.15.102.1-3
+- Enable CONFIG_NET_CLS_FLOWER module
+
+* Wed Mar 22 2023 Thien Trung Vuong <tvuong@microsoft.com> - 5.15.102.1-2
+- Enable Wireguard module
+
+* Tue Mar 14 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.102.1-1
+- Auto-upgrade to 5.15.102.1
+
+* Mon Mar 06 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.98.1-1
+- Auto-upgrade to 5.15.98.1
+
+* Sat Feb 25 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.95.1-1
+- Auto-upgrade to 5.15.95.1
+
+* Wed Feb 22 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.94.1-1
+- Auto-upgrade to 5.15.94.1
+
+* Wed Feb 15 2023 Rachel Menge <rachelmenge@microsoft.com> - 5.15.92.1-3
+- Install vmlinux as root executable for debuginfo
+
+* Thu Feb 09 2023 Minghe Ren <mingheren@microsoft.com> - 5.15.92.1-2
+- Disable CONFIG_INIT_ON_FREE_DEFAULT_ON
+
+* Mon Feb 06 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.92.1-1
+- Auto-upgrade to 5.15.92.1
+
+* Wed Jan 25 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.90.1-1
+- Auto-upgrade to 5.15.90.1
+
+* Sat Jan 14 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.87.1-1
+- Auto-upgrade to 5.15.87.1
+
+* Sat Jan 07 2023 nick black <niblack@microsoft.com> - 5.15.86.1-2
+- Add several missing BuildRequires (w/ Rachel Menge)
+
+* Tue Jan 03 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.86.1-1
+- Auto-upgrade to 5.15.86.1
+
 * Fri Dec 23 2022 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.85.1-1
 - Auto-upgrade to 5.15.85.1
 
@@ -502,7 +567,7 @@ ln -sf linux-%{uname_r}.cfg /boot/mariner.cfg
 - Symlink /lib/modules/uname/vmlinuz to /boot/vmlinuz-uname to improve compat with scripts seeking the kernel.
 
 * Wed Jun 22 2022 Max Brodeur-Urbas <maxbr@microsoft.com> - 5.15.48.1-2
-- Enabling Vgem driver in config. 
+- Enabling Vgem driver in config.
 
 * Fri Jun 17 2022 Neha Agarwal <nehaagarwal@microsoft.com> - 5.15.48.1-1
 - Update source to 5.15.48.1
@@ -515,7 +580,7 @@ ln -sf linux-%{uname_r}.cfg /boot/mariner.cfg
 - Address CVE-2022-32250 with a nopatch
 
 * Mon Jun 06 2022 Max Brodeur-Urbas <maxbr@microsoft.com> - 5.15.41.1-4
-- Compiling ptp_kvm driver as a module 
+- Compiling ptp_kvm driver as a module
 
 * Wed Jun 01 2022 Pawel Winogrodzki <pawelwi@microsoft.com> - 5.15.41.1-3
 - Enabling "LIVEPATCH" config option.
@@ -535,7 +600,7 @@ ln -sf linux-%{uname_r}.cfg /boot/mariner.cfg
 
 * Mon May 09 2022 Neha Agarwal <nehaagarwal@microsoft.com> - 5.15.37.1-1
 - Update source to 5.15.37.1
-- Nopatch CVE-2021-4095, CVE-2022-0500, CVE-2022-0998, CVE-2022-28796, CVE-2022-29582, 
+- Nopatch CVE-2021-4095, CVE-2022-0500, CVE-2022-0998, CVE-2022-28796, CVE-2022-29582,
     CVE-2022-1048, CVE-2022-1195, CVE-2022-1353, CVE-2022-29968, CVE-2022-1015
 - Enable IFB config
 
@@ -543,7 +608,7 @@ ln -sf linux-%{uname_r}.cfg /boot/mariner.cfg
 - Update source to 5.15.34.1
 - Clean up nopatches in Patch list, no longer needed for CVE automation
 - Nopatch CVE-2022-28390, CVE-2022-28389, CVE-2022-28388, CVE-2022-28356, CVE-2022-0435,
-    CVE-2021-4202, CVE-2022-27950, CVE-2022-0433, CVE-2022-0494, CVE-2022-0330, CVE-2022-0854, 
+    CVE-2021-4202, CVE-2022-27950, CVE-2022-0433, CVE-2022-0494, CVE-2022-0330, CVE-2022-0854,
     CVE-2021-4197, CVE-2022-29156
 
 * Tue Apr 19 2022 Max Brodeur-Urbas <maxbr@microsoft.com> - 5.15.32.1-3
@@ -574,7 +639,7 @@ ln -sf linux-%{uname_r}.cfg /boot/mariner.cfg
 * Tue Mar 08 2022 cameronbaird <cameronbaird@microsoft.com> - 5.15.26.1-1
 - Update source to 5.15.26.1
 - Address CVES: 2022-0617, 2022-25375, 2022-25258, 2021-4090, 2022-25265,
-  2021-45402, 2022-0382, 2022-0185, 2021-44879, 2022-24959, 2022-0264, 
+  2021-45402, 2022-0382, 2022-0185, 2021-44879, 2022-24959, 2022-0264,
   2022-24448, 2022-24122, 2021-20194, 2022-0847, 1999-0524, 2008-4609,
   2010-0298, 2010-4563, 2011-0640, 2022-0492, 2021-3743, 2022-26966
 
@@ -593,7 +658,7 @@ ln -sf linux-%{uname_r}.cfg /boot/mariner.cfg
 * Mon Feb 07 2022 Cameron Baird <cameronbaird@microsoft.com> - 5.15.18.1-1
 - Update source to 5.15.18.1
 - Address CVE-2010-0309, CVE-2018-1000026, CVE-2018-16880, CVE-2019-3016,
-  CVE-2019-3819, CVE-2019-3887, CVE-2020-25672, CVE-2021-3564, CVE-2021-45095, 
+  CVE-2019-3819, CVE-2019-3887, CVE-2020-25672, CVE-2021-3564, CVE-2021-45095,
   CVE-2021-45469, CVE-2021-45480
 
 * Thu Feb 03 2022 Henry Li <lihl@microsoft.com> - 5.15.2.1-5

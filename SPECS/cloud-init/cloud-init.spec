@@ -1,7 +1,7 @@
 Summary:        Cloud instance init scripts
 Name:           cloud-init
-Version:        22.2
-Release:        9%{?dist}
+Version:        22.4
+Release:        2%{?dist}
 License:        GPLv3
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -9,8 +9,6 @@ Group:          System Environment/Base
 URL:            https://launchpad.net/cloud-init
 Source0:        https://launchpad.net/cloud-init/trunk/%{version}/+download/%{name}-%{version}.tar.gz
 Source1:        10-azure-kvp.cfg
-Patch0:         add-mariner-distro-support.patch
-Patch1:         CVE-2022-2084.patch
 %define cl_services cloud-config.service cloud-config.target cloud-final.service cloud-init.service cloud-init.target cloud-init-local.service
 BuildRequires:  automake
 BuildRequires:  dbus
@@ -107,7 +105,7 @@ echo -e 'CERT1\nLINE2\nLINE3\nCERT2\nLINE2\nLINE3' > "${crt_file}"
 conf_file='%{_sysconfdir}/ca-certificates.conf'
 echo -e 'line1\nline2\nline3\ncloud-init-ca-certs.crt\n' > "${conf_file}"
 
-%define test_pkgs pytest-metadata unittest2 mock attrs iniconfig netifaces
+%define test_pkgs pytest-metadata unittest2 mock attrs iniconfig netifaces pyserial
 
 pip3 install --upgrade %{test_pkgs}
 pip3 install -r test-requirements.txt
@@ -132,6 +130,7 @@ make check %{?_smp_mflags}
 %dir %{_sharedstatedir}/cloud
 %dir %{_sysconfdir}/cloud/templates
 %doc %{_sysconfdir}/cloud/cloud.cfg.d/README
+%doc %{_sysconfdir}/cloud/clean.d/README
 %{_sysconfdir}/dhcp/dhclient-exit-hooks.d/hook-dhclient
 %{_sysconfdir}/NetworkManager/dispatcher.d/hook-network-manager
 %config(noreplace) %{_sysconfdir}/cloud/templates/*
@@ -147,6 +146,13 @@ make check %{?_smp_mflags}
 %config(noreplace) %{_sysconfdir}/cloud/cloud.cfg.d/10-azure-kvp.cfg
 
 %changelog
+* Mon Apr 03 2023 Minghe Ren <mingheren@microsoft.com> - 22.4-2
+- Install python serial module in check section to avoid test failure
+
+* Wed Feb 15 2023 Minghe Ren <mingheren@microsoft.com> - 22.4-1
+- Upgrade cloud-init to version 22.4
+- Remove add-mariner-distro-support and CVE-2022-2084 pathc as no longer needed in newer version
+
 * Tue Oct 04 2022 Minghe Ren <mingheren@microsoft.com> - 22.2-9
 - add BuildRequires mariner-release to make sure /etc/os-release exists so variant can be set as mariner properly
 

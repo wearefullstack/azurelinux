@@ -1,8 +1,8 @@
 %global debug_package %{nil}
 
 Name:          helm
-Version:       3.9.4
-Release:       4%{?dist}
+Version:       3.10.3
+Release:       6%{?dist}
 Summary:       The Kubernetes Package Manager
 Group:         Applications/Networking
 License:       Apache 2.0
@@ -25,11 +25,8 @@ Source0:       %{name}-%{version}.tar.gz
 #           -cf %%{name}-%%{version}-vendor.tar.gz vendor
 #
 Source1:       %{name}-%{version}-vendor.tar.gz
-# CVE-2022-23525 has been patched in 3.10.3: https://github.com/helm/helm/commit/638ebffbc2e445156f3978f02fd83d9af1e56f5b
-Patch0:        CVE-2022-23525.patch
-# CVE-2022-23526 has been patched in 3.10.3: https://github.com/helm/helm/commit/bafafa8bb1b571b61d7a9528da8d40c307dade3d
-Patch1:        CVE-2022-23526.patch
-BuildRequires: golang >= 1.15.5
+Patch0:        CVE-2023-25165.patch
+BuildRequires: golang <= 1.18.8
 
 %description
 Helm is a tool that streamlines installing and managing Kubernetes applications. Think of it like apt/yum/homebrew for Kubernetes.
@@ -55,7 +52,32 @@ install -m 755 ./helm %{buildroot}%{_bindir}
 %{_bindir}/helm
 
 
+%check
+go test -v ./cmd/helm
+
 %changelog
+* Wed Apr 05 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 3.10.3-6
+- Bump release to rebuild with go 1.19.8
+
+* Tue Mar 28 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 3.10.3-5
+- Bump release to rebuild with go 1.19.7
+
+* Wed Mar 15 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 3.10.3-4
+- Bump release to rebuild with go 1.19.6
+
+* Thu Feb 16 2023 Suresh Thelkar <sthelkar@microsoft.com> - 3.10.3-3
+- Patch CVE-2023-25165
+- License verified.
+
+* Wed Jan 18 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 3.10.3-2
+- - Set golang <= 1.18.8 build requires
+
+* Wed Jan 04 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 3.10.3-1
+- Auto-upgrade to 3.10.3 - to fix CVE-2022-23524
+
+* Thu Dec 22 2022 Nan Liu <liunan@microsoft.com> - 3.9.4-5
+- Enable the check tests
+
 * Wed Dec 21 2022 Nan Liu <liunan@microsoft.com> - 3.9.4-4
 - Patch CVE-2022-23525, CVE-2022-23526
 

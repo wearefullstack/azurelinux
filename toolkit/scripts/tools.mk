@@ -54,7 +54,7 @@ define go_util_rule
 go-$(notdir $(tool))=$(tool)
 .PHONY: go-$(notdir $(tool))
 go-$(notdir $(tool)): $(tool)
-$(tool): $(shell find $(TOOLS_DIR)/$(notdir $(tool))/ -type f -name '*.go')
+$(tool): $(call shell_real_build_only, find $(TOOLS_DIR)/$(notdir $(tool))/ -type f -name '*.go')
 endef
 $(foreach tool,$(go_tool_targets),$(eval $(go_util_rule)))
 
@@ -81,7 +81,7 @@ $(TOOL_BINS_DIR)/%:
 	touch $@
 else
 # Rebuild the go tools as needed
-$(TOOL_BINS_DIR)/%: $(go_common_files)
+$(TOOL_BINS_DIR)/%: $(go_common_files) $(STATUS_FLAGS_DIR)/got_go_deps.flag
 	cd $(TOOLS_DIR)/$* && \
 		go test -covermode=atomic -coverprofile=$(BUILD_DIR)/tools/$*.test_coverage ./... && \
 		CGO_ENABLED=0 go build \
@@ -90,9 +90,24 @@ $(TOOL_BINS_DIR)/%: $(go_common_files)
 endif
 
 # Runs tests for common components
-$(BUILD_DIR)/tools/internal.test_coverage: $(go_internal_files) $(go_imagegen_files)
+$(BUILD_DIR)/tools/internal.test_coverage: $(go_internal_files) $(go_imagegen_files) $(STATUS_FLAGS_DIR)/got_go_deps.flag
 	cd $(TOOLS_DIR)/$* && \
 		go test -covermode=atomic -coverprofile=$@ ./...
+
+# Downloads all the go dependencies without using sudo, so we don't break other go use cases for the user.
+# We can check if $SUDO_USER is set (the user who invoked sudo), and if so, use that user to run go get via sudo -u.
+# We allow the command to fail with || echo ..., since we don't want to fail the build if the user has already
+# downloaded the dependencies as root. The go build command will download the dependencies if they are missing (but as root).
+$(STATUS_FLAGS_DIR)/got_go_deps.flag: $(go_common_files)
+	@cd $(TOOLS_DIR)/ && \
+		if [ -z "$$SUDO_USER" ]; then \
+			echo "SUDO_USER is not set, running 'go get' as user '$$USER'"; \
+			go get -d ./... || echo "Failed to run 'go get', falling back to 'go build' to pull modules" ; \
+		else \
+			echo "SUDO_USER is set, running 'go get' as user '$$SUDO_USER'"; \
+			sudo -u $$SUDO_USER go get -d ./... || echo "Failed to run 'go get', falling back to 'go build' to pull modules" ; \
+		fi && \
+		touch $@
 
 # Return a list of all directories inside tools/ which contains a *.go file in
 # the form of "go-fmt-<directory>"
@@ -107,7 +122,7 @@ go-fmt-all:
 
 # Formats the test coverage for the tools
 .PHONY: $(BUILD_DIR)/tools/all_tools.coverage
-$(BUILD_DIR)/tools/all_tools.coverage: $(shell find $(TOOLS_DIR)/ -type f -name '*.go')
+$(BUILD_DIR)/tools/all_tools.coverage: $(call shell_real_build_only, find $(TOOLS_DIR)/ -type f -name '*.go')
 	cd $(TOOLS_DIR) && go test -coverpkg=./... -covermode=atomic -coverprofile=$@ ./...
 $(test_coverage_report): $(BUILD_DIR)/tools/all_tools.coverage
 	cd $(TOOLS_DIR) && go tool cover -html=$(BUILD_DIR)/tools/all_tools.coverage -o $@
@@ -138,8 +153,8 @@ worker_chroot_manifest = $(TOOLCHAIN_MANIFESTS_DIR)/$(worker_manifest_name)
 # Find the *.rpm corresponding to each of the entries in the manifest
 # regex operation: (.*\.([^\.]+)\.rpm) extracts *.(<arch>).rpm" to determine
 # the exact path of the required rpm
-# Outputs: $(RPMS_DIR)/<arch>/<name>.<arch>.rpm
-sed_regex_full_path = 's`(.*\.([^\.]+)\.rpm)`$(toolchain_rpms_dir)/\2/\1`p'
+# Outputs: $(TOOLCHAIN_RPMS_DIR)/<arch>/<name>.<arch>.rpm
+sed_regex_full_path = 's`(.*\.([^\.]+)\.rpm)`$(TOOLCHAIN_RPMS_DIR)/\2/\1`p'
 worker_chroot_rpm_paths := $(shell sed -nr $(sed_regex_full_path) < $(worker_chroot_manifest))
 
 # The worker chroot depends on specific toolchain RPMs, the $(toolchain_rpms): target in toolchain.mk knows how
@@ -154,11 +169,11 @@ $(chroot_worker): $(worker_chroot_deps) $(depend_REBUILD_TOOLCHAIN) $(depend_TOO
 else
 $(chroot_worker):
 endif
-	$(PKGGEN_DIR)/worker/create_worker_chroot.sh $(BUILD_DIR)/worker $(worker_chroot_manifest) $(toolchain_rpms_dir) $(LOGS_DIR)
+	$(PKGGEN_DIR)/worker/create_worker_chroot.sh $(BUILD_DIR)/worker $(worker_chroot_manifest) $(TOOLCHAIN_RPMS_DIR) $(LOGS_DIR)
 
 validate-chroot: $(go-validatechroot) $(chroot_worker)
 	$(go-validatechroot) \
-	--rpm-dir="$(toolchain_rpms_dir)" \
+	--rpm-dir="$(TOOLCHAIN_RPMS_DIR)" \
 	--tmp-dir="$(BUILD_DIR)/validatechroot" \
 	--worker-chroot="$(chroot_worker)" \
 	--worker-manifest="$(worker_chroot_manifest)" \

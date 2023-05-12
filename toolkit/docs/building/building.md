@@ -20,6 +20,9 @@
       - [Force Rebuilds](#force-rebuilds)
       - [Ignoring Packages](#ignoring-packages)
       - [Source Hashes](#source-hashes)
+  - [packages.microsoft.com Repository Structure](#packagesmicrosoftcom-repository-structure)
+      - [CBL-Mariner 1.0](#cbl-mariner-10)
+      - [CBL-Mariner 2.0](#cbl-mariner-20)
   - [Keys, Certs, and Remote Sources](#keys-certs-and-remote-sources)
     - [Sources](#sources)
     - [Authentication](#authentication)
@@ -134,7 +137,6 @@ A set of bootstrapped toolchain packages (gcc etc.) are used to build CBL-Marine
 ```bash
 # Populate Toolchain from pre-existing binaries
 sudo make toolchain REBUILD_TOOLS=y
-sudo make copy-toolchain-rpms
 ```
 
 ### **Rebuild Toolchain**
@@ -294,6 +296,33 @@ The build system also enforces hash checking for sources when packaging SRPMs. F
 sudo make input-srpms SRPM_FILE_SIGNATURE_HANDLING=update
 ```
 
+### packages.microsoft.com Repository Structure
+
+CBL-Mariner packages are available on [packages.microsoft.com](https://packages.microsoft.com/cbl-mariner/). The CBL-Mariner repositories are divided into major release folders (1.0, 2.0, etc). Each top level folder is subdivided into "preview" and "production" (prod) repositories.
+
+The "preview" and "production" folders are further subdivided into purpose, and then again for architecture. This includes locations for source-rpms.
+
+#### CBL-Mariner 1.0
+
+For CBL-Mariner 1.0, the repositories are structured as follows:
+
+- **Base:** Packages released with CBL-Mariner 1.0.
+- **Update:** Base packages added or updated since CBL-Mariner 1.0's release date.
+- **CoreUI:** Targeted UI related packages.
+- **Extras:** CBL-Mariner 1.0 packages that are built by Microsoft and are closed source.
+- **NVIDIA:** Specially licensed NVIDIA packages.
+- **Microsoft:** Packages built by other, non-CBL-Mariner, Microsoft teams.
+
+#### CBL-Mariner 2.0
+
+For CBL-Mariner 2.0, the repositories are structured as follows:
+
+- **Base:** Packages released with CBL-Mariner 2.0 and their updates.
+- **Extras:** CBL-Mariner 2.0 packages that are built by Microsoft and are closed source
+- **Extended:** CBL-Mariner 2.0 packages that are not considered part of core. Generally, viewed as experimental or for development purposes.
+- **NVIDIA:** Specially licensed NVIDIA packages.
+- **Microsoft:** Packages built by other, non-CBL-Mariner, Microsoft teams.
+
 ## Keys, Certs, and Remote Sources
 
 ### Sources
@@ -386,6 +415,40 @@ sudo make image PACKAGE_URL_LIST="" REPO_LIST="" DISABLE_UPSTREAM_REPOS=y REBUIL
 
 ### Local Build Variables
 
+#### Quickrebuild Defaults
+
+Quickrebuild flags will set some flags to try and optimize builds for speed. This involves using as many packages as possible from the upstream repos for both package building and for toolchain creation. These flags are meant to work on any branch.
+
+#### `QUICK_REBUILD=...`
+
+##### `QUICK_REBUILD=`**`n`** _(default)_
+
+> Do not set any additional quickbuild flags
+
+##### `QUICK_REBUILD=`**`y`**
+
+> If they are not set, set `QUICK_REBUILD_TOOLCHAIN=y` and `QUICK_REBUILD_PACKAGES=y`.
+
+#### `QUICK_REBUILD_TOOLCHAIN=...`
+
+##### `QUICK_REBUILD_TOOLCHAIN=`**`n`** _(default)_
+
+> Do not set toolchain specific quick rebuild flags
+
+##### `QUICK_REBUILD_TOOLCHAIN=`**`y`**
+
+> Set `REBUILD_TOOLCHAIN = y`, `INCREMENTAL_TOOLCHAIN = y`, `ALLOW_TOOLCHAIN_DOWNLOAD_FAIL = y`, `REBUILD_TOOLS ?= y`.
+
+#### `QUICK_REBUILD_PACKAGES=...`
+
+##### `QUICK_REBUILD_PACKAGES=`**`n`** _(default)_
+
+> Do not set toolchain specific quick rebuild flags
+
+##### `QUICK_REBUILD_PACKAGES=`**`y`**
+
+> Set `DELTA_BUILD = y`, `REBUILD_TOOLS ?= y`, `REBUILD_TOOLS ?= y`.
+
 #### URLS and Repos
 
 The build can be configured to prioritize local builds but still use the remote sources if needed. For example: If a locally defined `*.spec` file has build dependencies which are not satisfied locally.
@@ -406,7 +469,7 @@ If that is not desired all remote sources can be disabled by clearing the follow
 
 #### `REPO_LIST=...`
 
-> List of RPM repositories to pull packages from. These packages are used to satisfy dependencies during the build process, and to compose a final image. Locally available packages are always prioritized. The repos are prioritized based on the order they appear in the list: repos earlier in the list are higher priority. CBL-Mariner provides a set of pre-populated RPM repositories accessible inside the toolkit folder under `toolkit/repos`:
+> Space separated list of `.repo` files pointing to RPM repositories to pull packages from. These packages are used to satisfy dependencies during the build process, and to compose a final image. Locally available packages are always prioritized. The repos are prioritized based on the order they appear in the list: repos earlier in the list are higher priority. CBL-Mariner provides a set of pre-populated RPM repositories accessible inside the toolkit folder under `toolkit/repos`:
 >
 > - `mariner-official-base.repo` and `mariner-official-update.repo` - default, always-on CBL-Mariner repositories.
 > - `mariner-preview.repo` - CBL-Mariner repository containing pre-release versions of RPMs **subject to change without notice**. Using this .repo file is equivalent to adding the [`USE_PREVIEW_REPO=y`](#use_preview_repoy) argument to your build command.
@@ -435,6 +498,16 @@ If that is not desired all remote sources can be disabled by clearing the follow
 ##### `INCREMENTAL_TOOLCHAIN=`**`y`**
 
 > Do not clear out the toolchain build chroot before performing a build of the final toolchain packages. RPMs within the toolchain build chroot will be used as a cache to avoid rebuilding already-built SRPMs. These RPMs can be seeded by (a) previous failed builds or (b) upstream package repos.
+
+#### `CLEAN_TOOLCHAIN_CONTAINERS=...`
+
+##### `CLEAN_TOOLCHAIN_CONTAINERS=n`
+
+> Leave the raw toolchain containers in docker when running `make clean`. If they match the configuration of the current build they will be re-used.
+
+##### `CLEAN_TOOLCHAIN_CONTAINERS=`**`y`** *(default)*
+
+> Delete all `marinertoolchain*` containers and images associated with this working directory when running `make clean`.
 
 #### `ALLOW_TOOLCHAIN_DOWNLOAD_FAIL=...`
 
@@ -569,7 +642,7 @@ These are the useful build targets:
 | clean-*                          | Most targets have a `clean-<target>` target which selectively cleans the target's output.
 | compress-rpms                    | Compresses all RPMs in `../out/RPMS` into `../out/rpms.tar.gz`. See `hydrate-rpms` target.
 | compress-srpms                   | Compresses all SRPMs in `../out/SRPMS` into `../out/srpms.tar.gz`.
-| copy-toolchain-rpms              | Copy all toolchain RPMS from `../build/rpm_cache/cache` to  `../out/RPMS`.
+| copy-toolchain-rpms              | **[DEPRECATED]: This should no longer be needed as a work around in core repo builds. Will be removed in future versions.** Copy all toolchain RPMS from `../build/toolchain_rpms` to  `../out/RPMS`.
 | expand-specs                     | Extract working copies of the `*.spec` files from the local `*.src.rpm` files.
 | fetch-image-packages             | Locate and download all packages required for an image build.
 | fetch-external-image-packages    | Download all external packages required for an image build.
@@ -703,7 +776,9 @@ To reproduce an ISO build, run the same make invocation as before, but set:
 | ARCHIVE_TOOL                  | $(shell if command -v pigz 1>/dev/null 2>&1 ; then echo pigz ; else echo gzip ; fi )                   | Default tool to use in conjunction with `tar` to extract `*.tar.gz` files. Tries to use `pigz` if available, otherwise uses `gzip`
 | INCREMENTAL_TOOLCHAIN         | n                                                                                                      | Only build toolchain RPM packages if they are not already present
 | RUN_CHECK                     | n                                                                                                      | Run the %check sections when compiling packages
-| PACKAGE_BUILD_RETRIES         | 1                                                                                                      | Number of build retries for each package
+| ALLOW_TOOLCHAIN_REBUILDS      | n                                                                                                      | Do not treat rebuilds of toolchain packages during regular package build phase as errors.
+|  PACKAGE_BUILD_RETRIES        | 1                                                                                                      | Number of build retries for each package
+| CHECK_BUILD_RETRIES           | 1                                                                                                      | Minimum number of check section retries for each package if RUN_CHECK=y and tests fail.
 | IMAGE_TAG                     | (empty)                                                                                                | Text appended to a resulting image name - empty by default. Does not apply to the initrd. The text will be prepended with a hyphen.
 | CONCURRENT_PACKAGE_BUILDS     | 0                                                                                                      | The maximum number of concurrent package builds that are allowed at once. If set to 0 this defaults to the number of logical CPUs.
 | CLEANUP_PACKAGE_BUILDS        | y                                                                                                      | Cleanup a package build's working directory when it finishes. Note that `build` directory will still be removed on a successful package build even when this is turned off.

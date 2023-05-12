@@ -2,14 +2,24 @@
 %global sha512hmac bash %{_sourcedir}/sha512hmac-openssl.sh
 %define uname_r %{version}-%{release}
 
+# find_debuginfo.sh arguments are set by default in rpm's macros.
+# The default arguments regenerate the build-id for vmlinux in the 
+# debuginfo package causing a mismatch with the build-id for vmlinuz in
+# the kernel package. Therefore, explicilty set the relevant default 
+# settings to prevent this behavior.
+%undefine _unique_build_ids
+%undefine _unique_debug_names
+%global _missing_build_ids_terminate_build 1
+%global _no_recompute_build_ids 1
+
 %define arch x86_64
 %define archdir x86
 %define config_source %{SOURCE1}
 
 Summary:        Linux Kernel for HCI
 Name:           kernel-hci
-Version:        5.15.85.1
-Release:        1%{?dist}
+Version:        5.15.107.1
+Release:        2%{?dist}
 License:        GPLv2
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -39,6 +49,11 @@ Patch17:        0018-net-mlx5-Bridge-pop-VLAN-on-egress-table-miss.patch
 Patch18:        0019-net-mlx5-Bridge-provide-flow-source-hints.patch
 Patch19:        0020-net-mlx5-Bridge-extract-code-to-lookup-and-del-notif.patch
 Patch20:        0021-net-mlx5-Bridge-support-replacing-existing-FDB-entry.patch
+Patch21:        0022-net-mlx5-Bridge-refactor-groups-sizes-and-indices.patch
+Patch22:        0023-net-mlx5-Bridge-rename-filter-fg-to-vlan_filter.patch
+Patch23:        0024-net-mlx5-Bridge-extract-VLAN-push-pop-actions-creati.patch
+Patch24:        0025-net-mlx5-Bridge-implement-infrastructure-for-VLAN-pr.patch
+Patch25:        0026-net-mlx5-Bridge-implement-QinQ-support.patch
 BuildRequires:  audit-devel
 BuildRequires:  bash
 BuildRequires:  bc
@@ -175,6 +190,11 @@ manipulation of eBPF programs and maps.
 %patch18 -p1
 %patch19 -p1
 %patch20 -p1
+%patch21 -p1
+%patch22 -p1
+%patch23 -p1
+%patch24 -p1
+%patch25 -p1
 
 make mrproper
 
@@ -245,7 +265,7 @@ install -vm 600 arch/x86/boot/bzImage %{buildroot}/boot/vmlinuz-%{uname_r}
 install -vm 400 System.map %{buildroot}/boot/System.map-%{uname_r}
 install -vm 600 .config %{buildroot}/boot/config-%{uname_r}
 cp -r Documentation/*        %{buildroot}%{_defaultdocdir}/linux-%{uname_r}
-install -vm 644 vmlinux %{buildroot}%{_libdir}/debug/lib/modules/%{uname_r}/vmlinux-%{uname_r}
+install -vm 744 vmlinux %{buildroot}%{_libdir}/debug/lib/modules/%{uname_r}/vmlinux-%{uname_r}
 # `perf test vmlinux` needs it
 ln -s vmlinux-%{uname_r} %{buildroot}%{_libdir}/debug/lib/modules/%{uname_r}/vmlinux
 
@@ -408,6 +428,45 @@ ln -sf linux-%{uname_r}.cfg /boot/mariner.cfg
 %{_sysconfdir}/bash_completion.d/bpftool
 
 %changelog
+* Wed Apr 19 2023 Rachel Menge <rachelmenge@microsoft.com> - 5.15.107.1-2
+- Disable rpm's debuginfo defaults which regenerate build-ids
+
+* Tue Apr 18 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.107.1-1
+- Auto-upgrade to 5.15.107.1
+
+* Tue Apr 11 2023 Kanika Nema <kanikanema@microsoft.com> - 5.15.102.1-2
+- Enable nvme-tcp and nvme-rdma modules
+
+* Tue Mar 14 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.102.1-1
+- Auto-upgrade to 5.15.102.1
+
+* Mon Mar 06 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.98.1-1
+- Auto-upgrade to 5.15.98.1
+
+* Sat Feb 25 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.95.1-1
+- Auto-upgrade to 5.15.95.1
+
+* Mon Feb 27 2023 Vince Perri <viperri@microsoft.com> - 5.15.94.1-2
+- Add net/mlx5 patches (patches 21-25) for QinQ support
+
+* Wed Feb 22 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.94.1-1
+- Auto-upgrade to 5.15.94.1
+
+* Tue Feb 21 2023 Rachel Menge <rachelmenge@microsoft.com> - 5.15.92.1-2
+- Install vmlinux as root executable for debuginfo
+
+* Mon Feb 06 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.92.1-1
+- Auto-upgrade to 5.15.92.1
+
+* Wed Jan 25 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.90.1-1
+- Auto-upgrade to 5.15.90.1
+
+* Sat Jan 14 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.87.1-1
+- Auto-upgrade to 5.15.87.1
+
+* Tue Jan 03 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.86.1-1
+- Auto-upgrade to 5.15.86.1
+
 * Fri Dec 23 2022 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.85.1-1
 - Auto-upgrade to 5.15.85.1
 
