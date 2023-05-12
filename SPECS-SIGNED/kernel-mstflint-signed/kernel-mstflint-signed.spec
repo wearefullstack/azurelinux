@@ -1,4 +1,6 @@
 %global debug_package %{nil}
+# The default %%__os_install_post macro ends up stripping the signatures off of the kernel module.
+%define __os_install_post %{__os_install_post_leave_signatures} %{nil}
 %define mstflint_unsigned_name kernel-mstflint
 %define mstflint_module_name mstflint_access.ko
 %define ub_kver 5.16.0
@@ -14,10 +16,10 @@ Distribution:   Mariner
 Group:          System Environment/Kernel
 URL:            https://github.com/Mellanox/%{name}
 Source0:        https://github.com/Mellanox/%{name}/releases/download/v%{version}-1/%{name}-%{version}-1.tar.gz#/%{mstflint_module_name}
-BuildRequires:  kernel-devel >= %{lb_kver}
-BuildRequires:  kernel-devel < %{ub_kver}
+BuildRequires:  kernel-headers >= %{lb_kver}
+BuildRequires:  kernel-headers < %{ub_kver}
 
-%global kver %(/bin/rpm -q --queryformat '%{RPMTAG_VERSION}-%{RPMTAG_RELEASE}' $(/bin/rpm -q --whatprovides kernel-devel))
+%global kver %(/bin/rpm -q --queryformat '%{RPMTAG_VERSION}-%{RPMTAG_RELEASE}' kernel-headers)
 %global install_mod_dir %{_libdir}/modules/%{kver}/extra/%{mstflint_unsigned_name}
 
 %description
@@ -47,7 +49,7 @@ depmod %{kver}
 
 %files -n %{mstflint_unsigned_name}
 %defattr(-,root,root,-)
-/%{install_mod_dir}/
+%{install_mod_dir}
 
 %changelog
 * Thu Mar 23 2023 Elaheh Dehghani <edehghani@microsoft.com> - 4.21.0-4
