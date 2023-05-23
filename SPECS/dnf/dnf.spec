@@ -15,8 +15,16 @@ BuildRequires:  cmake
 BuildRequires:  gettext
 BuildRequires:  python3-sphinx
 BuildRequires:  systemd
+%if 0%{?with_check}
+BuildRequires:       python3-curses
+BuildRequires:       python3-gpg
+BuildRequires:       python3-hawkey
+BuildRequires:       python3-libcomps
+BuildRequires:       python3-libdnf
+BuildRequires:       python3-rpm
+%endif
 Requires:       python3
-Requires:       python3-%{name}
+Requires:       python3-%{name} = %{version}-%{release}
 BuildArch:      noarch
 
 %description
@@ -81,6 +89,9 @@ rm -f %{buildroot}%{_bindir}/dnf-automatic-*
 rm -f %{buildroot}%{confdir}/%{name}-strict.conf
 
 %check
+# Work around the lack of a C.UTF-8 locale in Mariner
+localedef -v -c -i C -f UTF-8 C.UTF-8
+
 cd build
 ctest -VV
 
@@ -131,6 +142,7 @@ ctest -VV
 %{python3_sitelib}/%{name}
 %dir %{py3pluginpath}
 %dir %{py3pluginpath}/__pycache__/
+%exclude %{python3_sitelib}/%{name}/automatic
 
 %files automatic
 %{_bindir}/%{name}-automatic
@@ -146,15 +158,21 @@ ctest -VV
 %{python3_sitelib}/%{name}/automatic
 
 %changelog
+* Tue May 23 2023 Olivia Crain <oliviacrain@microsoft.com> - 4.8.0-3
+- Generate C.UTF-8 locale at check-time to fix package test
+- Require runtime dependencies at check-time to fix package test
+- Exclude %{python3_sitelib}/%{name}/automatic from python3-dnf to avoid double-packaging with dnf-automatic
+- Tighten dependency from dnf on python3-dnf to force same EVR on both packages 
+
 * Thu Apr 14 2022 Chris Co <chrco@microsoft.com> - 4.8.0-2
 - Emit dnf-automatic messages through motd
 - Start dnf-automatic-notifyonly timer
 
-* Tue Sep 14 2021 Thomas Crain <thcrain@microsoft.com> - 4.8.0-1
+* Tue Sep 14 2021 Olivia Crain <oliviacrain@microsoft.com> - 4.8.0-1
 - Upgrade to latest upstream version
 - Lint spec
 
-* Wed Mar 10 2021 Thomas Crain <thcrain@microsoft.com> - 4.2.18-4
+* Wed Mar 10 2021 Olivia Crain <oliviacrain@microsoft.com> - 4.2.18-4
 - Use modern bash-completion directory, now that dnf can auto-detect it based on bash-completion.pc
 
 * Tue Nov 03 2020 Ruying Chen <v-ruyche@microsoft.com> - 4.2.18-3
