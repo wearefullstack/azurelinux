@@ -136,8 +136,8 @@ make check
 %{_mandir}/*
 
 %changelog
-* Wed May 25 2023 Dylan Garrett <dylang@microsoft.com> - 5.1.0-7
-Patch CVE-2023-2700
+* Wed Jun 12 2023 Dylan Garrett <dylang@microsoft.com> - 5.1.0-7
+- Patch CVE-2023-2700
 
 * Thu Oct 06 2022 Bala <balakumaran.kannan@microsoft.com> - 6.1.0-6
 - Patch CVE-2021-3975
