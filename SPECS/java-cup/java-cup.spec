@@ -1,129 +1,103 @@
-#
-# spec file for package java-cup
-#
-# Copyright (c) 2019 SUSE LINUX GmbH, Nuernberg, Germany.
-#
-# All modifications and additions to the file contributed by third parties
-# remain the property of their copyright owners, unless otherwise agreed
-# upon. The license for this file, and modifications and additions to the
-# file, is the same license as for the pristine package itself (unless the
-# license for the pristine package is not an Open Source License, in which
-# case the license is the MIT License). An "Open Source License" is a
-# license that conforms to the Open Source Definition (Version 1.9)
-# published by the Open Source Initiative.
+%bcond_without bootstrap
+ 
+%global pkg_version     11b
 
-# Please submit bugfixes or comments via https://bugs.opensuse.org/
-#
-
-%define cvs_version    11a
-%define real_name      java-cup
-
-Summary:        LALR Parser Generator in Java
+Summary:        LALR parser generator for Java
 Name:           java-cup
-Version:        0.11
-Release:        32%{?dist}
-License:        HPND
+Version:        0.11b
+Release:        1%{?dist}
+Epoch:          1
+License:        MIT
 Group:          Development/Libraries/Java
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
-Url:            http://www2.cs.tum.edu/projects/cup/
-# TODO the version of our 11a source is no longer published
-Source0:        %{_mariner_sources_url}/develop.tar.bz2
-Source1:        java-cup-generated-files.tar.bz2
-Source2:        java-cup.license
-# From          http://www2.cs.tum.edu/projects/cup/
-Patch1:         java-cup-no-classpath-in-manifest.patch
-Patch2:         java-cup-no-cup-no-jflex.patch
-Patch3:         java-cup-classpath.patch
-# Missing symbolFactory initialization in lr_parser, causes sinjdoc to crash
-Patch4:         java-cup-lr_parser-constructor.patch
-BuildRequires:  ant
-BuildRequires:  git
-BuildRequires:  java-cup-bootstrap
-BuildRequires:  java-devel
-BuildRequires:  jflex-bootstrap
-BuildRequires:  javapackages-local-bootstrap
-BuildRequires:  javapackages-tools
-BuildRequires:  xml-commons-apis-bootstrap
-BuildRequires:  xml-commons-resolver-bootstrap
-#!BuildIgnore:  xalan-j2
-#!BuildIgnore:  xerces-j2
-#!BuildIgnore:  xml-commons-apis
-#!BuildIgnore:  xml-commons-resolver
-# Compatibility 
-Obsoletes:      java_cup < %{version}-%{release}
-Obsoletes:      java-cup < %{version}-%{release}
-Provides:       java_cup = %{version}-%{release}
-Provides:       java-cup = %{version}-%{release}
-Conflicts:      java-cup-bootstrap
+URL:            http://www2.cs.tum.edu/projects/cup/
 BuildArch:      noarch
+ 
+# https://versioncontrolseidl.in.tum.de/parsergenerators/cup/-/tree/master/
+Source0:        java-cup-%{version}.tar.bz2
+# Add OSGi manifests
+Source2:        %{name}-MANIFEST.MF
+Source4:        %{name}-runtime-MANIFEST.MF
+ 
+Patch0:         %{name}-build.patch
+ 
+%if %{with bootstrap}
+BuildRequires:  javapackages-bootstrap
+%else
+BuildRequires:  javapackages-local
+BuildRequires:  ant
+BuildRequires:  jflex
+BuildRequires:  java-cup
+%endif
+
+# Explicit javapackages-tools requires since scripts use
+# /usr/share/java-utils/java-functions
+Requires:       javapackages-tools
 
 %description
-java-cup is a LALR Parser Generator in Java. With v0.11, you can: 
-* use CUP in an Ant-Target
-* start CUP by a simple command like java -jar java-cup.jar
-   myGrammar.cup
-* use generic parametrized classes (since Java 1.5) as datatypes for
-   non terminals and terminals
-* have Your own symbol classes
+%{name} is a LALR Parser Generator for Java
+
+%package javadoc
+Summary:       Javadoc for %{name}
+
+%description javadoc
+Javadoc for %{name}
 
 %package manual
-Summary:        LALR Parser Generator in Java
-Group:          Development/Libraries/Java
+Summary:        Documentation for %{name}
 
 %description manual
-java-cup is a LALR Parser Generator in Java. With v0.11, you can: 
-* use CUP in an Ant-Target
-* start CUP by a simple command like java -jar java-cup.jar
-   myGrammar.cup
-* use generic parametrized classes (since Java 1.5) as datatypes for
-   non
-* terminals and terminals
-* have Your own symbol classes
+Documentation for %{name}.
 
 %prep
-%setup -q -n develop
-%patch1 -p1
-%patch3 -p1
+%setup -q
+%patch0 -b .build
+
+sed -i '/<javac/s/1.5/1.7/g' build.xml
+
 # remove all binary files
 find -name "*.class" -delete
-find -name "*.jar" -delete
-%patch4 -p1
-perl -pi -e 's/1\.2/1.6/g' build.xml
-mkdir -p classes dist
-cp %{SOURCE2} license.txt
+
+%mvn_file ':{*}' @1
+
+# remove prebuilt JFlex
+rm -rf %{name}-%{version}/bin/JFlex.jar
+
+# remove prebuilt %{name}, if not bootstrapping
+rm -rf %{name}-%{version}/bin/java-cup-11.jar
 
 %build
-export CLASSPATH=$(build-classpath java-cup jflex)
-export OPT_JAR_LIST=:
-ant
+export CLASSPATH=$(build-classpath %{name} %{name}-runtime jflex)
+
+%ant -Dcupversion=20150326 -Dsvnversion=65
+find -name parser.cup -delete
+%ant javadoc
+
+# inject OSGi manifests
+jar ufm dist/java-cup-%{pkg_version}.jar %{SOURCE2}
+jar ufm dist/java-cup-%{pkg_version}-runtime.jar %{SOURCE4}
 
 %install
-# jar
-mkdir -p %{buildroot}%{_javadir}
-cp -a dist/%{real_name}-%{cvs_version}.jar %{buildroot}%{_javadir}/%{real_name}-%{version}.jar
-cp -a dist/%{real_name}-%{cvs_version}-runtime.jar %{buildroot}%{_javadir}/%{real_name}-runtime-%{version}.jar
+%mvn_artifact %{name}:%{name}:%{version} dist/java-cup-%{pkg_version}.jar
+%mvn_artifact %{name}:%{name}-runtime:%{version} dist/java-cup-%{pkg_version}-runtime.jar
 
-pushd %{buildroot}%{_javadir}
-for jar in *-%{version}*; do
-  ln -s ${jar} ${jar/-%{version}/};
-done
-# compatibility symlinks
-ln -s %{real_name}.jar java_cup.jar
-ln -s %{real_name}-runtime.jar java_cup-runtime.jar
-popd
+%mvn_install -J dist/javadoc
 
-mkdir -p %{buildroot}%{_bindir}
-install -p -m 755 %{SOURCE1} %{buildroot}%{_bindir}/%{real_name}
+# wrapper script for direct execution
+%jpackage_script %{name}.Main "" "" %{name} cup true
 
-%files
-%license license.txt
+%files -f .mfiles
+%{_bindir}/cup
 %doc changelog.txt
-%attr(0755,root,root) %{_bindir}/%{real_name}
-%{_javadir}/*
+%license licence.txt
 
 %files manual
 %doc manual.html
+%license licence.txt
+
+%files javadoc -f .mfiles-javadoc
+%license licence.txt
 
 %changelog
 * Fri Apr 29 2022 Pawel Winogrodzki <pawelwi@microsoft.com> - 0.11-32
