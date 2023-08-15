@@ -6,7 +6,6 @@ Summary:        LALR parser generator for Java
 Name:           java-cup
 Version:        0.11b
 Release:        1%{?dist}
-Epoch:          1
 License:        MIT
 Group:          Development/Libraries/Java
 Vendor:         Microsoft Corporation
@@ -15,7 +14,7 @@ URL:            http://www2.cs.tum.edu/projects/cup/
 BuildArch:      noarch
  
 # https://versioncontrolseidl.in.tum.de/parsergenerators/cup/-/tree/master/
-Source0:        java-cup-%{version}.tar.bz2
+Source0:        java-cup-%{version}.tar.gz
 # Add OSGi manifests
 Source2:        %{name}-MANIFEST.MF
 Source4:        %{name}-runtime-MANIFEST.MF
