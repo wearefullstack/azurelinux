@@ -64,7 +64,7 @@ find -name "*.class" -delete
 rm -rf %{name}-%{version}/bin/JFlex.jar
 
 # remove prebuilt %{name}, if not bootstrapping
-rm -rf %{name}-%{version}/bin/java-cup-11.jar
+rm -rf %{name}-%{version}/bin/%{name}-11.jar
 
 %build
 export CLASSPATH=$(build-classpath %{name} %{name}-runtime jflex)
@@ -74,12 +74,12 @@ find -name parser.cup -delete
 %ant javadoc
 
 # inject OSGi manifests
-jar ufm dist/java-cup-%{pkg_version}.jar %{SOURCE1}
-jar ufm dist/java-cup-%{pkg_version}-runtime.jar %{SOURCE2}
+jar ufm dist/%{name}-%{pkg_version}.jar %{SOURCE1}
+jar ufm dist/%{name}-%{pkg_version}-runtime.jar %{SOURCE2}
 
 %install
-%mvn_artifact %{name}:%{name}:%{version} dist/java-cup-%{pkg_version}.jar
-%mvn_artifact %{name}:%{name}-runtime:%{version} dist/java-cup-%{pkg_version}-runtime.jar
+%mvn_artifact %{name}:%{name}:%{version} dist/%{name}-%{pkg_version}.jar
+%mvn_artifact %{name}:%{name}-runtime:%{version} dist/%{name}-%{pkg_version}-runtime.jar
 
 %mvn_install -J dist/javadoc
 
