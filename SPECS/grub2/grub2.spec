@@ -6,7 +6,7 @@
 Summary:        GRand Unified Bootloader
 Name:           grub2
 Version:        2.06
-Release:        10%{?dist}
+Release:        11%{?dist}
 License:        GPLv3+
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -15,6 +15,10 @@ URL:            https://www.gnu.org/software/grub
 Source0:        https://git.savannah.gnu.org/cgit/grub.git/snapshot/grub-%{version}.tar.gz
 Source1:        https://git.savannah.gnu.org/cgit/gnulib.git/snapshot/gnulib-%{gnulibversion}.tar.gz
 Source2:        sbat.csv.in
+Source3:        00_header
+Source4:        31_systemd
+Source5:        32_grubenv
+Source6:        50_mariner
 # Incorporate relevant patches from Fedora 34
 # EFI Secure Boot / Handover Protocol patches
 Patch0001:      0001-Add-support-for-Linux-EFI-stub-loading.patch
@@ -52,6 +56,7 @@ Patch0167:      0167-restore-umask-for-grub-config.patch
 Patch0170:      0170-fix-memory-alloc-errno-reset.patch
 Patch0171:      CVE-2022-2601.patch
 Patch0172:      CVE-2022-3775.patch
+Patch0173:      0173-add-grub-mariner-fields.patch
 BuildRequires:  autoconf
 BuildRequires:  device-mapper-devel
 BuildRequires:  python3
@@ -225,6 +230,11 @@ cp -a install-for-pc/. %{buildroot}/.
 mkdir %{buildroot}%{_sysconfdir}/default
 touch %{buildroot}%{_sysconfdir}/default/grub
 mkdir %{buildroot}%{_sysconfdir}/sysconfig
+find %{buildroot}%{_sysconfdir}/grub.d -type f ! -name README -delete
+install -m 750 %{SOURCE3} %{buildroot}%{_sysconfdir}/grub.d/00_header
+install -m 750 %{SOURCE4} %{buildroot}%{_sysconfdir}/grub.d/31_systemd
+install -m 750 %{SOURCE5} %{buildroot}%{_sysconfdir}/grub.d/32_grubenv
+install -m 750 %{SOURCE6} %{buildroot}%{_sysconfdir}/grub.d/50_mariner
 ln -sf %{_sysconfdir}/default/grub %{buildroot}%{_sysconfdir}/sysconfig/grub
 install -vdm 700 %{buildroot}/boot/%{name}
 touch %{buildroot}/boot/%{name}/grub.cfg
@@ -270,7 +280,36 @@ GRUB_PXE_MODULE_SOURCE=%{buildroot}%{_datadir}/grub2-efi/grubaa64-noprefix.efi
 cp $GRUB_MODULE_SOURCE $EFI_BOOT_DIR/$GRUB_MODULE_NAME
 cp $GRUB_PXE_MODULE_SOURCE $EFI_BOOT_DIR/$GRUB_PXE_MODULE_NAME
 
-%post   -p /sbin/ldconfig
+%post
+/sbin/ldconfig
+# When grub2 is installed, we need to populate the defaults file with 
+# the minimal configs required to work with our templates in /etc/grub.d
+# Respect existing /etc/default/grub options if we are installing on an existing image.
+
+if [ ! -f /etc/default/grub ]; then
+  touch /etc/default/grub
+fi
+
+if [ -s /etc/default/grub ]; then
+  source /etc/default/grub
+fi
+
+boot_dev="$(df /boot/ | tail -1 | cut -d' ' -f1)"
+root_dev="$(df / | tail -1 | cut -d' ' -f1)"
+
+boot_prefix=""
+[ "$root_dev" == "$boot_dev" ] && boot_prefix="/boot"
+
+[ -z "$GRUB_TIMEOUT" ] && echo "GRUB_TIMEOUT=$(grep -m 1 "set timeout" /boot/grub2/grub.cfg | cut -d'=' -f2-)" >> /etc/default/grub
+[ -z "$GRUB_DISTRIBUTOR" ] && echo "GRUB_DISTRIBUTOR=$(cat /etc/os-release | grep PRETTY_NAME | cut -d'=' -f2-)" >> /etc/default/grub
+[ -z "$GRUB_DEVICE_UUID" ] && echo "GRUB_DEVICE_UUID=$(blkid $boot_dev -s UUID -o value)" >> /etc/default/grub
+[ -z "$GRUB_DISABLE_SUBMENU" ] && echo "GRUB_DISABLE_SUBMENU=true" >> /etc/default/grub
+[ -z "$GRUB_TERMINAL_OUTPUT" ] && echo "GRUB_TERMINAL_OUTPUT=console" >> /etc/default/grub
+[ -z "$GRUB_CMDLINE_LINUX" ] && echo "GRUB_CMDLINE_LINUX='$(sed -n 's/.*\$mariner_linux//p' /boot/grub2/grub.cfg | head -1)'" >> /etc/default/grub
+[ -z "$GRUB_ENABLE_BLSCFG" ] && echo "GRUB_ENABLE_BLSCFG=true" >> /etc/default/grub
+[ -z "$GRUB_MARINER_PARTUUID" ] && echo "GRUB_MARINER_PARTUUID=PARTUUID=$(blkid $root_dev -s PARTUUID -o value)" >> /etc/default/grub
+[ -z "$GRUB_MARINER_BOOTPREFIX" ] && echo "GRUB_MARINER_BOOTPREFIX=$boot_prefix" >> /etc/default/grub
+
 %postun -p /sbin/ldconfig
 
 %files
@@ -280,18 +319,15 @@ cp $GRUB_PXE_MODULE_SOURCE $EFI_BOOT_DIR/$GRUB_PXE_MODULE_NAME
 %dir /boot/%{name}
 %config() %{_sysconfdir}/bash_completion.d/grub
 %config() %{_sysconfdir}/grub.d/00_header
-%config() %{_sysconfdir}/grub.d/10_linux
-%config() %{_sysconfdir}/grub.d/20_linux_xen
-%config() %{_sysconfdir}/grub.d/30_os-prober
-%config() %{_sysconfdir}/grub.d/30_uefi-firmware
-%config(noreplace) %{_sysconfdir}/grub.d/40_custom
-%config(noreplace) %{_sysconfdir}/grub.d/41_custom
+%config() %{_sysconfdir}/grub.d/31_systemd
+%config() %{_sysconfdir}/grub.d/32_grubenv
+%config() %{_sysconfdir}/grub.d/50_mariner
 %{_sysconfdir}/grub.d/README
 /sbin/*
 %{_bindir}/*
 %{_datarootdir}/grub/*
 %{_sysconfdir}/sysconfig/grub
-%{_sysconfdir}/default/grub
+%attr(0644,root,root) %ghost %config(noreplace) %{_sysconfdir}/default/grub
 %ghost %config(noreplace) /boot/%{name}/grub.cfg
 
 %ifarch x86_64
@@ -327,6 +363,9 @@ cp $GRUB_PXE_MODULE_SOURCE $EFI_BOOT_DIR/$GRUB_PXE_MODULE_NAME
 %endif
 
 %changelog
+* Fri Aug 11 2023 Cameron Baird <cameronbaird@microsoft.com> - 2.06-11
+- Enable support for grub2-mkconfig grub.cfg generation
+
 * Thu Jun 08 2023 Daniel McIlvaney <damcilva@microsoft.com> - 2.06-10
 - CVE-2022-3775
 

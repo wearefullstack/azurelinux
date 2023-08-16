@@ -1,0 +1,6 @@
+#!/bin/sh
+cat << EOF
+if [ -f $GRUB_MARINER_BOOTPREFIX/grub2/grubenv ]; then
+	load_env -f $GRUB_MARINER_BOOTPREFIX/grub2/grubenv
+fi
+EOF

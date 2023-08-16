@@ -1,0 +1,5 @@
+#!/bin/sh
+cat << EOF
+set timeout=$GRUB_TIMEOUT
+search -n -u $GRUB_DEVICE_UUID -s
+EOF

@@ -1,0 +1,8 @@
+#!/bin/sh
+cat << EOF
+if [ -f  $GRUB_MARINER_BOOTPREFIX/systemd.cfg ]; then
+        load_env -f $GRUB_MARINER_BOOTPREFIX/systemd.cfg
+else
+        set systemd_cmdline=net.ifnames=0
+fi
+EOF

@@ -1,0 +1,34 @@
+From aa90698a4875025a6b56a6a00bc53b0edf5c8098 Mon Sep 17 00:00:00 2001
+From: Cameron Baird <cameronbaird@microsoft.com>
+Date: Mon, 14 Aug 2023 12:15:49 -0700
+Subject: grub-mkconfig: Add mariner-specific fields 'GRUB_MARINER_*' 
+
+This commit adds GRUB_MARINER_PARTUUID (the rootfs PARTUUID passed to linux)
+and GRUB_MARINER_BOOTPREFIX (path on .BootUUID to /boot). 
+These are image-level properties that get installed in /etc/default/grub
+by our tools and are used by grub2-mkconfig to generate
+/boot/grub/grub.cfg
+
+Signed-Off-By: Cameron Baird <cameronbaird@microsoft.com>
+---
+ util/grub-mkconfig.in | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/util/grub-mkconfig.in b/util/grub-mkconfig.in
+index f8cbb8d7a..296d8cdeb 100644
+--- a/util/grub-mkconfig.in
++++ b/util/grub-mkconfig.in
+@@ -251,7 +251,9 @@ export GRUB_DEFAULT \
+   GRUB_ENABLE_CRYPTODISK \
+   GRUB_BADRAM \
+   GRUB_OS_PROBER_SKIP_LIST \
+-  GRUB_DISABLE_SUBMENU
++  GRUB_DISABLE_SUBMENU  \
++  GRUB_MARINER_PARTUUID \
++  GRUB_MARINER_BOOTPREFIX
+ 
+ if test "x${grub_cfg}" != "x"; then
+   rm -f "${grub_cfg}.new"
+-- 
+2.25.1
+
