@@ -1,6 +1,5 @@
 #!/bin/sh
 cat << EOF
-set rootdevice=$GRUB_MARINER_PARTUUID
 load_env -f $GRUB_MARINER_BOOTPREFIX/mariner.cfg
 
 menuentry "CBL-Mariner" {
