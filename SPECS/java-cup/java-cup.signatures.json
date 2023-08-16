@@ -1,6 +1,6 @@
 {
     "Signatures": {
-        "java-cup.tar.gz": "7f039821d692ead172802501fd886ef117a2f83de392fa8bc6baa0559e6e7369",
+        "java-cup-0.11b.tar.gz": "7f039821d692ead172802501fd886ef117a2f83de392fa8bc6baa0559e6e7369",
         "java-cup.license": "252a94c415df3c72289293888e70e137ffecef2a7c7823d984eae4e0b6287a6e",
         "java-cup-runtime-MANIFEST.MF": "0234500d8169cd9ab0891e852064638b8a6acfba75f9c4414af58e6a5ab65d80",
         "java-cup-MANIFEST.MF": "83594559233302206092487c52cdae9cf5eb3f26dd2606ddcb057d2b7bfc6f9a"
