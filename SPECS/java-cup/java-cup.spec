@@ -50,7 +50,7 @@ Summary:        Documentation for %{name}
 Documentation for %{name}.
 
 %prep
-%setup -q
+%setup -q -n %{name}
 %patch0 -b .build
 
 sed -i '/<javac/s/1.5/1.7/g' build.xml
