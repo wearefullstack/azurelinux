@@ -16,8 +16,8 @@ BuildArch:      noarch
 # https://versioncontrolseidl.in.tum.de/parsergenerators/cup/-/tree/master/
 Source0:        java-cup-%{version}.tar.gz
 # Add OSGi manifests
-Source2:        %{name}-MANIFEST.MF
-Source4:        %{name}-runtime-MANIFEST.MF
+Source1:        %{name}-MANIFEST.MF
+Source2:        %{name}-runtime-MANIFEST.MF
  
 Patch0:         %{name}-build.patch
  
@@ -74,8 +74,8 @@ find -name parser.cup -delete
 %ant javadoc
 
 # inject OSGi manifests
-jar ufm dist/java-cup-%{pkg_version}.jar %{SOURCE2}
-jar ufm dist/java-cup-%{pkg_version}-runtime.jar %{SOURCE4}
+jar ufm dist/java-cup-%{pkg_version}.jar %{SOURCE1}
+jar ufm dist/java-cup-%{pkg_version}-runtime.jar %{SOURCE2}
 
 %install
 %mvn_artifact %{name}:%{name}:%{version} dist/java-cup-%{pkg_version}.jar
