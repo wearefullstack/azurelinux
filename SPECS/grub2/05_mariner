@@ -1,0 +1,32 @@
+
+boot_dev="$(df /boot/ | tail -1 | cut -d' ' -f1)"
+root_dev="$(df / | tail -1 | cut -d' ' -f1)"
+
+bootprefix=""
+if [ "$boot_dev" == "$root_dev" ]; then
+    bootprefix="/boot"
+fi
+
+# Ideally we load these during mkconfig and inject the literal values into the
+# produced grub.cfg. Unfortunately, these cfgs today only work with load_env
+# since the cmdline fields are not wrapped in quotes. 
+[ -e "$bootprefix/systemd.cfg" ] && echo "load_env -f $bootprefix/systemd.cfg"
+if [ -e "$bootprefix/mariner.cfg" ]; then
+    echo "load_env -f $bootprefix/mariner.cfg"
+else
+    echo "Warning: a valid mariner.cfg file was not detected at $bootprefix/mariner.cfg" 1>&2
+fi
+
+# TODO: this portion of the logic DOESN'T WORK; we would need a patch to
+# the functionality of grub-mkconfig (and thus diverge from expected behavior)
+ 
+# Generate missing default values for a Mariner image
+[ -z "$GRUB_TIMEOUT" ] && echo "GRUB_TIMEOUT=$(grep -m 1 "set timeout=" /boot/grub2/grub.cfg | cut -d'=' -f2-)"
+[ -z "$GRUB_DISTRIBUTOR" ] && echo "GRUB_DISTRIBUTOR=$(cat /etc/os-release | grep PRETTY_NAME | cut -d'=' -f2-)"
+[ -z "$GRUB_DEVICE_UUID" ] && echo "GRUB_DEVICE_UUID=$(blkid $boot_dev -s UUID -o value)"
+[ -z "$GRUB_DISABLE_SUBMENU" ] && echo "GRUB_DISABLE_SUBMENU=true"
+[ -z "$GRUB_TERMINAL_OUTPUT" ] && echo "GRUB_TERMINAL_OUTPUT=console"
+[ -z "$GRUB_CMDLINE_LINUX" ] && echo "GRUB_CMDLINE_LINUX='$(sed -n 's/.*\$mariner_linux//p' /boot/grub2/grub.cfg | head -1)'"
+[ -z "$GRUB_ENABLE_BLSCFG" ] && echo "GRUB_ENABLE_BLSCFG=true"
+
+echo "terminal_output $GRUB_TERMINAL_OUTPUT"

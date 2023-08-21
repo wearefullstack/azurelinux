@@ -1,0 +1,1 @@
+GRUB_CMDLINE_LINUX="{{.LuksUUID}} {{.LVM}} {{.IMAPolicy}} {{.ReadOnlyVerityRoot}} {{.SELinux}} rd.auto=1 root=$LINUX_ROOT_DEVICE \$mariner_cmdline lockdown=integrity sysctl.kernel.unprivileged_bpf_disabled=1 \$systemd_cmdline {{.CGroup}} {{.ExtraCommandLine}} $kernelopts"
