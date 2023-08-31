@@ -1,11 +1,11 @@
-Vendor:         Microsoft Corporation
-Distribution:   Mariner
 %bcond_with multiuser
 %global _hardened_build 1
 
+Vendor:         Microsoft Corporation
+Distribution:   Mariner
 Summary:        A screen manager that supports multiple logins on one terminal
 Name:           screen
-Version:        4.9.0
+Version:        4.9.1
 Release:        1%{?dist}
 License:        GPLv3+
 URL:            http://www.gnu.org/software/screen
@@ -23,7 +23,6 @@ Patch2:         screen-4.3.1-screenrc.patch
 Patch3:         screen-E3.patch
 Patch4:         screen-4.3.1-suppress_remap.patch
 Patch5:         screen-4.3.1-crypt.patch
-Patch6:         screen-4.9.0-braille.patch
 
 %description
 The screen utility allows you to have multiple logins on just one
@@ -117,6 +116,9 @@ rm -f $RPM_BUILD_ROOT%{_infodir}/dir
 %endif
 
 %changelog
+* Thu Aug 31 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 4.9.1-1
+- Auto-upgrade to 4.9.1 - Address CVE-2021-20230
+
 * Wed Nov 09 2022 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 4.9.0-1
 - Auto-upgrade to 4.9.0 - CVE-2021-26937
 
