@@ -71,8 +71,9 @@ route add -net 224.0.0.0 netmask 240.0.0.0 dev lo
 chmod g+w . -R
 useradd test -G root -m
 sudo -u test pip3 install --upgrade pip
-sudo -u test pip3 install 'tox>=3.27.1,<4.0.0' PyHamcrest cython-test-exception-raiser
+sudo -u test pip3 install 'tox<4.0.0' PyHamcrest cython-test-exception-raiser
 chmod g+w . -R
+sed -i -e 's/install_requires=\[/install_requires=\[\'\'py\',/g' "/usr/src/mariner/BUILD/twisted-twisted-22.10.0/.tox/.tox/lib/python3.9/site-packages/tox_wheel/setup.py"
 LANG=en_US.UTF-8 sudo -u test /home/test/.local/bin/tox -e nocov-posix-alldeps
 
 %files -n python3-twisted
