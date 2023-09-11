@@ -98,6 +98,10 @@ parameters:
     type: string
     default: "srpms.tar.gz"
 
+  - name: SRPM_BUILD_LIST
+    type: string
+    default: "tree"
+
 steps:
   - template: ToolkitCheck.yml@${{ parameters.selfRepoName }}
     parameters:
@@ -172,7 +176,9 @@ steps:
         $delta_fetch_arg \
         $quick_rebuild_packages_arg \
         $run_check_arg \
-        $use_ccache_arg
+        $use_ccache_arg \
+        SRPM_PACK_LIST="${{ parameters.PACKAGE_REBUILD_LIST }}" \
+        PACKAGE_REBUILD_LIST="${{ parameters.PACKAGE_REBUILD_LIST }}"
     displayName: "Build packages"
 
   - ${{ if parameters.outputArtifactsFolder }}:
