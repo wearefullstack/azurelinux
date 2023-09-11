@@ -177,8 +177,8 @@ steps:
         $quick_rebuild_packages_arg \
         $run_check_arg \
         $use_ccache_arg \
-        SRPM_PACK_LIST="${{ parameters.PACKAGE_REBUILD_LIST }}" \
-        PACKAGE_REBUILD_LIST="${{ parameters.PACKAGE_REBUILD_LIST }}"
+        SRPM_PACK_LIST="${{ parameters.SRPM_BUILD_LIST }}" \
+        PACKAGE_REBUILD_LIST="${{ parameters.SRPM_BUILD_LIST }}"
     displayName: "Build packages"
 
   - ${{ if parameters.outputArtifactsFolder }}:
