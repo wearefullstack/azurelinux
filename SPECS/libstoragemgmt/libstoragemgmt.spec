@@ -192,6 +192,7 @@ install -m 755 tools/udev/scan-scsi-target \
     %{buildroot}/%{_udevrulesdir}/../scan-scsi-target
 
 %check
+useradd libstoragemgmt -G libstoragemgmt -m
 check_status=0
 if ! make check
 then
