@@ -194,7 +194,7 @@ install -m 755 tools/udev/scan-scsi-target \
 %check
 useradd libstoragemgmt -G libstoragemgmt -m
 check_status=0
-if ! make check
+if ! sudo -u libstoragemgmt make installcheck
 then
   cat test-suite.log
   check_status=1
