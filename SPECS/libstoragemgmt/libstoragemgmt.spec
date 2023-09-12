@@ -1,7 +1,7 @@
 Summary:        Storage array management library
 Name:           libstoragemgmt
 Version:        1.9.3
-Release:        4%{?dist}
+Release:        5%{?dist}
 License:        LGPLv2+
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -27,6 +27,7 @@ BuildRequires:  python3-pywbem
 BuildRequires:  python3-six
 BuildRequires:  sqlite-devel
 %{?systemd_requires}
+BuildRequires:  glibc-debuginfo
 BuildRequires:  systemd
 BuildRequires:  systemd-devel
 BuildRequires:  valgrind
@@ -455,6 +456,9 @@ fi
 %{_mandir}/man1/local_lsmplugin.1*
 
 %changelog
+* Tue Sep 12 2023 Osama Esmail <osamaesmail@microsoft.com> - 1.9.3-5
+- Adding `glibc-debuginfo` for tests
+
 * Fri Mar 04 2022 Muhammad Falak <mwani@microsoft.com> - 1.9.3-4
 - Cleanup duplicate BRs
 - Add an explicit BR on `git` to enable ptest
