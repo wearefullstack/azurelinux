@@ -28,6 +28,7 @@ BuildRequires:  python3-six
 BuildRequires:  sqlite-devel
 %{?systemd_requires}
 BuildRequires:  glibc-debuginfo
+BuildRequires:  sudo
 BuildRequires:  systemd
 BuildRequires:  systemd-devel
 BuildRequires:  valgrind
@@ -192,7 +193,7 @@ install -m 755 tools/udev/scan-scsi-target \
     %{buildroot}/%{_udevrulesdir}/../scan-scsi-target
 
 %check
-useradd libstoragemgmt -G libstoragemgmt -m
+useradd libstoragemgmt -G root -m
 check_status=0
 if ! sudo -u libstoragemgmt make installcheck
 then
