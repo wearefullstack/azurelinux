@@ -58,7 +58,7 @@ ln -s %{_builddir}/test .
 # Get rid of Bundler.
 sed -i '/bundler/ s/^/#/' Rakefile
 
-ruby -Ilib:. -e 'Dir.glob "test/**/test_*.rb", &method(:require)'
+ruby -Ilib:. -e 'Dir.glob "test/**/test_*.rb", &method(:require)' --verbose
 popd
 
 %files

@@ -62,7 +62,7 @@ rm -vr deps
 %ninja_install -C %{_target_platform}
 
 %check
-%ninja_test -C %{_target_platform}
+%ninja_test -C %{_target_platform} --rerun-failed --output-on-failure
 
 %files
 %license COPYING

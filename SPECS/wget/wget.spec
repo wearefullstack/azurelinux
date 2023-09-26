@@ -51,6 +51,7 @@ export PERL_MM_USE_DEFAULT=1
 cpan local::lib
 cpan HTTP::Daemon
 make  %{?_smp_mflags} check
+cat "tests/test-suite.log"
 
 %files -f %{name}.lang
 %defattr(-,root,root)
