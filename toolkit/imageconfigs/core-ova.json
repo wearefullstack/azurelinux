@@ -60,11 +60,6 @@
                 {
                     "Name": "root"
                 }
-            ],
-            "FinalizeImageScripts": [
-                {
-                    "Path": "postinstallscripts/grub/grub2-mkconfig-init.sh"
-                }
             ]
         }
     ]

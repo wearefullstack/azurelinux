@@ -72,12 +72,7 @@
             "KernelCommandLine": {
                 "ExtraCommandLine": "console=ttyS0"
             },
-            "Hostname": "cbl-mariner",
-            "FinalizeImageScripts": [
-                {
-                    "Path": "postinstallscripts/grub/grub2-mkconfig-init.sh"
-                }
-            ]
+            "Hostname": "cbl-mariner"
         }
     ]
 }

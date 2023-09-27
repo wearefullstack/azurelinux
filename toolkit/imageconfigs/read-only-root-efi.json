@@ -101,11 +101,6 @@
                     "PasswordHashed": true,
                     "_comment": "The password is 'p@ssw0rd', this should be regenerated with 'openssl passwd -6 -salt <YOUR_SALT> <YOUR_PASSWORD>', or use the json key 'SSHPubKeyPaths' to use an SSH key for login"
                 }
-            ],
-            "FinalizeImageScripts": [
-                {
-                    "Path": "postinstallscripts/grub/grub2-mkconfig-init.sh"
-                }
             ]
         }
     ]

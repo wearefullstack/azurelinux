@@ -1062,6 +1062,21 @@ func InstallGrubCfg(installRoot, rootDevice, bootUUID, bootPrefix string, encryp
 	return
 }
 
+func CallGrubMkconfig(installChroot *safechroot.Chroot) (err error) {
+	squashErrors := false
+
+	ReportActionf("Running grub2-mkconfig...")
+	err = installChroot.UnsafeRun(func() error {
+		return shell.ExecuteLive(squashErrors, "grub2-mkconfig", "-o", "/boot/grub2/grub.cfg") 
+	})
+
+	if err != nil {
+		return
+	}
+
+	return
+}
+
 func updateHostname(installRoot, hostname string) (err error) {
 	ReportAction("Configuring hostname")
 
