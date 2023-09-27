@@ -1070,10 +1070,6 @@ func CallGrubMkconfig(installChroot *safechroot.Chroot) (err error) {
 		return shell.ExecuteLive(squashErrors, "grub2-mkconfig", "-o", "/boot/grub2/grub.cfg") 
 	})
 
-	if err != nil {
-		return
-	}
-
 	return
 }
 
