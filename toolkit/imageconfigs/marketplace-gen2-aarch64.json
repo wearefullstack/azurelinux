@@ -75,7 +75,12 @@
             "KernelCommandLine": {
                 "ExtraCommandLine": "console=tty1 console=ttyAMA0 earlycon=pl011,0xeffec000 initcall_blacklist=arm_pmu_acpi_init"
             },
-            "Hostname": "cbl-mariner"
+            "Hostname": "cbl-mariner",
+            "FinalizeImageScripts": [
+                {
+                    "Path": "postinstallscripts/grub/grub2-mkconfig-init.sh"
+                }
+            ]
         }
     ]
 }

@@ -47,7 +47,12 @@
             "KernelOptions": {
                 "default": "kernel"
             },
-            "Hostname": "cbl-mariner"
+            "Hostname": "cbl-mariner",
+            "FinalizeImageScripts": [
+                {
+                    "Path": "postinstallscripts/grub/grub2-mkconfig-init.sh"
+                }
+            ]
         }
     ]
 }
