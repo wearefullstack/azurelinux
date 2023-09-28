@@ -13,6 +13,8 @@ BuildRequires:  openssl-devel
 BuildRequires:  perl
 BuildRequires:  perl-HTTP-Daemon
 BuildRequires:  perl-English
+BuildRequires:  perl-IO-Socket-SSL
+BuildRequires:  perl-lib
 %endif
 Requires:       openssl
 
