@@ -62,8 +62,7 @@ rm -vr deps
 %ninja_install -C %{_target_platform}
 
 %check
-# %ninja_test -C %{_target_platform} --rerun-failed --output-on-failure
-./libgit2_tests
+%ninja_test -C %{_target_platform} -v
 
 %files
 %license COPYING
