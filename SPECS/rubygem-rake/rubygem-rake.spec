@@ -39,11 +39,9 @@ Documentation for %{name}.
 
 %prep
 %setup -q -n %{gem_name}-%{version}
-mv ../%{gem_name}-%{version}.gemspec .
 
 %build
 gem build %{gem_name}
-%gem_install
 
 %install
 gem install -V --local --force --install-dir %{buildroot}/%{gemdir} --bindir %{buildroot}/%{_bindir} %{gem_name}-%{version}.gem
