@@ -64,6 +64,9 @@ cat "tests/test-suite.log"
 %{_datadir}/locale/*/LC_MESSAGES/*.mo
 
 %changelog
+* Thu Sep 28 2023 Osama Esmail <osamaesmail@microsoft.com> - 
+- Trying to fix tests
+
 * Wed Jan 26 2022 Neha Agarwal <nehaagarwal@microsoft.com> - 1.21.2-1
 - Update to version 1.21.2.
 

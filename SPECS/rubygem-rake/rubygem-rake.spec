@@ -82,6 +82,9 @@ popd
 %doc %{gem_instdir}/*.rdoc
 
 %changelog
+* Thu Sep 28 2023 Osama Esmail <osamaesmail@microsoft.com> - 13.0.6-7
+- Trying to fix tests
+
 * Mon Oct 24 2022 Pawel Winogrodzki <pawelwi@microsoft.com> - 13.0.6-6
 - Adding 'Obsoletes: ruby <= 3.1.2-2'.
 
