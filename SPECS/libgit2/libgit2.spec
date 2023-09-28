@@ -47,26 +47,19 @@ sed -i '/-sonline/s/^/#/' tests/CMakeLists.txt
 rm -vr deps
 
 %build
-mkdir build && cd build
-cmake --build . \
-    -DUSE_HTTP_PARSER=system \
-    -DREGEX_BACKEND=pcre2 \
-    -DUSE_NTLMCLIENT=off
-    -DUSE_HTTPS=OpenSSL \
-    %{nil}
-# %cmake . -B%{_target_platform} \
-#   -GNinja \
-#   -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-#   -DREGEX_BACKEND=pcre2 \
-#   -DUSE_HTTP_PARSER=system \
-#   -DUSE_SHA1=HTTPS \
-#   -DUSE_HTTPS=OpenSSL \
-#   -DUSE_NTLMCLIENT=OFF \
-#   %{nil}
-# %ninja_build -C %{_target_platform}
+%cmake . -B%{_target_platform} \
+  -GNinja \
+  -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+  -DREGEX_BACKEND=pcre2 \
+  -DUSE_HTTP_PARSER=system \
+  -DUSE_SHA1=HTTPS \
+  -DUSE_HTTPS=OpenSSL \
+  -DUSE_NTLMCLIENT=OFF \
+  %{nil}
+%ninja_build -C %{_target_platform}
 
 %install
-make destdir=%{buildroot} install
+%ninja_install -C %{_target_platform}
 
 %check
 # %ninja_test -C %{_target_platform} --rerun-failed --output-on-failure
