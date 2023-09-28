@@ -48,7 +48,12 @@ rm -vr deps
 
 %build
 mkdir build && cd build
-cmake ..
+cmake --build . \
+    -DUSE_HTTP_PARSER=system \
+    -DREGEX_BACKEND=pcre2 \
+    -DUSE_NTLMCLIENT=off
+    -DUSE_HTTPS=OpenSSL \
+    %{nil}
 # %cmake . -B%{_target_platform} \
 #   -GNinja \
 #   -DCMAKE_BUILD_TYPE=RelWithDebInfo \

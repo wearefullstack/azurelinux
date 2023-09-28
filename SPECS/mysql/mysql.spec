@@ -48,7 +48,7 @@ make %{?_smp_mflags}
 make DESTDIR=%{buildroot} install
 
 %check
-make test
+make test --rerun-failed --output-on-failure
 
 %files
 %defattr(-,root,root)

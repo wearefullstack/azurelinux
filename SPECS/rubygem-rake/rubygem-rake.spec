@@ -39,9 +39,11 @@ Documentation for %{name}.
 
 %prep
 %setup -q -n %{gem_name}-%{version}
+mv ../%{gem_name}-%{version}.gemspec .
 
 %build
 gem build %{gem_name}
+%gem_install
 
 %install
 gem install -V --local --force --install-dir %{buildroot}/%{gemdir} --bindir %{buildroot}/%{_bindir} %{gem_name}-%{version}.gem
@@ -51,28 +53,28 @@ mkdir -p %{buildroot}%{_mandir}/man1
 mv %{buildroot}%{gem_instdir}/doc/rake.1 %{buildroot}%{_mandir}/man1
 
 %check
-pushd /%{gem_instdir}
-# symlink tests here
-ln -s %{_builddir}/test .
-
+pushd .%{gem_instdir}
+ 
 # Get rid of Bundler.
 sed -i '/bundler/ s/^/#/' Rakefile
-
-rake
-# ruby -Ilib:. -e 'Dir.glob "test/**/test_*.rb", &method(:require)'
+ 
+export TESTOPTS=--verbose
+export VERBOSE=y
+export RUBYLIB=$(pwd)/lib
+ruby ./exe/rake test
 popd
 
 %files
 %dir %{gem_instdir}
+%{_bindir}/rake
 %license %{gem_instdir}/MIT-LICENSE
 %{gem_instdir}/exe
 %{gem_libdir}
 %exclude %{gem_cache}
 %{gem_spec}
 %{_mandir}/man1/*
-%{_bindir}/rake
-%exclude %{gem_instdir}/.*
-%exclude %{gem_instdir}/rake.gemspec
+# %exclude %{gem_instdir}/.*
+# %exclude %{gem_instdir}/rake.gemspec
 
 %files doc
 %doc %{gem_dir}/doc/

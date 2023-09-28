@@ -11,6 +11,8 @@ Source0:        https://ftp.gnu.org/gnu/%{name}/%{name}-%{version}.tar.gz
 BuildRequires:  openssl-devel
 %if %{with_check}
 BuildRequires:  perl
+BuildRequires:  perl-HTTP-Daemon
+BuildRequires:  perl-English
 %endif
 Requires:       openssl
 
