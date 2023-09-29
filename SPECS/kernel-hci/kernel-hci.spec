@@ -18,7 +18,7 @@
 Summary:        Linux Kernel for HCI
 Name:           kernel-hci
 Version:        5.15.131.1
-Release:        2%{?dist}
+Release:        3%{?dist}
 License:        GPLv2
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -431,6 +431,9 @@ ln -sf linux-%{uname_r}.cfg /boot/mariner.cfg
 %{_sysconfdir}/bash_completion.d/bpftool
 
 %changelog
+* Fri Sep 29 2023 Brian Fjeldstad <bfjelds@microsoft.com> - 5.15.131.1-3
+- Add *VDPA*=m configurations
+
 * Wed Sep 20 2023 Jon Slobodzian <joslobo@microsoft.com> - 5.15.131.1-2
 - Recompile with stack-protection fixed gcc version (CVE-2023-4039)
 
