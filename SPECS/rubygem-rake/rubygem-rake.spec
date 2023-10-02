@@ -56,7 +56,7 @@ pushd .%{gem_instdir}
 # Get rid of Bundler.
 sed -i '/bundler/ s/^/#/' Rakefile
  
-export TESTOPTS=--verbose
+export TESTOPTS="--verbose --trace"
 export VERBOSE=y
 export RUBYLIB=$(pwd)/lib
 ruby ./exe/rake test
@@ -70,8 +70,8 @@ ruby ./exe/rake test
 %exclude %{gem_cache}
 %{gem_spec}
 %{_mandir}/man1/*
-# %exclude %{gem_instdir}/.*
-# %exclude %{gem_instdir}/rake.gemspec
+%exclude %{gem_instdir}/.*
+%exclude %{gem_instdir}/rake.gemspec
 
 %files doc
 %doc %{gem_dir}/doc/
