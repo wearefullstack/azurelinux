@@ -55,7 +55,7 @@ rm -vr deps
   -DUSE_SHA1=HTTPS \
   -DUSE_HTTPS=OpenSSL \
   -DUSE_NTLMCLIENT=OFF \
-  -DUSE_SSH=ON
+  -DUSE_SSH=OFF
   %{nil}
 %ninja_build -C %{_target_platform}
 # %cmake_build
