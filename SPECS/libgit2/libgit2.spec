@@ -57,16 +57,16 @@ rm -vr deps
   -DUSE_NTLMCLIENT=OFF \
   -DUSE_SSH=ON
   %{nil}
-# %ninja_build -C %{_target_platform}
-%cmake_build
+%ninja_build -C %{_target_platform}
+# %cmake_build
 
 %install
-# %ninja_install -C %{_target_platform}
-%cmake_install
+%ninja_install -C %{_target_platform}
+# %cmake_install
 
 %check
-# %ninja_test -C %{_target_platform} -v
-%ctest
+%ninja_test -C %{_target_platform} -v
+# %ctest
 
 %files
 %license COPYING
