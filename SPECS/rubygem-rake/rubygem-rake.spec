@@ -56,7 +56,7 @@ pushd /%{gem_instdir}
 # Get rid of Bundler.
 sed -i '/bundler/ s/^/#/' Rakefile
 
-ruby -Ilib:. -e 'Dir.glob "test/**/test_*.rb", &method(:require)'
+ruby -Ilib:. -e 'Dir.glob "test/**/test_*.rb", &method(:require), "--verbose"'
 # export TESTOPTS="--verbose --trace"
 # export VERBOSE=y
 # export RUBYLIB=$(pwd)/lib
