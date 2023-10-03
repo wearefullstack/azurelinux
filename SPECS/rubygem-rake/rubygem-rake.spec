@@ -52,24 +52,24 @@ mv %{buildroot}%{gem_instdir}/doc/rake.1 %{buildroot}%{_mandir}/man1
 
 %check
 pushd /%{gem_instdir}
-# symlink tests here
-ln -s %{_builddir}/test .
-
+ 
 # Get rid of Bundler.
 sed -i '/bundler/ s/^/#/' Rakefile
-
-ruby -Ilib:. -e 'Dir.glob "test/**/test_*.rb", &method(:require)'
-popd
+ 
+export TESTOPTS="--verbose --trace"
+export VERBOSE=y
+export RUBYLIB=$(pwd)/lib
+ruby ./exe/rake test
 
 %files
 %dir %{gem_instdir}
+%{_bindir}/rake
 %license %{gem_instdir}/MIT-LICENSE
 %{gem_instdir}/exe
 %{gem_libdir}
 %exclude %{gem_cache}
 %{gem_spec}
 %{_mandir}/man1/*
-%{_bindir}/rake
 %exclude %{gem_instdir}/.*
 %exclude %{gem_instdir}/rake.gemspec
 
@@ -79,6 +79,9 @@ popd
 %doc %{gem_instdir}/*.rdoc
 
 %changelog
+* Thu Sep 28 2023 Osama Esmail <osamaesmail@microsoft.com> - 13.0.6-7
+- Trying to fix tests
+
 * Mon Oct 24 2022 Pawel Winogrodzki <pawelwi@microsoft.com> - 13.0.6-6
 - Adding 'Obsoletes: ruby <= 3.1.2-2'.
 
