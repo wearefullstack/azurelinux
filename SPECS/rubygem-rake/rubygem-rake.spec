@@ -52,14 +52,15 @@ mv %{buildroot}%{gem_instdir}/doc/rake.1 %{buildroot}%{_mandir}/man1
 
 %check
 pushd /%{gem_instdir}
- 
+
 # Get rid of Bundler.
 sed -i '/bundler/ s/^/#/' Rakefile
- 
-export TESTOPTS="--verbose --trace"
-export VERBOSE=y
-export RUBYLIB=$(pwd)/lib
-ruby ./exe/rake test
+
+ruby -Ilib:. -e 'Dir.glob "test/**/test_*.rb", &method(:require)'
+# export TESTOPTS="--verbose --trace"
+# export VERBOSE=y
+# export RUBYLIB=$(pwd)/lib
+# ruby ./exe/rake test
 
 %files
 %dir %{gem_instdir}
