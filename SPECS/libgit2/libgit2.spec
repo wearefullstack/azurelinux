@@ -63,6 +63,7 @@ rm -vr deps
 
 %check
 %ninja_test -C %{_target_platform}
+cat "/usr/src/mariner/BUILD/libgit2-1.4.5/x86_64-mariner-linux/Testing/Temporary/LastTest.log"
 
 %files
 %license COPYING
