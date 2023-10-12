@@ -12,7 +12,9 @@ Source1:       https://ftp.gnu.org/gnu/gdb/gdb-10.2.tar.gz
 License:       GPLv3+
 BuildRequires: binutils
 BuildRequires: glibc-devel
+BuildRequires: lzo-devel
 BuildRequires: ncurses-devel
+BuildRequires: snappy-devel
 BuildRequires: zlib-devel
 Requires:      binutils
 
