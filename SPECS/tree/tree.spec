@@ -1,7 +1,7 @@
 Summary:        Recursive directory listing command.
 Name:           tree
 Version:        1.8.0
-Release:        2%{?dist}
+Release:        33%{?dist}
 License:        GPLv2+
 URL:            http://mama.indstate.edu/users/ice/tree/
 Group:          Applications
