@@ -335,6 +335,10 @@ done
 /usr/share/makedumpfile/
 
 %changelog
+* Thu Oct 19 2023 Chris Co <chrco@microsoft.com> - 2.0.23-4
+- Remove "force_no_rebuild 1" from kdump.conf so kdump builds minimal host-specific initrd
+- Update kdumpctl path of kdump initrd to no longer overwrite the host's initrd
+
 * Tue Sep 25 2023 Cameron Baird <cameronbaird@microsoft.com> - 2.0.23-4
 - Enable grub2-mkconfig-based boot path by installing 
     51_kexec_tools.cfg 
