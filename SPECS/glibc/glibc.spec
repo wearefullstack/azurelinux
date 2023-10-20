@@ -7,7 +7,7 @@
 Summary:        Main C library
 Name:           glibc
 Version:        2.35
-Release:        6%{?dist}
+Release:        7%{?dist}
 License:        BSD AND GPLv2+ AND Inner-Net AND ISC AND LGPLv2+ AND MIT
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -30,6 +30,7 @@ Patch5:         glibc-2.34_pthread_cond_wait.patch
 Patch6:         CVE-2023-4911.patch
 Patch7:         CVE-2023-4806.patch
 Patch8:         CVE-2023-5156.patch
+Patch9:         CVE-2023-4813.patch
 BuildRequires:  bison
 BuildRequires:  gawk
 BuildRequires:  gettext
@@ -322,6 +323,9 @@ grep "^FAIL: nptl/tst-eintr1" tests.sum >/dev/null && n=$((n+1)) ||:
 %defattr(-,root,root)
 
 %changelog
+* Fri Oct 20 2023 Nan Liu <liunan@microsoft.com> - 2.35-7
+- Add patch to address CVE-2023-4813
+
 * Wed Oct 04 2023 Minghe Ren <mingheren@microsoft.com> - 2.35-6
 - Add patches for CVE-2023-4806 and CVE-2023-5156
 
