@@ -10,7 +10,7 @@
 Summary:        Microsoft Kubernetes
 Name:           kubernetes
 Version:        1.28.2
-Release:        3%{?dist}
+Release:        4%{?dist}
 License:        ASL 2.0
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -262,6 +262,9 @@ fi
 %{_exec_prefix}/local/bin/pause
 
 %changelog
+* Fri Oct 20 2023 Nan Liu <liunan@microsoft.com> - 1.28.2-4
+- Bump release to rebuild against glibc 2.35-7
+
 * Thu Oct 12 2023 Pawel Winogrodzki <pawelwi@microsoft.com> - 1.28.2-3
 - Bump release to rebuild with updated version of Go.
 
