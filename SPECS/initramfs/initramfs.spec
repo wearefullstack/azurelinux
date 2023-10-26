@@ -111,6 +111,7 @@ echo "initramfs" %{version}-%{release} "posttrans" >&2
 mkinitrd -q
 # Move initrd generated for kernel-mshv to /boot/efi, where linuxloader expects to find it
 mv /boot/initrd.img-*mshv* /boot/efi/ >/dev/null 2>&1 || :
+%grub2_post
 
 %postun
 echo "initramfs" %{version}-%{release} "postun" >&2

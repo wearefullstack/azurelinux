@@ -121,6 +121,7 @@ func validatePackages(config configuration.Config) (err error) {
 		dracutFipsPkgName  = "dracut-fips"
 		fipsKernelCmdLine  = "fips=1"
 		grub2PkgName       = "grub2"
+		grub2ConfigPkgName = "grub2-configuration"
 	)
 
 	for _, systemConfig := range config.SystemConfigs {
@@ -133,6 +134,7 @@ func validatePackages(config configuration.Config) (err error) {
 		foundVerityInitramfsDebugPackage := false
 		foundDracutFipsPackage := false
 		foundGrub2Package := false
+		foundGrub2ConfigPackage := false
 		kernelCmdLineString := systemConfig.KernelCommandLine.ExtraCommandLine
 		for _, pkg := range packageList {
 			if pkg == "kernel" {
@@ -152,6 +154,9 @@ func validatePackages(config configuration.Config) (err error) {
 			}
 			if pkg == grub2PkgName {
 				foundGrub2Package = true
+			}
+			if pkg == grub2ConfigPkgName {
+				foundGrub2ConfigPackage = true
 			}
 		}
 		if systemConfig.ReadOnlyVerityRoot.Enable {
@@ -173,8 +178,8 @@ func validatePackages(config configuration.Config) (err error) {
 			}
 		}
 		if systemConfig.EnableGrubMkconfig {
-			if !foundGrub2Package {
-				return fmt.Errorf("%s: [EnableGrubMkconfig] selected, but '%s' package is not included in the package lists", validateError, grub2PkgName)
+			if !foundGrub2Package || !foundGrub2ConfigPackage {
+				return fmt.Errorf("%s: [EnableGrubMkconfig] selected, but one of '%s' '%s' package is not included in the package lists", validateError, grub2PkgName, grub2ConfigPkgName)
 			}
 		}
 	}
