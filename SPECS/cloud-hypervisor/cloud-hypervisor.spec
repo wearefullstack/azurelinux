@@ -5,7 +5,7 @@
 Summary:        Cloud Hypervisor is an open source Virtual Machine Monitor (VMM) that runs on top of KVM.
 Name:           cloud-hypervisor
 Version:        32.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        ASL 2.0 OR BSD-3-clause
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -19,7 +19,7 @@ Source0:        https://github.com/cloud-hypervisor/cloud-hypervisor/archive/ref
 #   cd %{name}-%{version}
 #   cargo vendor > config.toml
 #   tar -czf %{name}-%{version}-cargo.tar.gz vendor/
-Source1:        %{name}-%{version}-cargo.tar.gz
+Source1:        %{name}-%{version}-cargo-rohit.tar.gz
 Source2:        config.toml
 %endif
 
@@ -73,6 +73,7 @@ Cloud Hypervisor is an open source Virtual Machine Monitor (VMM) that runs on to
 tar xf %{SOURCE1}
 mkdir -p .cargo
 cp %{SOURCE2} .cargo/
+ls -l vendor/
 %endif
 
 %install
