@@ -2,34 +2,27 @@
     "Disks": [
         {
             "PartitionTableType": "gpt",
-            "MaxSize": 5000,
+            "MaxSize": 4096,
             "Artifacts": [
                 {
-                    "Name": "cblmariner-gen2",
-                    "Type": "vhd"
+                    "Name": "core",
+                    "Type": "vhdx"
                 }
             ],
             "Partitions": [
                 {
-                    "ID": "efi",
+                    "ID": "boot",
                     "Flags": [
                         "esp",
                         "boot"
                     ],
                     "Start": 1,
-                    "End": 65,
+                    "End": 9,
                     "FsType": "fat32"
                 },
                 {
-                    "ID": "boot",
-                    "Start": 65,
-                    "End": 565,
-                    "FsType": "ext4"
-                },
-                {
                     "ID": "rootfs",
-                    "Name": "rootfs",
-                    "Start": 565,
+                    "Start": 9,
                     "End": 0,
                     "FsType": "ext4"
                 }
@@ -43,43 +36,23 @@
             "EnableGrubMkconfig": true,
             "PartitionSettings": [
                 {
-                    "ID": "efi",
+                    "ID": "boot",
                     "MountPoint": "/boot/efi",
                     "MountOptions" : "umask=0077"
-                },
-                {
-                    "ID": "boot",
-                    "MountPoint": "/boot"
                 },
                 {
                     "ID": "rootfs",
                     "MountPoint": "/"
                 }
             ],
-            "packages": [
-                "grub2"
-            ],
             "PackageLists": [
+                "packagelists/grub2-mkconfig.json",
+                "packagelists/hyperv-packages.json",
                 "packagelists/core-packages-image.json",
-                "packagelists/marketplace-tools-packages.json",
-                "packagelists/azurevm-packages.json"
-            ],
-            "AdditionalFiles": {
-                "additionalconfigs/cloud-init.cfg": "/etc/cloud/cloud.cfg",
-                "additionalconfigs/chrony.cfg": "/etc/chrony.conf",
-                "additionalconfigs/wait-for-ptp-hyperv.conf": "/etc/systemd/system/chronyd.service.d/wait-for-ptp-hyperv.conf",
-                "additionalconfigs/51-ptp-hyperv.rules": "/etc/udev/rules.d/51-ptp-hyperv.rules"
-            },
-            "PostInstallScripts": [
-                {
-                    "Path": "additionalconfigs/configure-image.sh"
-                }
+                "packagelists/cloud-init-packages.json"
             ],
             "KernelOptions": {
                 "default": "kernel"
-            },
-            "KernelCommandLine": {
-                "ExtraCommandLine": "console=ttyS0"
             },
             "Hostname": "cbl-mariner"
         }

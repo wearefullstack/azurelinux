@@ -1,6 +1,5 @@
 {
     "packages": [
-        "grub2",
         "grub2-configuration",
         "shim",
         "grub2-efi-binary",
