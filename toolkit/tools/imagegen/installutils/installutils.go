@@ -618,6 +618,26 @@ func TdnfInstallWithProgress(packageName, installRoot string, currentPackagesIns
 	return
 }
 
+// TdnfInstallWithProgress installs a package in the current environment while optionally reporting progress
+func TdnfDeleteCache(installRoot string) (err error) {
+	timestamp.StartEvent("deleting tdnf cache", nil)
+	defer timestamp.StopEvent(nil)
+
+	// TDNF 3.x uses repositories from installchroot instead of host. Passing setopt for repo files directory to use local repo for installroot installation
+	err = shell.ExecuteLiveWithCallback(logger.Log.Debug, logger.Log.Warn, true, "tdnf", "-y", "clean", "all")
+	if err != nil {
+		logger.Log.Warnf("Failed to tdnf clean all: %v.", err)
+	}
+
+	// TDNF 3.x uses repositories from installchroot instead of host. Passing setopt for repo files directory to use local repo for installroot installation
+	err = shell.ExecuteLiveWithCallback(logger.Log.Debug, logger.Log.Warn, true, "rm", "-rf", installRoot+"/var/cache/tdnf")
+	if err != nil {
+		logger.Log.Warnf("Failed to rm -rf %v/var/cache/tdnf: %v.", installRoot, err)
+	}
+
+	return
+}
+
 func configureSystemFiles(installChroot *safechroot.Chroot, hostname string, config configuration.SystemConfig, installMap, mountPointToFsTypeMap, mountPointToMountArgsMap, partIDToDevPathMap, partIDToFsTypeMap map[string]string, encryptedRoot diskutils.EncryptedRootDevice, hidepidEnabled bool) (err error) {
 	// Update hosts file
 	err = updateHosts(installChroot.RootDir(), hostname)
