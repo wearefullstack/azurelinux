@@ -647,5 +647,11 @@ func buildImage(mountPointMap, mountPointToFsTypeMap, mountPointToMountArgsMap, 
 		return
 	}
 
+	err = installutils.TdnfDeleteCache(rootDir)
+	if err != nil {
+		err = fmt.Errorf("failed to clean tdnf cache: %s", err)
+		return
+	}
+
 	return
 }
