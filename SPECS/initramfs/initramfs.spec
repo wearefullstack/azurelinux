@@ -1,7 +1,7 @@
 Summary:        initramfs
 Name:           initramfs
 Version:        2.0
-Release:        13%{?dist}
+Release:        14%{?dist}
 License:        Apache License
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -107,8 +107,8 @@ fi \
 echo "initramfs" %{version}-%{release} "posttrans" >&2
 %removal_action
 mkinitrd -q
-# Move initrd generated for kernel-mshv to /boot/efi, where linuxloader expects to find it
-mv /boot/initrd.img-*mshv* /boot/efi/ >/dev/null 2>&1 || :
+# Copy initrd generated for kernel-mshv to /boot/efi, where linuxloader expects to find it
+cp /boot/initrd.img-*mshv* /boot/efi/ >/dev/null 2>&1 || :
 
 %postun
 echo "initramfs" %{version}-%{release} "postun" >&2
@@ -137,9 +137,14 @@ echo "initramfs" %{version}-%{release} "postun" >&2
 %dir %{_localstatedir}/lib/initramfs/kernel
 
 %changelog
+* Fri Oct 06 2023 Cameron Baird <cameronbaird@microsoft.com> - 2.0.14
+- Ensure grub2-mkconfig is called after the initramfs generation
+- Fix bug with 2.0.13 where we were mv'ing the initrd, not cp'ing as expected. 
+
 * Wed Jun 28 2023 Cameron Baird <cameronbaird@microsoft.com> - 2.0.13
 - Copy the initrd image to /boot/efi to maintain backwards compatibility
     with the old linuxloader. Let the initrd remain in /boot as well. 
+
 
 * Fri Apr 07 2023 Andy Zaugg <azaugg@linkedin.com> - 2.0.12
 - Added fsck.xfs into initrd
