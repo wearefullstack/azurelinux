@@ -1,7 +1,7 @@
 Summary:        agent for collecting, processing, aggregating, and writing metrics.
 Name:           telegraf
-Version:        1.27.3
-Release:        4%{?dist}
+Version:        1.28.3
+Release:        1%{?dist}
 License:        MIT
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -10,7 +10,6 @@ URL:            https://github.com/influxdata/telegraf
 Source0:        %{url}/archive/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 # Use the generate_source_tarbbal.sh script to get the vendored sources.
 Source1:        %{name}-%{version}-vendor.tar.gz
-Patch0:         add-extra-metrics.patch
 BuildRequires:  golang
 BuildRequires:  systemd-devel
 Requires:       logrotate
@@ -55,6 +54,9 @@ getent passwd telegraf >/dev/null || useradd -c "Telegraf" -d %{_localstatedir}/
 chown -R telegraf:telegraf %{_sysconfdir}/telegraf
 %systemd_post %{name}.service
 
+%check
+make check
+
 %preun
 %systemd_preun %{name}.service
 
@@ -75,6 +77,9 @@ fi
 %dir %{_sysconfdir}/%{name}/telegraf.d
 
 %changelog
+* Wed Nov 08 2023 Osama Esmail <osamaesmail@microsoft.com> - 1.28.3-1
+- Upgrading minor version and removing old patch
+
 * Mon Oct 16 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 1.27.3-4
 - Bump release to rebuild with go 1.20.10
 
