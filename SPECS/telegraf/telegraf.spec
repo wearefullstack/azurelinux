@@ -20,6 +20,10 @@ Requires(pre):  %{_sbindir}/useradd
 Requires(pre):  %{_sbindir}/groupadd
 Requires(postun): %{_sbindir}/userdel
 Requires(postun): %{_sbindir}/groupdel
+%if %{with_check}
+Requires:       ca-certificates
+Requires:       git
+%endif
 
 %description
 Telegraf is an agent written in Go for collecting, processing, aggregating, and writing metrics.
