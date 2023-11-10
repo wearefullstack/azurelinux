@@ -16,6 +16,7 @@ Requires:       logrotate
 Requires:       procps-ng
 Requires:       shadow-utils
 Requires:       systemd
+Requires:       tzdata
 Requires(pre):  %{_sbindir}/useradd
 Requires(pre):  %{_sbindir}/groupadd
 Requires(postun): %{_sbindir}/userdel
