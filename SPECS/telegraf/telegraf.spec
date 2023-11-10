@@ -8,7 +8,7 @@ Distribution:   Mariner
 Group:          Development/Tools
 URL:            https://github.com/influxdata/telegraf
 Source0:        %{url}/archive/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
-# Use the generate_source_tarbbal.sh script to get the vendored sources.
+# Use the tarball.sh script to get the vendored sources.
 Source1:        %{name}-%{version}-vendor.tar.gz
 BuildRequires:  golang
 BuildRequires:  systemd-devel
@@ -34,7 +34,7 @@ Postgres, or Redis) and third party APIs (like Mailchimp, AWS CloudWatch, or Goo
 tar -xf %{SOURCE1}
 
 %build
-go build -mod=vendor ./cmd/telegraf
+go build -buildvcs=disabled -mod=vendor ./cmd/telegraf
 
 %install
 mkdir -pv %{buildroot}%{_sysconfdir}/%{name}/%{name}.d
