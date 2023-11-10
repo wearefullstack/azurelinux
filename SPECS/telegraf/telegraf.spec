@@ -34,7 +34,7 @@ Postgres, or Redis) and third party APIs (like Mailchimp, AWS CloudWatch, or Goo
 tar -xf %{SOURCE1}
 
 %build
-go build -buildvcs=disabled -mod=vendor ./cmd/telegraf
+go build -buildvcs=false -mod=vendor ./cmd/telegraf
 
 %install
 mkdir -pv %{buildroot}%{_sysconfdir}/%{name}/%{name}.d
