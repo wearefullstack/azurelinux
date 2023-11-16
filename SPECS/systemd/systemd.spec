@@ -43,6 +43,7 @@ BuildRequires:  kmod-devel
 BuildRequires:  libcap-devel
 BuildRequires:  libgcrypt-devel
 BuildRequires:  libselinux-devel
+BuildRequires:  libxcrypt-devel
 BuildRequires:  libxslt
 BuildRequires:  lz4-devel
 BuildRequires:  meson
