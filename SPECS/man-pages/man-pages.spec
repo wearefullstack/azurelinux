@@ -22,6 +22,8 @@ make DESTDIR=%{buildroot} prefix=/usr install
 #	The following man pages conflict with other packages
 rm -vf %{buildroot}%{_mandir}/man3/getspnam.3
 rm -vf %{buildroot}%{_mandir}/man5/passwd.5
+#Found 1 problems\nfile /usr/share/man/man3/crypt.3.gz from install of man-pages-5.13-1.cm2.noarch conflicts with file from package libxcrypt-devel-4.4.27-3.cm2.x86_64"
+rm -vf %{buildroot}%{_mandir}//man3/crypt.3.gz
 
 %files
 
