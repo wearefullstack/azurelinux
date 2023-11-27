@@ -1,7 +1,7 @@
 Summary:        advanced key-value store
 Name:           redis
 Version:        6.2.14
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        BSD
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -86,6 +86,9 @@ exit 0
 %config(noreplace) %attr(0640, %{name}, %{name}) %{_sysconfdir}/redis.conf
 
 %changelog
+* Mon Nov 27 2023 Mykhailo Bykhovtsev <mbykhovtsev@microsoft.com> - 6.2.14-2
+- Modified redis installation to configure redis user before installation
+
 * Thu Nov 02 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 6.2.14-1
 - Auto-upgrade to 6.2.14 - Fixes CVE-2023-45145
 
