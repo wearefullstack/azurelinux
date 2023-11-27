@@ -64,6 +64,9 @@ useradd -r -g %{name} -d %{_sharedstatedir}/%{name} -s /sbin/nologin \
 -c 'Redis Database Server' %{name} &> /dev/null
 exit 0
 
+%pre
+%sysusers_create_package %{name} %{_sysconfdir}/redis.conf
+
 %post
 /sbin/ldconfig
 %systemd_post  redis.service
