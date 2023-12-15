@@ -57,13 +57,13 @@ func connectToExistingImageHelper(imageConnection *ImageConnection, imageFilePat
 	return nil
 }
 
-func createNewImage(filename string, diskConfig imagecustomizerapi.Disk,
+func createNewImage(filename string, diskConfig imagecustomizerapi.Disk, systemConfig imagecustomizerapi.SystemConfig,
 	partitionSettings []imagecustomizerapi.PartitionSetting, bootType imagecustomizerapi.BootType, buildDir string,
 	chrootDirName string, installOS installOSFunc,
 ) (*ImageConnection, error) {
 	imageConnection := &ImageConnection{}
 
-	err := createNewImageHelper(imageConnection, filename, diskConfig, partitionSettings, bootType, buildDir,
+	err := createNewImageHelper(imageConnection, filename, diskConfig, systemConfig, partitionSettings, bootType, buildDir,
 		chrootDirName, installOS,
 	)
 	if err != nil {
@@ -74,7 +74,7 @@ func createNewImage(filename string, diskConfig imagecustomizerapi.Disk,
 	return imageConnection, nil
 }
 
-func createNewImageHelper(imageConnection *ImageConnection, filename string, diskConfig imagecustomizerapi.Disk,
+func createNewImageHelper(imageConnection *ImageConnection, filename string, diskConfig imagecustomizerapi.Disk, systemConfig imagecustomizerapi.SystemConfig,
 	partitionSettings []imagecustomizerapi.PartitionSetting, bootType imagecustomizerapi.BootType, buildDir string,
 	chrootDirName string, installOS installOSFunc,
 ) error {
@@ -115,7 +115,7 @@ func createNewImageHelper(imageConnection *ImageConnection, filename string, dis
 	// Configure the boot loader.
 	err = installutils.ConfigureDiskBootloader(imagerBootType, false, false, imagerPartitionSettings,
 		configuration.KernelCommandLine{}, imageConnection.Chroot(), imageConnection.Loopback().DevicePath(),
-		mountPointMap, diskutils.EncryptedRootDevice{}, diskutils.VerityDevice{}, false /*enableGrubMkconfig*/)
+		mountPointMap, diskutils.EncryptedRootDevice{}, diskutils.VerityDevice{}, systemConfig.EnableGrubMkconfig)
 	if err != nil {
 		return fmt.Errorf("failed to install bootloader:\n%w", err)
 	}

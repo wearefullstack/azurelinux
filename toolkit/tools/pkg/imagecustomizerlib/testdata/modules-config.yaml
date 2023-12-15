@@ -6,3 +6,4 @@ SystemConfig:
       - Name: mlx5_ib
     Disable:
       - Name: mousedev
+  EnableGrubMkconfig: true

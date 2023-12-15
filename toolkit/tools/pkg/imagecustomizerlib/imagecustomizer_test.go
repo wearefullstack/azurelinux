@@ -218,6 +218,10 @@ func createFakeEfiImage(buildDir string) (string, error) {
 		},
 	}
 
+	systemConfig := imagecustomizerapi.SystemConfig{
+		EnableGrubMkconfig: true,
+	}
+
 	partitionSettings := []imagecustomizerapi.PartitionSetting{
 		{
 			ID:              "boot",
@@ -241,7 +245,7 @@ func createFakeEfiImage(buildDir string) (string, error) {
 		return nil
 	}
 
-	imageConnection, err := createNewImage(rawDisk, diskConfig, partitionSettings, "efi", buildDir, "imageroot",
+	imageConnection, err := createNewImage(rawDisk, diskConfig, systemConfig, partitionSettings, "efi", buildDir, "imageroot",
 		installOS)
 	if err != nil {
 		return "", err
