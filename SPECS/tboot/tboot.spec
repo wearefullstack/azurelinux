@@ -10,7 +10,6 @@ URL:            https://sourceforge.net/projects/tboot/
 Source0:        http://downloads.sourceforge.net/%{name}/%{name}-%{version}.tar.gz
 Source1:        create-drtm-policy.sh
 Source2:        README.md
-Patch0:         remove-sm3.patch
 BuildRequires:  make
 BuildRequires:  gcc
 BuildRequires:  openssl-devel
