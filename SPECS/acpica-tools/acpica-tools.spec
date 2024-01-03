@@ -1,8 +1,8 @@
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
 Name:           acpica-tools
-Version:        20190509
-Release:        7%{?dist}
+Version:        20230628
+Release:        1%{?dist}
 Summary:        ACPICA tools for the development and debug of ACPI tables
 
 License:        GPLv2
@@ -241,6 +241,9 @@ fi
 
 
 %changelog
+* Wed Jan 02 2024 Rakshaa Viswanathan <rviswanathan@microsoft.com> - 20230628-1
+- Bump version to 20230628 for 3.0
+
 * Tue May 02 2023 Cameron Baird <cameronbaird@microsoft.com> - 20190509-7
 - Moved to SPECS
 - License verified
