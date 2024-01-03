@@ -241,7 +241,7 @@ fi
 
 
 %changelog
-* Wed Jan 02 2024 Rakshaa Viswanathan <rviswanathan@microsoft.com> - 20230628-1
+* Wed Jan 03 2024 Rakshaa Viswanathan <rviswanathan@microsoft.com> - 20230628-1
 - Bump version to 20230628 for 3.0
 
 * Tue May 02 2023 Cameron Baird <cameronbaird@microsoft.com> - 20190509-7
