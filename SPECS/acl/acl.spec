@@ -1,13 +1,13 @@
 Summary:        Access control list utilities
 Name:           acl
-Version:        3.6.1-6
+Version:        3.6.1
 Release:        1%{?dist}
 License:        GPLv2+
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
 Group:          System Environment/Base
 URL:            https://github.com/acl-dev/acl
-Source0:        https://github.com/acl-dev/%{name}/archive/refs/tags/v%{version}.tar.gz
+Source0:        https://github.com/acl-dev/%{name}/archive/refs/tags/v%{version}-6.tar.gz
 
 BuildRequires:  attr-devel
 
