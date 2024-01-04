@@ -1,6 +1,6 @@
 Summary:        Access control list utilities
 Name:           acl
-Version:        3.6.1
+Version:        3.6.1-6
 Release:        1%{?dist}
 License:        GPLv2+
 Vendor:         Microsoft Corporation
@@ -90,8 +90,8 @@ sed -e 's|test/misc.test||' -i test/Makemodule.am Makefile.in Makefile
 %{_libdir}/libacl.so.*
 
 %changelog
-* Thu Jan 04 2024 Brian Fjeldstad <bfjelds@microsoft.com> - 3.6.1-6
-- Updating to version 3.6.1-6.
+* Thu Jan 04 2024 Brian Fjeldstad <bfjelds@microsoft.com> - 3.6.1-6.1
+- Updating to version 3.6.1-6.1.
 
 * Wed Sep 20 2023 Jon Slobodzian <joslobo@microsoft.com> - 2.3.1-2
 - Recompile with stack-protection fixed gcc version (CVE-2023-4039)
