@@ -1,13 +1,13 @@
 Summary:        Access control list utilities
 Name:           acl
-Version:        2.3.1
-Release:        2%{?dist}
+Version:        3.6.1
+Release:        1%{?dist}
 License:        GPLv2+
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
 Group:          System Environment/Base
-URL:            https://savannah.nongnu.org/projects/acl/
-Source0:        https://download.savannah.nongnu.org/releases/%{name}/%{name}-%{version}.tar.gz
+URL:            https://github.com/acl-dev/acl
+Source0:        https://github.com/acl-dev/%{name}/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:  attr-devel
 
@@ -90,6 +90,9 @@ sed -e 's|test/misc.test||' -i test/Makemodule.am Makefile.in Makefile
 %{_libdir}/libacl.so.*
 
 %changelog
+* Thu Jan 04 2024 Brian Fjeldstad <bfjelds@microsoft.com> - 3.6.1-6
+- Updating to version 3.6.1-6.
+
 * Wed Sep 20 2023 Jon Slobodzian <joslobo@microsoft.com> - 2.3.1-2
 - Recompile with stack-protection fixed gcc version (CVE-2023-4039)
 

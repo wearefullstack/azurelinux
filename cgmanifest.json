@@ -35,8 +35,8 @@
         "type": "other",
         "other": {
           "name": "acl",
-          "version": "2.3.1",
-          "downloadUrl": "https://download.savannah.nongnu.org/releases/acl/acl-2.3.1.tar.gz"
+          "version": "3.6.1-6",
+          "downloadUrl": "https://github.com/acl-dev/acl/archive/refs/tags/v3.6.1-6.tar.gz"
         }
       }
     },
