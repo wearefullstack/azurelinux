@@ -105,7 +105,7 @@ sed -e 's|test/misc.test||' -i test/Makemodule.am Makefile.in Makefile
 * Tue Apr 14 2020 Henry Beberman <henry.beberman@microsoft.com> - 2.2.53-4
 - Update files to include license
 
-* Fri Mar 03 2020 Jon Slobodzian <joslobo@microsoft.com> - 2.2.53-3
+* Tue Mar 03 2020 Jon Slobodzian <joslobo@microsoft.com> - 2.2.53-3
 - Replaced dead link. Fixed Source URL. Verified license.
 
 * Tue Sep 03 2019 Mateusz Malisz <mamalisz@microsoft.com> - 2.2.53-2
