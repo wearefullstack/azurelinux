@@ -10,6 +10,7 @@ URL:            https://github.com/microsoft/KeysInUse-OpenSSL
 Source0:        https://github.com/microsoft/KeysInUse-OpenSSL/archive/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 BuildRequires:  cmake
 BuildRequires:  gcc
+BuildRequires:  golang >= 1.16.6
 BuildRequires:  make
 BuildRequires:  openssl-devel
 #Requires:       openssl < 1.1.2
