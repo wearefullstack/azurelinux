@@ -49,7 +49,8 @@ make %{?_smp_mflags}
 make DESTDIR=%{buildroot} install
 
 %check
-make test
+adduser mysqlrouter
+make test || { cat $(find Testing -name "*.log"); false; }
 
 %files
 %defattr(-,root,root)
