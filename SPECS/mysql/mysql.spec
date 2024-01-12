@@ -50,7 +50,7 @@ make DESTDIR=%{buildroot} install
 
 %check
 adduser mysqlrouter
-make test || { cat $(find Testing -name "*.log"); false; }
+sudo -u mysqlrouter make test || { cat $(find Testing -name "*.log"); false; }
 
 %files
 %defattr(-,root,root)
