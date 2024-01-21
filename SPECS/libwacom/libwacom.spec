@@ -1,14 +1,18 @@
 %global udevdir %(pkg-config --variable=udevdir udev)
 
+%bcond_with check
+# out check
+
 Summary:        Tablet Information Client Library
 Name:           libwacom
-Version:        1.6
-Release:        5%{?dist}
+Version:        2.7.0
+Release:        1%{?dist}
 License:        MIT
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
 URL:            https://github.com/linuxwacom/libwacom
-Source0:        https://github.com/linuxwacom/libwacom/releases/download/%{name}-%{version}/%{name}-%{version}.tar.bz2
+Source0:        https://github.com/linuxwacom/libwacom/releases/download/%{name}-%{version}/%{name}-%{version}.tar.xz
+# https://github.com/linuxwacom/libwacom/releases/download/libwacom-2.6.0/libwacom-2.6.0.tar.xz
 
 BuildRequires:  gcc
 BuildRequires:  git
@@ -18,6 +22,9 @@ BuildRequires:  libxml2-devel
 BuildRequires:  meson
 BuildRequires:  systemd
 BuildRequires:  systemd-devel
+# BuildRequires:  libevdev
+# BuildRequires:  python3-pyudev
+# BuildRequires:  python3-pytest
 
 Requires:       %{name}-data = %{version}-%{release}
 
@@ -42,6 +49,15 @@ BuildArch:      noarch
 
 %description data
 Tablet information client library data files.
+
+%package utils
+Summary:        Tablet Information Client Library Utilities Package
+Requires:       %{name} = %{version}-%{release}
+# Requires:       python3-libevdev
+Requires:       python3-pyudev
+ 
+%description utils
+Utilities to handle and/or debug libwacom devices.
 
 %prep
 %autosetup
@@ -70,6 +86,7 @@ install -d %{buildroot}/%{_udevrulesdir}
 %doc README.md
 %{_libdir}/libwacom.so.*
 %{_bindir}/libwacom-list-local-devices
+%{_bindir}/libwacom-update-db
 %{_mandir}/man1/libwacom-list-local-devices.1*
 
 %files devel
@@ -88,6 +105,11 @@ install -d %{buildroot}/%{_udevrulesdir}
 %{_datadir}/libwacom/*.stylus
 %dir %{_datadir}/libwacom/layouts
 %{_datadir}/libwacom/layouts/*.svg
+
+%files utils
+%{_bindir}/libwacom-list-devices
+%{_bindir}/libwacom-show-stylus
+%{_mandir}/man1/libwacom-list-devices.1*
 
 %changelog
 * Wed Sep 20 2023 Jon Slobodzian <joslobo@microsoft.com> - 1.6-5
