@@ -1,18 +1,21 @@
 Summary:        GLib wrapper around libusb1
 Name:           libgusb
-Version:        0.3.5
-Release:        3%{?dist}
+Version:        0.4.8
+Release:        1%{?dist}
 License:        LGPLv2+
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
 URL:            https://github.com/hughsie/libgusb
-Source0:        https://people.freedesktop.org/~hughsient/releases/%{name}-%{version}.tar.xz
+Source0:        https://github.com/hughsie/libgusb/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz
 BuildRequires:  glib2-devel >= 2.38.0
 BuildRequires:  gobject-introspection-devel
 BuildRequires:  gtk-doc
 BuildRequires:  libusb1-devel >= 1.0.19
 BuildRequires:  meson
 BuildRequires:  vala
+BuildRequires:  libusb
+BuildRequires:  systemd
+BuildRequires:  systemd-rpm-macros
 
 %description
 GUsb is a GObject wrapper for libusb1 that makes it easy to do
