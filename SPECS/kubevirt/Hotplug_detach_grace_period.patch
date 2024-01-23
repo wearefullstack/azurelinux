@@ -7,7 +7,7 @@ index 63d8d43d2..0e608c4bb 100644
  const maxConcurrentMemoryDumps = 1
  
 +// TODO: Make this configurable from the VMI object?
-+const hotplugDetachmentGracePeriod = 5 * time.Second
++const hotplugDetachmentGracePeriod = 30 * time.Second
 +
 +const hotplugDetachmentVerbosity = 4
 +
