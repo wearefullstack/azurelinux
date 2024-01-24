@@ -14,13 +14,14 @@
 %global __provides_exclude_from ^%{_libdir}/gtk-3.0
 Summary:        GTK+ graphical user interface library
 Name:           gtk3
-Version:        3.24.28
-Release:        9%{?dist}
+Version:        4.12.5
+Release:        1%{?dist}
 License:        GPLv2+
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
 URL:            https://www.gtk.org
-Source0:        https://download.gnome.org/sources/gtk+/3.24/gtk+-%{version}.tar.xz
+Source0:        https://download.gnome.org/sources/gtk/%{majmin}/gtk-%{version}.tar.xz
+# https://download.gnome.org/sources/gtk+/4.8/gtk+-%{version}.tar.xz
 # https://bugzilla.redhat.com/show_bug.cgi?id=1946133
 # https://gitlab.gnome.org/GNOME/gtk/-/merge_requests/3387
 Patch0:         3387.patch
@@ -289,6 +290,9 @@ gtk-query-immodules-3.0-%{__isa_bits} --update-cache &>/dev/null || :
 %{_datadir}/installed-tests/
 
 %changelog
+* Mon Feb 12 2024 Betty Lakes <bettylakeso@microsoft.com> - 4.12.5-1
+- Upgrade the package to 4.12.5
+
 * Wed Sep 20 2023 Jon Slobodzian <joslobo@microsoft.com> - 3.24.28-9
 - Recompile with stack-protection fixed gcc version (CVE-2023-4039)
 
