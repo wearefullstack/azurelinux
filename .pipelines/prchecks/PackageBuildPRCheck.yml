@@ -104,6 +104,7 @@ extends:
                       isCheckBuild: true
                       isQuickRebuildPackages: true
                       outputArtifactsFolder: $(ob_outputDirectory)
+                      outputRPMsCacheTarballName: cache.tar.gz
                       maxCPU: "${{ configuration.maxCPUs }}"
                       pipArtifactFeeds: "mariner/Mariner-Pypi-Feed"
                       selfRepoName: self
@@ -113,6 +114,38 @@ extends:
                   - task: PublishPipelineArtifact@1
                     inputs:
                       artifact: ${{ variables.rpmsArtifactNameBase }}_${{ configuration.name }}
+                      targetPath: $(ob_outputDirectory)
+                    condition: always()
+                    displayName: "Publish packages build artifacts"
+
+              - job: BuildAndTestWithCache
+                dependsOn: BuildAndTest
+                pool:
+                  type: linux
+                  isCustom: true
+                  name: ${{ configuration.agentPool }}
+                variables:
+                  ob_artifactBaseName: ${{ variables.rpmsArtifactNameBase }}_${{ configuration.name }}_WithCache
+                  ob_outputDirectory: $(Build.ArtifactStagingDirectory)
+                steps:
+                  - template: .pipelines/templates/PackageBuild.yml@self
+                    parameters:
+                      customToolchainArtifactName: $(toolchainArtifactNameBase)_${{ configuration.name }}
+                      inputCacheArtifacts:
+                        - name: ${{ variables.rpmsArtifactNameBase }}_${{ configuration.name }}
+                          rpmsTarball: cache.tar.gz
+                        - name: ${{ variables.rpmsArtifactNameBase }}_${{ configuration.name }}
+                          rpmsTarball: rpms.tar.gz
+                      isCheckBuild: true
+                      isQuickRebuildPackages: true
+                      outputArtifactsFolder: $(ob_outputDirectory)
+                      maxCPU: "${{ configuration.maxCPUs }}"
+                      pipArtifactFeeds: "mariner/Mariner-Pypi-Feed"
+                      selfRepoName: self
+
+                  - task: PublishPipelineArtifact@1
+                    inputs:
+                      artifact: ${{ variables.rpmsArtifactNameBase }}_${{ configuration.name }}_WithCache
                       targetPath: $(ob_outputDirectory)
                     condition: always()
                     displayName: "Publish packages build artifacts"
