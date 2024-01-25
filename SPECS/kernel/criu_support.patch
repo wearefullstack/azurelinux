@@ -1,0 +1,5199 @@
+From 41de1e790e1bf01bf873eb4114604c77f8988610 Mon Sep 17 00:00:00 2001
+From: Rajneesh Bhardwaj <rajneesh.bhardwaj@amd.com>
+Date: Wed, 19 Aug 2020 14:59:00 -0400
+Subject: [PATCH 01/17] drm/amdkfd: CRIU Introduce Checkpoint-Restore APIs
+
+Checkpoint-Restore in userspace (CRIU) is a powerful tool that can
+snapshot a running process and later restore it on same or a remote
+machine but expects the processes that have a device file (e.g. GPU)
+associated with them, provide necessary driver support to assist CRIU
+and its extensible plugin interface. Thus, In order to support the
+Checkpoint-Restore of any ROCm process, the AMD Radeon Open Compute
+Kernel driver, needs to provide a set of new APIs that provide
+necessary VRAM metadata and its contents to a userspace component
+(CRIU plugin) that can store it in form of image files.
+
+This introduces some new ioctls which will be used to checkpoint-Restore
+any KFD bound user process. KFD doesn't allow any arbitrary ioctl call
+unless it is called by the group leader process. Since these ioctls are
+expected to be called from a KFD criu plugin which has elevated ptrace
+attached priviledges and CAP_SYS_ADMIN capabilities attached with the file
+descriptors so modify KFD to allow such calls.
+
+Signed-off-by: David Yat Sin <david.yatsin@amd.com>
+Signed-off-by: Rajneesh Bhardwaj <rajneesh.bhardwaj@amd.com>
+(cherry picked from commit 72f4907135aed9c037b9f442a6055b51733b518a)
+(cherry picked from commit 33ff4953c5352f51d57a77ba8ae6614b7993e70d)
+Change-Id: I1b25f6f65ad44b897752ac2c771a95157d0b1130
+---
+ drivers/gpu/drm/amd/amdkfd/kfd_chardev.c |  60 ++++++++++++-
+ drivers/gpu/drm/amd/amdkfd/kfd_priv.h    |  28 ++++++
+ include/uapi/linux/kfd_ioctl.h           | 110 ++++++++++++++++++++++-
+ 3 files changed, 196 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+index 6688129df240..80e438d42891 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+@@ -33,6 +33,7 @@
+ #include <linux/time.h>
+ #include <linux/mm.h>
+ #include <linux/mman.h>
++#include <linux/ptrace.h>
+ #include <linux/dma-buf.h>
+ #include <asm/processor.h>
+ #include "kfd_priv.h"
+@@ -1818,6 +1819,37 @@ static int kfd_ioctl_svm(struct file *filep, struct kfd_process *p, void *data)
+ 	return -EPERM;
+ }
+ #endif
++static int kfd_ioctl_criu_dumper(struct file *filep,
++				struct kfd_process *p, void *data)
++{
++	pr_info("Inside %s\n",__func__);
++
++	return 0;
++}
++
++static int kfd_ioctl_criu_restorer(struct file *filep,
++				struct kfd_process *p, void *data)
++{
++	pr_info("Inside %s\n",__func__);
++
++	return 0;
++}
++
++static int kfd_ioctl_criu_helper(struct file *filep,
++				struct kfd_process *p, void *data)
++{
++	pr_info("Inside %s\n",__func__);
++
++	return 0;
++}
++
++static int kfd_ioctl_criu_resume(struct file *filep,
++				struct kfd_process *p, void *data)
++{
++	pr_info("Inside %s\n",__func__);
++
++	return 0;
++}
+ 
+ #define AMDKFD_IOCTL_DEF(ioctl, _func, _flags) \
+ 	[_IOC_NR(ioctl)] = {.cmd = ioctl, .func = _func, .flags = _flags, \
+@@ -1922,6 +1954,18 @@ static const struct amdkfd_ioctl_desc amdkfd_ioctls[] = {
+ 
+ 	AMDKFD_IOCTL_DEF(AMDKFD_IOC_SET_XNACK_MODE,
+ 			kfd_ioctl_set_xnack_mode, 0),
++
++	AMDKFD_IOCTL_DEF(AMDKFD_IOC_CRIU_DUMPER,
++			 kfd_ioctl_criu_dumper, KFD_IOC_FLAG_PTRACE_ATTACHED),
++
++	AMDKFD_IOCTL_DEF(AMDKFD_IOC_CRIU_RESTORER,
++			 kfd_ioctl_criu_restorer, KFD_IOC_FLAG_ROOT_ONLY),
++
++	AMDKFD_IOCTL_DEF(AMDKFD_IOC_CRIU_HELPER,
++			 kfd_ioctl_criu_helper, KFD_IOC_FLAG_PTRACE_ATTACHED),
++
++	AMDKFD_IOCTL_DEF(AMDKFD_IOC_CRIU_RESUME,
++			 kfd_ioctl_criu_resume, KFD_IOC_FLAG_ROOT_ONLY),
+ };
+ 
+ #define AMDKFD_CORE_IOCTL_COUNT	ARRAY_SIZE(amdkfd_ioctls)
+@@ -1936,6 +1980,7 @@ static long kfd_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
+ 	char *kdata = NULL;
+ 	unsigned int usize, asize;
+ 	int retcode = -EINVAL;
++	bool ptrace_attached = false;
+ 
+ 	if (nr >= AMDKFD_CORE_IOCTL_COUNT)
+ 		goto err_i1;
+@@ -1961,7 +2006,15 @@ static long kfd_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
+ 	 * processes need to create their own KFD device context.
+ 	 */
+ 	process = filep->private_data;
+-	if (process->lead_thread != current->group_leader) {
++
++	rcu_read_lock();
++	if ((ioctl->flags & KFD_IOC_FLAG_PTRACE_ATTACHED) &&
++	    ptrace_parent(process->lead_thread) == current)
++		ptrace_attached = true;
++	rcu_read_unlock();
++
++	if (process->lead_thread != current->group_leader
++	    && !ptrace_attached) {
+ 		dev_dbg(kfd_device, "Using KFD FD in wrong process\n");
+ 		retcode = -EBADF;
+ 		goto err_i1;
+@@ -1976,6 +2029,11 @@ static long kfd_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
+ 		goto err_i1;
+ 	}
+ 
++	/* KFD_IOC_FLAG_ROOT_ONLY is only for CAP_SYS_ADMIN */
++	if (unlikely((ioctl->flags & KFD_IOC_FLAG_ROOT_ONLY) &&
++		     !capable(CAP_SYS_ADMIN)))
++		return -EACCES;
++
+ 	if (cmd & (IOC_IN | IOC_OUT)) {
+ 		if (asize <= sizeof(stack_kdata)) {
+ 			kdata = stack_kdata;
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+index 47ec820cae72..95dbf4ff61d6 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+@@ -121,7 +121,35 @@
+  */
+ #define KFD_QUEUE_DOORBELL_MIRROR_OFFSET 512
+ 
++/**
++ * enum kfd_ioctl_flags - KFD ioctl flags
++ * Various flags that can be set in &amdkfd_ioctl_desc.flags to control how
++ * userspace can use a given ioctl.
++ */
++enum kfd_ioctl_flags {
++	/**
++	 * @KFD_IOC_FLAG_ROOT_ONLY:
++	 * Certain KFD ioctls such as AMDKFD_IOC_CRIU_RESTORER can potentially
++	 * perform privileged operations and load arbitrary data into MQDs and
++	 * eventually HQD registers when the queue is mapped by HWS. In order to
++	 * prevent this we should perform additional security checks. In other
++	 * cases, certain ioctls such as AMDKFD_IOC_CRIU_RESUME might be called
++	 * by an external process e.g. CRIU restore process, for each resuming
++	 * tasks and thus require elevated privileges.
++	 *
++	 * This is equivalent to callers with the SYSADMIN capability.
++	 */
++	KFD_IOC_FLAG_ROOT_ONLY = BIT(0),
++	/**
++	 * @KFD_IOC_FLAG_PTRACE_ATTACHED:
++	 * Certain KFD ioctls such as AMDKFD_IOC_CRIU_HELPER and
++	 * AMDKFD_IOC_CRIU_DUMPER are expected to be called during a Checkpoint
++	 * operation triggered by CRIU. Since, these are expected to be called
++	 * from a PTRACE attched context, we must authenticate these.
++	 */
++	KFD_IOC_FLAG_PTRACE_ATTACHED = BIT(1),
+ 
++};
+ /*
+  * Kernel module parameter to specify maximum number of supported queues per
+  * device
+diff --git a/include/uapi/linux/kfd_ioctl.h b/include/uapi/linux/kfd_ioctl.h
+index af96af174dc4..b7b6c160d254 100644
+--- a/include/uapi/linux/kfd_ioctl.h
++++ b/include/uapi/linux/kfd_ioctl.h
+@@ -468,6 +468,102 @@ struct kfd_ioctl_smi_events_args {
+ 	__u32 anon_fd;	/* from KFD */
+ };
+ 
++struct kfd_criu_devinfo_bucket {
++	__u32 user_gpu_id;
++	__u32 actual_gpu_id;
++	__u32 drm_fd;
++};
++
++struct kfd_criu_bo_buckets {
++	__u64 bo_addr;  /* from KFD */
++	__u64 bo_size;  /* from KFD */
++	__u64 bo_offset;/* from KFD */
++	__u64 user_addr; /* from KFD */
++	__u32 bo_alloc_flags;/* from KFD */
++	__u32 gpu_id;/* from KFD */
++	__u32 idr_handle;/* from KFD */
++};
++
++struct kfd_criu_q_bucket {
++	__u64 q_address;
++	__u64 q_size;
++	__u64 read_ptr_addr;
++	__u64 write_ptr_addr;
++	__u64 doorbell_off;
++	__u64 eop_ring_buffer_address;		/* Relevant only for VI */
++	__u64 ctx_save_restore_area_address;	/* Relevant only for VI */
++	__u64 queues_data_offset;
++	__u32 gpu_id;
++	__u32 type;
++	__u32 format;
++	__u32 q_id;
++	__u32 priority;
++	__u32 q_percent;
++	__u32 doorbell_id;
++	__u32 is_gws;				/* TODO Implement me */
++	__u32 sdma_id;			/* Relevant only for sdma queues*/
++	__u32 eop_ring_buffer_size;		/* Relevant only for VI */
++	__u32 ctx_save_restore_area_size;	/* Relevant only for VI */
++	__u32 ctl_stack_size;			/* Relevant only for VI */
++	__u32 cu_mask_size;
++	__u32 mqd_size;
++};
++
++struct kfd_criu_ev_bucket {
++	__u32 event_id;
++	__u32 auto_reset;
++	__u32 type;
++	__u32 signaled;
++
++	union {
++		struct kfd_hsa_memory_exception_data memory_exception_data;
++		struct kfd_hsa_hw_exception_data hw_exception_data;
++	};
++};
++
++struct kfd_ioctl_criu_dumper_args {
++	__u64 num_of_bos;
++	__u64 kfd_criu_bo_buckets_ptr;
++	__u64 kfd_criu_q_buckets_ptr;
++	__u64 kfd_criu_ev_buckets_ptr;
++	__u64 kfd_criu_devinfo_buckets_ptr;
++	__u64 queues_data_size;
++	__u64 queues_data_ptr;
++	__u64 event_page_offset;
++	__u32 num_of_queues;
++	__u32 num_of_devices;
++	__u32 num_of_events;
++};
++
++struct kfd_ioctl_criu_restorer_args {
++	__u64 handle;   /* from KFD */
++	__u64 num_of_bos;
++	__u64 kfd_criu_bo_buckets_ptr;
++	__u64 restored_bo_array_ptr;
++	__u64 kfd_criu_q_buckets_ptr;
++	__u64 kfd_criu_ev_buckets_ptr;
++	__u64 kfd_criu_devinfo_buckets_ptr;
++	__u64 queues_data_size;
++	__u64 queues_data_ptr;
++	__u64 event_page_offset;
++	__u32 num_of_devices;
++	__u32 num_of_queues;
++	__u32 num_of_events;
++};
++
++struct kfd_ioctl_criu_helper_args {
++	__u64 num_of_bos;	/* from KFD */
++	__u64 queues_data_size;
++	__u32 task_pid;
++	__u32 num_of_devices;
++	__u32 num_of_queues;    /* from KFD */
++	__u32 num_of_events;	/* from KFD */
++};
++
++struct kfd_ioctl_criu_resume_args {
++	__u32 pid;	/* to KFD */
++};
++
+ /* Register offset inside the remapped mmio page
+  */
+ enum kfd_mmio_remap {
+@@ -742,7 +838,19 @@ struct kfd_ioctl_set_xnack_mode_args {
+ #define AMDKFD_IOC_SET_XNACK_MODE		\
+ 		AMDKFD_IOWR(0x21, struct kfd_ioctl_set_xnack_mode_args)
+ 
++#define AMDKFD_IOC_CRIU_DUMPER			\
++		AMDKFD_IOWR(0x22, struct kfd_ioctl_criu_dumper_args)
++
++#define AMDKFD_IOC_CRIU_RESTORER			\
++		AMDKFD_IOWR(0x23, struct kfd_ioctl_criu_restorer_args)
++
++#define AMDKFD_IOC_CRIU_HELPER			\
++		AMDKFD_IOWR(0x24, struct kfd_ioctl_criu_helper_args)
++
++#define AMDKFD_IOC_CRIU_RESUME			\
++		AMDKFD_IOWR(0x25, struct kfd_ioctl_criu_resume_args)
++
+ #define AMDKFD_COMMAND_START		0x01
+-#define AMDKFD_COMMAND_END		0x22
++#define AMDKFD_COMMAND_END		0x26
+ 
+ #endif
+-- 
+2.34.1
+
+
+From 29cab27287c13ca1eeec857f88a173f039127738 Mon Sep 17 00:00:00 2001
+From: Rajneesh Bhardwaj <rajneesh.bhardwaj@amd.com>
+Date: Mon, 30 Nov 2020 02:03:28 -0500
+Subject: [PATCH 02/17] drm/amdkfd: CRIU Implement KFD helper ioctl
+
+This IOCTL is expected to be called as a precursor to the actual
+Checkpoint operation. This does the basic discovery into the target
+process seized by CRIU and relays the information to the userspace that
+utilizes it to start the Checkpoint operation via another dedicated
+IOCTL.
+
+The helper IOCTL determines the number of GPUs, buffer objects that are
+associated with the target process, its process id in caller's namespace
+since /proc/pid/mem interface maybe used to drain the contenets of the
+discovered buffer objects in userspace and getpid returns the pid of
+CRIU dumper process. Also the pid of a process inside a container might
+be different than its global pid so return the ns pid.
+
+Signed-off-by: Rajneesh Bhardwaj <rajneesh.bhardwaj@amd.com>
+(cherry picked from commit b2fa92d0a8f1de51013cd6742b4996b38c285ffc)
+(cherry picked from commit 8b44c466ce53162603cd8ae49624462902541a47)
+Signed-off-by: David Yat Sin <david.yatsin@amd.com>
+Change-Id: I2c6b28fe4df7333c9faf7eb6ee86decabe475338
+---
+ drivers/gpu/drm/amd/amdkfd/kfd_chardev.c | 42 ++++++++++++++++++++++--
+ drivers/gpu/drm/amd/amdkfd/kfd_priv.h    |  2 ++
+ drivers/gpu/drm/amd/amdkfd/kfd_process.c | 14 ++++++++
+ 3 files changed, 56 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+index 80e438d42891..b97845580034 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+@@ -1838,9 +1838,47 @@ static int kfd_ioctl_criu_restorer(struct file *filep,
+ static int kfd_ioctl_criu_helper(struct file *filep,
+ 				struct kfd_process *p, void *data)
+ {
+-	pr_info("Inside %s\n",__func__);
++	struct kfd_ioctl_criu_helper_args *args = data;
++	struct kgd_mem *kgd_mem;
++	u64 num_of_bos = 0;
++	int id, i = 0;
++	void *mem;
++	int ret = 0;
+ 
+-	return 0;
++	pr_debug("Inside %s\n", __func__);
++	mutex_lock(&p->mutex);
++
++	if (!kfd_has_process_device_data(p)) {
++		pr_err("No pdd for given process\n");
++		ret = -ENODEV;
++		goto err_unlock;
++	}
++
++	/* Run over all PDDs of the process */
++	for (i = 0; i < p->n_pdds; i++) {
++		struct kfd_process_device *pdd = p->pdds[i];
++
++		idr_for_each_entry(&pdd->alloc_idr, mem, id) {
++			if (!mem) {
++				ret = -ENOMEM;
++				goto err_unlock;
++			}
++
++			kgd_mem = (struct kgd_mem *)mem;
++			if ((uint64_t)kgd_mem->va > pdd->gpuvm_base)
++				num_of_bos++;
++		}
++	}
++
++	args->task_pid = task_pid_nr_ns(p->lead_thread,
++					task_active_pid_ns(p->lead_thread));
++	args->num_of_devices = p->n_pdds;
++	args->num_of_bos = num_of_bos;
++	dev_dbg(kfd_device, "Num of bos = %llu\n", num_of_bos);
++
++err_unlock:
++	mutex_unlock(&p->mutex);
++	return ret;
+ }
+ 
+ static int kfd_ioctl_criu_resume(struct file *filep,
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+index 95dbf4ff61d6..e052c5b8b839 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+@@ -944,6 +944,8 @@ void *kfd_process_device_translate_handle(struct kfd_process_device *p,
+ void kfd_process_device_remove_obj_handle(struct kfd_process_device *pdd,
+ 					int handle);
+ 
++bool kfd_has_process_device_data(struct kfd_process *p);
++
+ /* PASIDs */
+ int kfd_pasid_init(void);
+ void kfd_pasid_exit(void);
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_process.c b/drivers/gpu/drm/amd/amdkfd/kfd_process.c
+index 21ec8a18cad2..9f2b4d8a5247 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_process.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_process.c
+@@ -1406,6 +1406,20 @@ static int init_doorbell_bitmap(struct qcm_process_device *qpd,
+ 	return 0;
+ }
+ 
++bool kfd_has_process_device_data(struct kfd_process *p)
++{
++	int i;
++
++	for (i = 0; i < p->n_pdds; i++) {
++		struct kfd_process_device *pdd = p->pdds[i];
++
++		if (pdd)
++			return true;
++	}
++
++	return false;
++}
++
+ struct kfd_process_device *kfd_get_process_device_data(struct kfd_dev *dev,
+ 							struct kfd_process *p)
+ {
+-- 
+2.34.1
+
+
+From 94bb599dfcdc944047dccb5ce866ff0cc9679bad Mon Sep 17 00:00:00 2001
+From: Rajneesh Bhardwaj <rajneesh.bhardwaj@amd.com>
+Date: Mon, 30 Nov 2020 18:26:22 -0500
+Subject: [PATCH 03/17] drm/amdkfd: CRIU Implement KFD dumper ioctl
+
+This adds support to discover the buffer objects that belong to a
+process being checkpointed. The data corresponding to these buffer
+objects is returned to user space plugin running under criu master
+context which then stores this info to recreate these buffer objects
+during a restore operation.
+
+Signed-off-by: David Yat Sin <david.yatsin@amd.com>
+Signed-off-by: Rajneesh Bhardwaj <rajneesh.bhardwaj@amd.com>
+(cherry picked from commit 1f114a541bd21873de905db64bb9efa673274d4b)
+(cherry picked from commit 20c435fad57d3201e5402e38ae778f1f0f84a09d)
+Change-Id: Ifdbeee3606578db61bdc9aca7528272e20a38256
+---
+ drivers/gpu/drm/amd/amdkfd/kfd_chardev.c | 96 +++++++++++++++++++++++-
+ 1 file changed, 95 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+index b97845580034..ca1148ec530f 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+@@ -42,6 +42,7 @@
+ #include "kfd_svm.h"
+ #include "amdgpu_amdkfd.h"
+ #include "kfd_smi_events.h"
++#include "amdgpu_object.h"
+ 
+ static long kfd_ioctl(struct file *, unsigned int, unsigned long);
+ static int kfd_open(struct inode *, struct file *);
+@@ -1822,9 +1823,102 @@ static int kfd_ioctl_svm(struct file *filep, struct kfd_process *p, void *data)
+ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 				struct kfd_process *p, void *data)
+ {
++	struct kfd_ioctl_criu_dumper_args *args = data;
++	struct kfd_criu_bo_buckets *bo_bucket;
++	struct amdgpu_bo *dumper_bo;
++	int ret, id, index, i = 0;
++	struct kgd_mem *kgd_mem;
++	void *mem;
++
+ 	pr_info("Inside %s\n",__func__);
+ 
+-	return 0;
++	if (args->num_of_bos == 0) {
++		pr_err("No BOs to be dumped\n");
++		return -EINVAL;
++	}
++
++	if (p->n_pdds != args->num_of_devices) {
++		pr_err("Invalid number of devices %d (expected = %d)\n",
++								args->num_of_devices, p->n_pdds);
++		return -EINVAL;
++	}
++
++	pr_debug("num of bos = %llu\n", args->num_of_bos);
++
++	bo_bucket = kvzalloc((sizeof(struct kfd_criu_bo_buckets) *
++			     args->num_of_bos), GFP_KERNEL);
++	if (!bo_bucket)
++		return -ENOMEM;
++
++	mutex_lock(&p->mutex);
++
++	if (!kfd_has_process_device_data(p)) {
++		pr_err("No pdd for given process\n");
++		ret = -ENODEV;
++		goto err_unlock;
++	}
++
++	/* Run over all PDDs of the process */
++	for (index = 0; index < p->n_pdds; index++) {
++		struct kfd_process_device *pdd = p->pdds[index];
++
++		idr_for_each_entry(&pdd->alloc_idr, mem, id) {
++			if (!mem) {
++				ret = -ENOMEM;
++				goto err_unlock;
++			}
++
++			kgd_mem = (struct kgd_mem *)mem;
++			dumper_bo = kgd_mem->bo;
++
++			if ((uint64_t)kgd_mem->va > pdd->gpuvm_base) {
++				if (i >= args->num_of_bos) {
++					pr_err("Num of BOs changed since last helper ioctl call\n");
++					ret = -EINVAL;
++					goto err_unlock;
++				}
++
++				bo_bucket[i].bo_addr = (uint64_t)kgd_mem->va;
++				bo_bucket[i].bo_size = amdgpu_bo_size(dumper_bo);
++				bo_bucket[i].gpu_id = pdd->dev->id;
++				bo_bucket[i].bo_alloc_flags = (uint32_t)kgd_mem->alloc_flags;
++				bo_bucket[i].idr_handle = id;
++
++				if (bo_bucket[i].bo_alloc_flags & KFD_IOC_ALLOC_MEM_FLAGS_DOORBELL)
++					bo_bucket[i].bo_offset = KFD_MMAP_TYPE_DOORBELL |
++						KFD_MMAP_GPU_ID(pdd->dev->id);
++				else if (bo_bucket[i].bo_alloc_flags &
++				    KFD_IOC_ALLOC_MEM_FLAGS_MMIO_REMAP)
++					bo_bucket[i].bo_offset = KFD_MMAP_TYPE_MMIO |
++						KFD_MMAP_GPU_ID(pdd->dev->id);
++				else
++					bo_bucket[i].bo_offset = amdgpu_bo_mmap_offset(dumper_bo);
++
++				pr_debug("bo_size = 0x%llx, bo_addr = 0x%llx bo_offset = 0x%llx\n"
++					 "gpu_id = 0x%x alloc_flags = 0x%x idr_handle = 0x%x",
++					 bo_bucket[i].bo_size,
++					 bo_bucket[i].bo_addr,
++					 bo_bucket[i].bo_offset,
++					 bo_bucket[i].gpu_id,
++					 bo_bucket[i].bo_alloc_flags,
++					 bo_bucket[i].idr_handle);
++				i++;
++			}
++		}
++	}
++
++	ret = copy_to_user((void __user *)args->kfd_criu_bo_buckets_ptr,
++			bo_bucket,
++			(args->num_of_bos *
++			 sizeof(struct kfd_criu_bo_buckets)));
++	kvfree(bo_bucket);
++	mutex_unlock(&p->mutex);
++	return ret ? -EFAULT : 0;
++
++err_unlock:
++	mutex_unlock(&p->mutex);
++	pr_err("Dumper ioctl failed err:%d\n", ret);
++	return ret;
+ }
+ 
+ static int kfd_ioctl_criu_restorer(struct file *filep,
+-- 
+2.34.1
+
+
+From d10248cad4a14b74c4133dc55696f7873bf894eb Mon Sep 17 00:00:00 2001
+From: Rajneesh Bhardwaj <rajneesh.bhardwaj@amd.com>
+Date: Tue, 1 Dec 2020 12:36:46 -0500
+Subject: [PATCH 04/17] drm/amdkfd: CRIU Implement KFD restore ioctl
+
+---
+ drivers/gpu/drm/amd/amdkfd/kfd_chardev.c | 321 ++++++++++++++++++++++-
+ drivers/gpu/drm/amd/amdkfd/kfd_priv.h    |   9 +
+ 2 files changed, 328 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+index ca1148ec530f..eed9f3003669 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+@@ -1820,6 +1820,94 @@ static int kfd_ioctl_svm(struct file *filep, struct kfd_process *p, void *data)
+ 	return -EPERM;
+ }
+ #endif
++static int kfd_devinfo_dump(struct kfd_process *p, struct kfd_ioctl_criu_dumper_args *args)
++{
++	int ret = 0;
++	int index;
++	struct kfd_criu_devinfo_bucket *devinfos;
++
++	if (p->n_pdds != args->num_of_devices)
++		return -EINVAL;
++
++	devinfos = kvzalloc((sizeof(struct kfd_criu_devinfo_bucket) *
++			     args->num_of_devices), GFP_KERNEL);
++	if (!devinfos)
++		return -ENOMEM;
++
++	for (index = 0; index < p->n_pdds; index++) {
++		struct kfd_process_device *pdd = p->pdds[index];
++
++		devinfos[index].user_gpu_id = pdd->user_gpu_id;
++		devinfos[index].actual_gpu_id = pdd->dev->id;
++	}
++
++	ret = copy_to_user((void __user *)args->kfd_criu_devinfo_buckets_ptr,
++			devinfos,
++			(args->num_of_devices *
++			sizeof(struct kfd_criu_devinfo_bucket)));
++	if (ret)
++		ret = -EFAULT;
++
++	kvfree(devinfos);
++	return ret;
++}
++
++static int kfd_devinfo_restore(struct kfd_process *p, struct kfd_criu_devinfo_bucket *devinfos,
++			       uint32_t num_of_devices)
++{
++	int i;
++
++	if (p->n_pdds != num_of_devices)
++		return -EINVAL;
++
++	for (i = 0; i < p->n_pdds; i++) {
++		struct kfd_dev *dev;
++		struct kfd_process_device *pdd;
++		struct file *drm_file;
++
++		dev = kfd_device_by_id(devinfos[i].actual_gpu_id);
++		if (!dev) {
++			pr_err("Failed to find device with gpu_id = %x\n",
++				devinfos[i].actual_gpu_id);
++			return -EINVAL;
++		}
++
++		pdd = kfd_get_process_device_data(dev, p);
++		if (!pdd) {
++			pr_err("Failed to get pdd for gpu_id = %x\n", devinfos[i].actual_gpu_id);
++			return -EINVAL;
++		}
++		pdd->user_gpu_id = devinfos[i].user_gpu_id;
++
++		drm_file = fget(devinfos[i].drm_fd);
++		if (!drm_file) {
++			pr_err("Invalid render node file descriptor sent from plugin (%d)\n",
++				devinfos[i].drm_fd);
++			return -EINVAL;
++		}
++
++		if (pdd->drm_file)
++			return -EINVAL;
++
++		/* create the vm using render nodes for kfd pdd */
++		if (kfd_process_device_init_vm(pdd, drm_file)) {
++			pr_err("could not init vm for given pdd\n");
++			/* On success, the PDD keeps the drm_file reference */
++			fput(drm_file);
++			return -EINVAL;
++		}
++		/*
++		 * pdd now already has the vm bound to render node so below api won't create a new
++		 * exclusive kfd mapping but use existing one with renderDXXX but is still needed
++		 * for iommu v2 binding  and runtime pm.
++		 */
++		pdd = kfd_bind_process_to_device(dev, p);
++		if (IS_ERR(pdd))
++			return PTR_ERR(pdd);
++	}
++	return 0;
++}
++
+ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 				struct kfd_process *p, void *data)
+ {
+@@ -1858,6 +1946,10 @@ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 		goto err_unlock;
+ 	}
+ 
++	ret = kfd_devinfo_dump(p, args);
++	if (ret)
++		goto err_unlock;
++
+ 	/* Run over all PDDs of the process */
+ 	for (index = 0; index < p->n_pdds; index++) {
+ 		struct kfd_process_device *pdd = p->pdds[index];
+@@ -1924,9 +2016,234 @@ static int kfd_ioctl_criu_dumper(struct file *filep,
+ static int kfd_ioctl_criu_restorer(struct file *filep,
+ 				struct kfd_process *p, void *data)
+ {
+-	pr_info("Inside %s\n",__func__);
++	struct kfd_ioctl_criu_restorer_args *args = data;
++	struct kfd_criu_devinfo_bucket *devinfos = NULL;
++	uint64_t *restored_bo_offsets_arr = NULL;
++	struct kfd_criu_bo_buckets *bo_bucket = NULL;
++	long err = 0;
++	int ret, i, j = 0;
+ 
+-	return 0;
++	devinfos = kvzalloc((sizeof(struct kfd_criu_devinfo_bucket) *
++			     args->num_of_devices), GFP_KERNEL);
++	if (!devinfos) {
++		err = -ENOMEM;
++		goto failed;
++	}
++
++	err = copy_from_user(devinfos,
++			     (void __user *)args->kfd_criu_devinfo_buckets_ptr,
++			     sizeof(struct kfd_criu_devinfo_bucket) *
++			     args->num_of_devices);
++	if (err != 0) {
++		err = -EFAULT;
++		goto failed;
++	}
++
++	mutex_lock(&p->mutex);
++	err = kfd_devinfo_restore(p, devinfos, args->num_of_devices);
++	if (err)
++		goto err_unlock;
++
++
++	bo_bucket = kvzalloc((sizeof(struct kfd_criu_bo_buckets) *
++			     args->num_of_bos), GFP_KERNEL);
++	if (!bo_bucket) {
++		err = -ENOMEM;
++		goto err_unlock;
++	}
++
++	err = copy_from_user(bo_bucket,
++			     (void __user *)args->kfd_criu_bo_buckets_ptr,
++			     args->num_of_bos * sizeof(struct kfd_criu_bo_buckets));
++	if (err != 0) {
++		err = -EFAULT;
++		goto err_unlock;
++	}
++
++	restored_bo_offsets_arr = kvmalloc_array(args->num_of_bos,
++					sizeof(*restored_bo_offsets_arr),
++					GFP_KERNEL);
++	if (!restored_bo_offsets_arr) {
++		err = -ENOMEM;
++		goto err_unlock;
++	}
++
++	/* Create and map new BOs */
++	for (i = 0; i < args->num_of_bos; i++) {
++		struct kfd_dev *dev;
++		struct kfd_process_device *pdd;
++		void *mem;
++		u64 offset;
++		int idr_handle;
++
++		dev = kfd_device_by_id(bo_bucket[i].gpu_id);
++		if (!dev) {
++			err = -EINVAL;
++			pr_err("Failed to get pdd\n");
++			goto err_unlock;
++		}
++		pdd = kfd_get_process_device_data(dev, p);
++		if (!pdd) {
++			err = -EINVAL;
++			pr_err("Failed to get pdd\n");
++			goto err_unlock;
++		}
++
++		pr_debug("kfd restore ioctl - bo_bucket[%d]:\n", i);
++		pr_debug("bo_size = 0x%llx, bo_addr = 0x%llx bo_offset = 0x%llx\n"
++			"gpu_id = 0x%x alloc_flags = 0x%x\n"
++			"idr_handle = 0x%x\n",
++			bo_bucket[i].bo_size,
++			bo_bucket[i].bo_addr,
++			bo_bucket[i].bo_offset,
++			bo_bucket[i].gpu_id,
++			bo_bucket[i].bo_alloc_flags,
++			bo_bucket[i].idr_handle);
++
++		if (bo_bucket[i].bo_alloc_flags &
++		    KFD_IOC_ALLOC_MEM_FLAGS_DOORBELL) {
++			pr_debug("restore ioctl: KFD_IOC_ALLOC_MEM_FLAGS_DOORBELL\n");
++			if (bo_bucket[i].bo_size !=
++			    kfd_doorbell_process_slice(dev)) {
++				err = -EINVAL;
++				goto err_unlock;
++			}
++			offset = kfd_get_process_doorbells(pdd);
++		} else if (bo_bucket[i].bo_alloc_flags &
++			   KFD_IOC_ALLOC_MEM_FLAGS_MMIO_REMAP) {
++			/* MMIO BOs need remapped bus address */
++			pr_info("restore ioctl :KFD_IOC_ALLOC_MEM_FLAGS_MMIO_REMAP\n");
++			if (bo_bucket[i].bo_size != PAGE_SIZE) {
++				pr_err("Invalid page size\n");
++				err = -EINVAL;
++				goto err_unlock;
++			}
++			offset = amdgpu_amdkfd_get_mmio_remap_phys_addr(dev->kgd);
++			if (!offset) {
++				pr_err("amdgpu_amdkfd_get_mmio_remap_phys_addr failed\n");
++				err = -ENOMEM;
++				goto err_unlock;
++			}
++		}
++
++		/* Create the BO */
++		ret = amdgpu_amdkfd_gpuvm_alloc_memory_of_gpu(dev->kgd,
++						bo_bucket[i].bo_addr,
++						bo_bucket[i].bo_size,
++						pdd->drm_priv,
++						(struct kgd_mem **) &mem,
++						&offset,
++						bo_bucket[i].bo_alloc_flags);
++		if (ret) {
++			pr_err("Could not create the BO\n");
++			err = -ENOMEM;
++			goto err_unlock;
++		}
++		pr_debug("New BO created: bo_size = 0x%llx, bo_addr = 0x%llx bo_offset = 0x%llx\n",
++			bo_bucket[i].bo_size, bo_bucket[i].bo_addr, offset);
++
++		/* Restore previuos IDR handle */
++		pr_debug("Restoring old IDR handle for the BO");
++		idr_handle = idr_alloc(&pdd->alloc_idr, mem,
++				       bo_bucket[i].idr_handle,
++				       bo_bucket[i].idr_handle + 1, GFP_KERNEL);
++		if (idr_handle < 0) {
++			pr_err("Could not allocate idr\n");
++			amdgpu_amdkfd_gpuvm_free_memory_of_gpu(dev->kgd,
++						(struct kgd_mem *)mem,
++						pdd->drm_priv, NULL);
++			goto err_unlock;
++		}
++
++		if (bo_bucket[i].bo_alloc_flags & KFD_IOC_ALLOC_MEM_FLAGS_DOORBELL)
++			restored_bo_offsets_arr[i] = KFD_MMAP_TYPE_DOORBELL |
++				KFD_MMAP_GPU_ID(pdd->dev->id);
++		if (bo_bucket[i].bo_alloc_flags & KFD_IOC_ALLOC_MEM_FLAGS_MMIO_REMAP) {
++			restored_bo_offsets_arr[i] = KFD_MMAP_TYPE_MMIO |
++				KFD_MMAP_GPU_ID(pdd->dev->id);
++		} else if (bo_bucket[i].bo_alloc_flags & KFD_IOC_ALLOC_MEM_FLAGS_GTT) {
++			restored_bo_offsets_arr[i] = offset;
++			pr_debug("updating offset for GTT\n");
++		} else if (bo_bucket[i].bo_alloc_flags & KFD_IOC_ALLOC_MEM_FLAGS_VRAM) {
++			restored_bo_offsets_arr[i] = offset;
++			/* Update the VRAM usage count */
++			WRITE_ONCE(pdd->vram_usage,
++				   pdd->vram_usage + bo_bucket[i].bo_size);
++			pr_debug("updating offset for VRAM\n");
++		}
++
++		/* now map these BOs to GPU/s */
++		for (j = 0; j < args->num_of_devices; j++) {
++			struct kfd_dev *peer;
++			struct kfd_process_device *peer_pdd;
++
++			peer = kfd_device_by_id(devinfos[j].actual_gpu_id);
++
++			pr_debug("Inside mapping loop with desired gpu_id = 0x%x\n",
++							devinfos[j].actual_gpu_id);
++			if (!peer) {
++				pr_debug("Getting device by id failed for 0x%x\n",
++				devinfos[j].actual_gpu_id);
++				err = -EINVAL;
++				goto err_unlock;
++			}
++
++			peer_pdd = kfd_bind_process_to_device(peer, p);
++			if (IS_ERR(peer_pdd)) {
++				err = PTR_ERR(peer_pdd);
++				goto err_unlock;
++			}
++			pr_debug("map mem in restore ioctl -> 0x%llx\n",
++				 ((struct kgd_mem *)mem)->va);
++			err = amdgpu_amdkfd_gpuvm_map_memory_to_gpu(peer->kgd,
++				(struct kgd_mem *)mem, peer_pdd->drm_priv);
++			if (err) {
++				pr_err("Failed to map to gpu %d/%d\n",
++				j, args->num_of_devices);
++				goto err_unlock;
++			}
++		}
++
++		err = amdgpu_amdkfd_gpuvm_sync_memory(dev->kgd,
++						      (struct kgd_mem *) mem, true);
++		if (err) {
++			pr_debug("Sync memory failed, wait interrupted by user signal\n");
++			goto err_unlock;
++		}
++
++		pr_info("map memory was successful for the BO\n");
++	} /* done */
++
++	/* Flush TLBs after waiting for the page table updates to complete */
++	for (j = 0; j < args->num_of_devices; j++) {
++		struct kfd_dev *peer;
++		struct kfd_process_device *peer_pdd;
++
++		peer = kfd_device_by_id(devinfos[j].actual_gpu_id);
++		if (WARN_ON_ONCE(!peer))
++			continue;
++		peer_pdd = kfd_get_process_device_data(peer, p);
++		if (WARN_ON_ONCE(!peer_pdd))
++			continue;
++		kfd_flush_tlb(peer_pdd);
++	}
++
++	ret = copy_to_user((void __user *)args->restored_bo_array_ptr,
++			   restored_bo_offsets_arr,
++			   (args->num_of_bos * sizeof(*restored_bo_offsets_arr)));
++	if (ret) {
++		err = -EFAULT;
++		goto err_unlock;
++	}
++
++err_unlock:
++	mutex_unlock(&p->mutex);
++failed:
++	kvfree(bo_bucket);
++	kvfree(restored_bo_offsets_arr);
++	kvfree(devinfos);
++
++	return err;
+ }
+ 
+ static int kfd_ioctl_criu_helper(struct file *filep,
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+index e052c5b8b839..024051952b8c 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+@@ -760,6 +760,7 @@ struct kfd_process_device {
+ 	 *  number of CU's a device has along with number of other competing processes
+ 	 */
+ 	struct attribute attr_cu_occupancy;
++<<<<<<< HEAD
+ 
+ 	/* sysfs counters for GPU retry fault and page migration tracking */
+ 	struct kobject *kobj_counters;
+@@ -769,6 +770,14 @@ struct kfd_process_device {
+ 	uint64_t faults;
+ 	uint64_t page_in;
+ 	uint64_t page_out;
++=======
++	/*
++	 * If this process has been checkpointed before, then the user
++	 * application will use the original gpu_id on the
++	 * checkpointed node to refer to this device.
++	 */
++	uint32_t user_gpu_id;
++>>>>>>> 0a5fe0d27b08 (drm/amdkfd: CRIU Implement KFD restore ioctl)
+ };
+ 
+ #define qpd_to_pdd(x) container_of(x, struct kfd_process_device, qpd)
+-- 
+2.34.1
+
+
+From 86615970708cbd3f9b2e789f5ec887fa1063d7f6 Mon Sep 17 00:00:00 2001
+From: Rajneesh Bhardwaj <rajneesh.bhardwaj@amd.com>
+Date: Mon, 11 Jan 2021 13:27:50 -0500
+Subject: [PATCH 05/17] drm/amdkfd: CRIU Implement KFD resume ioctl
+
+This adds support to create userptr BOs on restore and introduces a new
+ioctl to restart memory notifiers for the restored userptr BOs.
+When doing CRIU restore MMU notifications can happen anytime after we call
+amdgpu_mn_register. Prevent MMU notifications until we reach stage-4 of the
+restore process i.e. criu_resume ioctl is recieved, and the process is ready
+to be resumed. This ioctl is different from other KFD CRIU ioctls since
+its called by CRIU master restore process for all the target processes
+being resumed by CRIU.
+
+Signed-off-by: David Yat Sin <david.yatsin@amd.com>
+Signed-off-by: Rajneesh Bhardwaj <rajneesh.bhardwaj@amd.com>
+(cherry picked from commit 1f0300f5a4dc12b3c1140b0f0953300b4a6ac81f)
+(cherry picked from commit 5c5ae6026ea795ae39acff06db862a7ef2fc6aa9)
+Change-Id: I714bbd8bec35feb47e0a1af9c2ce63ea1098fa88
+---
+ drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd.h    |  5 +-
+ .../gpu/drm/amd/amdgpu/amdgpu_amdkfd_gpuvm.c  | 51 ++++++++++++++-
+ drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.c       | 20 ++++++
+ drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.h       |  2 +
+ drivers/gpu/drm/amd/amdkfd/kfd_chardev.c      | 63 ++++++++++++++++---
+ drivers/gpu/drm/amd/amdkfd/kfd_priv.h         |  1 +
+ drivers/gpu/drm/amd/amdkfd/kfd_process.c      | 36 +++++++++--
+ 7 files changed, 159 insertions(+), 19 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd.h b/drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd.h
+index 3bc52b2c604f..ce464d670d24 100644
+--- a/drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd.h
++++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd.h
+@@ -131,6 +131,7 @@ struct amdkfd_process_info {
+ 	atomic_t evicted_bos;
+ 	struct delayed_work restore_userptr_work;
+ 	struct pid *pid;
++	bool block_mmu_notifications;
+ };
+ 
+ int amdgpu_amdkfd_init(void);
+@@ -267,7 +268,9 @@ uint64_t amdgpu_amdkfd_gpuvm_get_process_page_dir(void *drm_priv);
+ int amdgpu_amdkfd_gpuvm_alloc_memory_of_gpu(
+ 		struct kgd_dev *kgd, uint64_t va, uint64_t size,
+ 		void *drm_priv, struct kgd_mem **mem,
+-		uint64_t *offset, uint32_t flags);
++		uint64_t *offset, uint32_t flags, bool criu_resume);
++void amdgpu_amdkfd_block_mmu_notifications(void *p);
++int amdgpu_amdkfd_criu_resume(void *p);
+ int amdgpu_amdkfd_gpuvm_free_memory_of_gpu(
+ 		struct kgd_dev *kgd, struct kgd_mem *mem, void *drm_priv,
+ 		uint64_t *size);
+diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd_gpuvm.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd_gpuvm.c
+index 00a8aef48a69..e38d330317cd 100644
+--- a/drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd_gpuvm.c
++++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd_gpuvm.c
+@@ -820,7 +820,8 @@ static void remove_kgd_mem_from_kfd_bo_list(struct kgd_mem *mem,
+  *
+  * Returns 0 for success, negative errno for errors.
+  */
+-static int init_user_pages(struct kgd_mem *mem, uint64_t user_addr)
++static int init_user_pages(struct kgd_mem *mem, uint64_t user_addr,
++			   bool criu_resume)
+ {
+ 	struct amdkfd_process_info *process_info = mem->process_info;
+ 	struct amdgpu_bo *bo = mem->bo;
+@@ -842,6 +843,17 @@ static int init_user_pages(struct kgd_mem *mem, uint64_t user_addr)
+ 		goto out;
+ 	}
+ 
++	if (criu_resume) {
++		/*
++		 * During a CRIU restore operation, the userptr buffer objects
++		 * will be validated in the restore_userptr_work worker at a
++		 * later stage when it is scheduled by another ioctl called by
++		 * CRIU master process for the target pid for restore.
++		 */
++		atomic_inc(&mem->invalid);
++		mutex_unlock(&process_info->lock);
++		return 0;
++	}
+ 	ret = amdgpu_ttm_tt_get_user_pages(bo, bo->tbo.ttm->pages);
+ 	if (ret) {
+ 		pr_err("%s: Failed to get user pages: %d\n", __func__, ret);
+@@ -1214,6 +1226,7 @@ static int init_kfd_vm(struct amdgpu_vm *vm, void **process_info,
+ 		INIT_DELAYED_WORK(&info->restore_userptr_work,
+ 				  amdgpu_amdkfd_restore_userptr_worker);
+ 
++		info->block_mmu_notifications = false;
+ 		*process_info = info;
+ 		*ef = dma_fence_get(&info->eviction_fence->base);
+ 	}
+@@ -1376,10 +1389,37 @@ uint64_t amdgpu_amdkfd_gpuvm_get_process_page_dir(void *drm_priv)
+ 	return avm->pd_phys_addr;
+ }
+ 
++void amdgpu_amdkfd_block_mmu_notifications(void *p)
++{
++	struct amdkfd_process_info *pinfo = (struct amdkfd_process_info *)p;
++
++	pinfo->block_mmu_notifications = true;
++}
++
++int amdgpu_amdkfd_criu_resume(void *p)
++{
++	int ret = 0;
++	struct amdkfd_process_info *pinfo = (struct amdkfd_process_info *)p;
++
++	mutex_lock(&pinfo->lock);
++	pr_debug("scheduling work\n");
++	atomic_inc(&pinfo->evicted_bos);
++	if (!pinfo->block_mmu_notifications) {
++		ret = -EINVAL;
++		goto out_unlock;
++	}
++	pinfo->block_mmu_notifications = false;
++	schedule_delayed_work(&pinfo->restore_userptr_work, 0);
++
++out_unlock:
++	mutex_unlock(&pinfo->lock);
++	return ret;
++}
++
+ int amdgpu_amdkfd_gpuvm_alloc_memory_of_gpu(
+ 		struct kgd_dev *kgd, uint64_t va, uint64_t size,
+ 		void *drm_priv, struct kgd_mem **mem,
+-		uint64_t *offset, uint32_t flags)
++		uint64_t *offset, uint32_t flags, bool criu_resume)
+ {
+ 	struct amdgpu_device *adev = get_amdgpu_device(kgd);
+ 	struct amdgpu_vm *avm = drm_priv_to_vm(drm_priv);
+@@ -1483,7 +1523,8 @@ int amdgpu_amdkfd_gpuvm_alloc_memory_of_gpu(
+ 	add_kgd_mem_to_kfd_bo_list(*mem, avm->process_info, user_addr);
+ 
+ 	if (user_addr) {
+-		ret = init_user_pages(*mem, user_addr);
++		pr_debug("creating userptr BO for user_addr = %llu\n", user_addr);
++		ret = init_user_pages(*mem, user_addr, criu_resume);
+ 		if (ret)
+ 			goto allocate_init_user_pages_failed;
+ 	}
+@@ -1961,6 +2002,10 @@ int amdgpu_amdkfd_evict_userptr(struct kgd_mem *mem,
+ 	int evicted_bos;
+ 	int r = 0;
+ 
++	/* Do not process MMU notifications until stage-4 IOCTL is received */
++	if (process_info->block_mmu_notifications)
++		return 0;
++
+ 	atomic_inc(&mem->invalid);
+ 	evicted_bos = atomic_inc_return(&process_info->evicted_bos);
+ 	if (evicted_bos == 1) {
+diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.c
+index 51c76d6322c9..f4cf45b2e8be 100644
+--- a/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.c
++++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.c
+@@ -1162,6 +1162,26 @@ static void amdgpu_ttm_tt_unpopulate(struct ttm_device *bdev,
+ 	return ttm_pool_free(&adev->mman.bdev.pool, ttm);
+ }
+ 
++/**
++ * amdgpu_ttm_tt_get_userptr - Return the userptr GTT ttm_tt for the current
++ * task
++ *
++ * @tbo: The ttm_buffer_object that contains the userptr
++ * @user_addr:  The returned value
++ */
++int amdgpu_ttm_tt_get_userptr(const struct ttm_buffer_object *tbo,
++			      uint64_t *user_addr)
++{
++	struct amdgpu_ttm_tt *gtt;
++
++	if (!tbo->ttm)
++		return -EINVAL;
++
++	gtt = (void *)tbo->ttm;
++	*user_addr = gtt->userptr;
++	return 0;
++}
++
+ /**
+  * amdgpu_ttm_tt_set_userptr - Initialize userptr GTT ttm_tt for the current
+  * task
+diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.h b/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.h
+index 639c7b41e30b..c3039bcb99bf 100644
+--- a/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.h
++++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.h
+@@ -177,6 +177,8 @@ static inline bool amdgpu_ttm_tt_get_user_pages_done(struct ttm_tt *ttm)
+ #endif
+ 
+ void amdgpu_ttm_tt_set_user_pages(struct ttm_tt *ttm, struct page **pages);
++int amdgpu_ttm_tt_get_userptr(const struct ttm_buffer_object *tbo,
++			      uint64_t *user_addr);
+ int amdgpu_ttm_tt_set_userptr(struct ttm_buffer_object *bo,
+ 			      uint64_t addr, uint32_t flags);
+ bool amdgpu_ttm_tt_has_userptr(struct ttm_tt *ttm);
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+index eed9f3003669..cb52c5326b50 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+@@ -1301,7 +1301,7 @@ static int kfd_ioctl_alloc_memory_of_gpu(struct file *filep,
+ 	err = amdgpu_amdkfd_gpuvm_alloc_memory_of_gpu(
+ 		dev->kgd, args->va_addr, args->size,
+ 		pdd->drm_priv, (struct kgd_mem **) &mem, &offset,
+-		flags);
++		flags, false);
+ 
+ 	if (err)
+ 		goto err_unlock;
+@@ -1975,6 +1975,14 @@ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 				bo_bucket[i].gpu_id = pdd->dev->id;
+ 				bo_bucket[i].bo_alloc_flags = (uint32_t)kgd_mem->alloc_flags;
+ 				bo_bucket[i].idr_handle = id;
++				if (bo_bucket[i].bo_alloc_flags & KFD_IOC_ALLOC_MEM_FLAGS_USERPTR) {
++					ret = amdgpu_ttm_tt_get_userptr(&dumper_bo->tbo,
++									&bo_bucket[i].user_addr);
++					if (ret) {
++						pr_err("Failed to obtain user address for user-pointer bo\n");
++						goto err_unlock;
++					}
++				}
+ 
+ 				if (bo_bucket[i].bo_alloc_flags & KFD_IOC_ALLOC_MEM_FLAGS_DOORBELL)
+ 					bo_bucket[i].bo_offset = KFD_MMAP_TYPE_DOORBELL |
+@@ -2020,6 +2028,7 @@ static int kfd_ioctl_criu_restorer(struct file *filep,
+ 	struct kfd_criu_devinfo_bucket *devinfos = NULL;
+ 	uint64_t *restored_bo_offsets_arr = NULL;
+ 	struct kfd_criu_bo_buckets *bo_bucket = NULL;
++	const bool criu_resume = true;
+ 	long err = 0;
+ 	int ret, i, j = 0;
+ 
+@@ -2068,6 +2077,9 @@ static int kfd_ioctl_criu_restorer(struct file *filep,
+ 		goto err_unlock;
+ 	}
+ 
++	/* Prevent MMU notifications until stage-4 IOCTL is received */
++	amdgpu_amdkfd_block_mmu_notifications(p->kgd_process_info);
++
+ 	/* Create and map new BOs */
+ 	for (i = 0; i < args->num_of_bos; i++) {
+ 		struct kfd_dev *dev;
+@@ -2124,8 +2136,12 @@ static int kfd_ioctl_criu_restorer(struct file *filep,
+ 				err = -ENOMEM;
+ 				goto err_unlock;
+ 			}
++		} else if (bo_bucket[i].bo_alloc_flags &
++			   KFD_IOC_ALLOC_MEM_FLAGS_USERPTR) {
++			offset = bo_bucket[i].user_addr;
+ 		}
+ 
++
+ 		/* Create the BO */
+ 		ret = amdgpu_amdkfd_gpuvm_alloc_memory_of_gpu(dev->kgd,
+ 						bo_bucket[i].bo_addr,
+@@ -2133,7 +2149,8 @@ static int kfd_ioctl_criu_restorer(struct file *filep,
+ 						pdd->drm_priv,
+ 						(struct kgd_mem **) &mem,
+ 						&offset,
+-						bo_bucket[i].bo_alloc_flags);
++						bo_bucket[i].bo_alloc_flags,
++						criu_resume);
+ 		if (ret) {
+ 			pr_err("Could not create the BO\n");
+ 			err = -ENOMEM;
+@@ -2246,6 +2263,40 @@ static int kfd_ioctl_criu_restorer(struct file *filep,
+ 	return err;
+ }
+ 
++static int kfd_ioctl_criu_resume(struct file *filep,
++				struct kfd_process *p, void *data)
++{
++	struct kfd_ioctl_criu_resume_args *args = data;
++	struct kfd_process *target = NULL;
++	struct pid *pid = NULL;
++	int ret = 0;
++
++	pr_debug("Inside %s, target pid for criu restore: %d\n", __func__,
++		 args->pid);
++
++	pid = find_get_pid(args->pid);
++	if (!pid) {
++		pr_err("Cannot find pid info for %i\n", args->pid);
++		return -ESRCH;
++	}
++
++	pr_debug("calling kfd_lookup_process_by_pid\n");
++	target = kfd_lookup_process_by_pid(pid);
++	if (!target) {
++		pr_debug("Cannot find process info for %i\n", args->pid);
++		put_pid(pid);
++		return -ESRCH;
++	}
++
++	mutex_lock(&target->mutex);
++	ret =  amdgpu_amdkfd_criu_resume(target->kgd_process_info);
++	mutex_unlock(&target->mutex);
++
++	put_pid(pid);
++	kfd_unref_process(target);
++	return ret;
++}
++
+ static int kfd_ioctl_criu_helper(struct file *filep,
+ 				struct kfd_process *p, void *data)
+ {
+@@ -2292,14 +2343,6 @@ static int kfd_ioctl_criu_helper(struct file *filep,
+ 	return ret;
+ }
+ 
+-static int kfd_ioctl_criu_resume(struct file *filep,
+-				struct kfd_process *p, void *data)
+-{
+-	pr_info("Inside %s\n",__func__);
+-
+-	return 0;
+-}
+-
+ #define AMDKFD_IOCTL_DEF(ioctl, _func, _flags) \
+ 	[_IOC_NR(ioctl)] = {.cmd = ioctl, .func = _func, .flags = _flags, \
+ 			    .cmd_drv = 0, .name = #ioctl}
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+index 024051952b8c..c5fd468c2cb2 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+@@ -952,6 +952,7 @@ void *kfd_process_device_translate_handle(struct kfd_process_device *p,
+ 					int handle);
+ void kfd_process_device_remove_obj_handle(struct kfd_process_device *pdd,
+ 					int handle);
++struct kfd_process *kfd_lookup_process_by_pid(struct pid *pid);
+ 
+ bool kfd_has_process_device_data(struct kfd_process *p);
+ 
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_process.c b/drivers/gpu/drm/amd/amdkfd/kfd_process.c
+index 9f2b4d8a5247..cd1a95b0c974 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_process.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_process.c
+@@ -64,7 +64,8 @@ static struct workqueue_struct *kfd_process_wq;
+  */
+ static struct workqueue_struct *kfd_restore_wq;
+ 
+-static struct kfd_process *find_process(const struct task_struct *thread);
++static struct kfd_process *find_process(const struct task_struct *thread,
++					bool ref);
+ static void kfd_process_ref_release(struct kref *ref);
+ static struct kfd_process *create_process(const struct task_struct *thread);
+ static int kfd_process_init_cwsr_apu(struct kfd_process *p, struct file *filep);
+@@ -710,7 +711,8 @@ static int kfd_process_alloc_gpuvm(struct kfd_process_device *pdd,
+ 	int err;
+ 
+ 	err = amdgpu_amdkfd_gpuvm_alloc_memory_of_gpu(kdev->kgd, gpu_va, size,
+-						 pdd->drm_priv, &mem, NULL, flags);
++						 pdd->drm_priv, &mem, NULL, flags,
++						 false);
+ 	if (err)
+ 		goto err_alloc_mem;
+ 
+@@ -814,7 +816,7 @@ struct kfd_process *kfd_create_process(struct file *filep)
+ 	mutex_lock(&kfd_processes_mutex);
+ 
+ 	/* A prior open of /dev/kfd could have already created the process. */
+-	process = find_process(thread);
++	process = find_process(thread, false);
+ 	if (process) {
+ 		pr_debug("Process already found\n");
+ 	} else {
+@@ -882,7 +884,7 @@ struct kfd_process *kfd_get_process(const struct task_struct *thread)
+ 	if (thread->group_leader->mm != thread->mm)
+ 		return ERR_PTR(-EINVAL);
+ 
+-	process = find_process(thread);
++	process = find_process(thread, false);
+ 	if (!process)
+ 		return ERR_PTR(-EINVAL);
+ 
+@@ -901,13 +903,16 @@ static struct kfd_process *find_process_by_mm(const struct mm_struct *mm)
+ 	return NULL;
+ }
+ 
+-static struct kfd_process *find_process(const struct task_struct *thread)
++static struct kfd_process *find_process(const struct task_struct *thread,
++					bool ref)
+ {
+ 	struct kfd_process *p;
+ 	int idx;
+ 
+ 	idx = srcu_read_lock(&kfd_processes_srcu);
+ 	p = find_process_by_mm(thread->mm);
++	if (p && ref)
++		kref_get(&p->ref);
+ 	srcu_read_unlock(&kfd_processes_srcu, idx);
+ 
+ 	return p;
+@@ -1625,6 +1630,27 @@ void kfd_process_device_remove_obj_handle(struct kfd_process_device *pdd,
+ 		idr_remove(&pdd->alloc_idr, handle);
+ }
+ 
++/* This increments the process->ref counter. */
++struct kfd_process *kfd_lookup_process_by_pid(struct pid *pid)
++{
++	struct task_struct *task = NULL;
++	struct kfd_process *p    = NULL;
++
++	if (!pid) {
++		task = current;
++		get_task_struct(task);
++	} else {
++		task = get_pid_task(pid, PIDTYPE_PID);
++	}
++
++	if (task) {
++		p = find_process(task, true);
++		put_task_struct(task);
++	}
++
++	return p;
++}
++
+ /* This increments the process->ref counter. */
+ struct kfd_process *kfd_lookup_process_by_pasid(u32 pasid)
+ {
+-- 
+2.34.1
+
+
+From 87e2f7e6c1449e858624e25893e1dcb124744263 Mon Sep 17 00:00:00 2001
+From: David Yat Sin <david.yatsin@amd.com>
+Date: Mon, 25 Jan 2021 10:13:48 -0500
+Subject: [PATCH 06/17] drm/amdkfd: CRIU add queues support
+
+Add support to existing CRIU ioctl's to save number of queues and queue
+properties for each queue during checkpoint and re-create queues on restore.
+
+Signed-off-by: David Yat Sin <david.yatsin@amd.com>
+Change-Id: Ifcd5e8359f492eef015867f354f44146dd1b6848
+---
+ drivers/gpu/drm/amd/amdkfd/kfd_chardev.c | 234 ++++++++++++++++++++++-
+ 1 file changed, 231 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+index cb52c5326b50..fedb86247774 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+@@ -1856,7 +1856,6 @@ static int kfd_devinfo_restore(struct kfd_process *p, struct kfd_criu_devinfo_bu
+ 			       uint32_t num_of_devices)
+ {
+ 	int i;
+-
+ 	if (p->n_pdds != num_of_devices)
+ 		return -EINVAL;
+ 
+@@ -1907,6 +1906,77 @@ static int kfd_devinfo_restore(struct kfd_process *p, struct kfd_criu_devinfo_bu
+ 	}
+ 	return 0;
+ }
++static void criu_dump_queue(struct kfd_process_device *pdd,
++                           struct queue *q,
++                           struct kfd_criu_q_bucket *q_bucket)
++{
++	q_bucket->gpu_id = pdd->dev->id;
++	q_bucket->type = q->properties.type;
++	q_bucket->format = q->properties.format;
++	q_bucket->q_id =  q->properties.queue_id;
++	q_bucket->q_address = q->properties.queue_address;
++	q_bucket->q_size = q->properties.queue_size;
++	q_bucket->priority = q->properties.priority;
++	q_bucket->q_percent = q->properties.queue_percent;
++	q_bucket->read_ptr_addr = (uint64_t)q->properties.read_ptr;
++	q_bucket->write_ptr_addr = (uint64_t)q->properties.write_ptr;
++	q_bucket->doorbell_id = q->doorbell_id;
++	q_bucket->doorbell_off = q->properties.doorbell_off;
++	q_bucket->sdma_id = q->sdma_id;
++
++	q_bucket->eop_ring_buffer_address =
++		q->properties.eop_ring_buffer_address;
++
++	q_bucket->eop_ring_buffer_size = q->properties.eop_ring_buffer_size;
++
++	q_bucket->ctx_save_restore_area_address =
++		q->properties.ctx_save_restore_area_address;
++
++	q_bucket->ctx_save_restore_area_size =
++		q->properties.ctx_save_restore_area_size;
++
++	q_bucket->ctl_stack_size = q->properties.ctl_stack_size;
++}
++
++static int criu_dump_queues_device(struct kfd_process_device *pdd,
++				unsigned *q_index,
++				unsigned int max_num_queues,
++				struct kfd_criu_q_bucket *user_buckets)
++{
++	struct queue *q;
++	struct kfd_criu_q_bucket q_bucket;
++	int ret = 0;
++
++	list_for_each_entry(q, &pdd->qpd.queues_list, list) {
++		if (q->properties.type != KFD_QUEUE_TYPE_COMPUTE &&
++			q->properties.type != KFD_QUEUE_TYPE_SDMA &&
++			q->properties.type != KFD_QUEUE_TYPE_SDMA_XGMI) {
++
++			pr_err("Unsupported queue type (%d)\n", q->properties.type);
++			return -ENOTSUPP;
++		}
++
++		if (*q_index >= max_num_queues) {
++			pr_err("Number of queues(%d) exceed allocated(%d)\n",
++				*q_index, max_num_queues);
++
++			ret = -ENOMEM;
++			break;
++		}
++
++		memset(&q_bucket, 0, sizeof(q_bucket));
++		criu_dump_queue(pdd, q, &q_bucket);
++		ret = copy_to_user((void __user *)&user_buckets[*q_index],
++					&q_bucket, sizeof(q_bucket));
++		if (ret) {
++			pr_err("Failed to copy queue information to user\n");
++			ret = -EFAULT;
++			break;
++		}
++		*q_index = *q_index + 1;
++	}
++	return ret;
++}
+ 
+ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 				struct kfd_process *p, void *data)
+@@ -1916,8 +1986,13 @@ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 	struct amdgpu_bo *dumper_bo;
+ 	int ret, id, index, i = 0;
+ 	struct kgd_mem *kgd_mem;
++	int q_index = 0;
+ 	void *mem;
+ 
++	struct kfd_criu_q_bucket *user_buckets =
++		(struct kfd_criu_q_bucket*) args->kfd_criu_q_buckets_ptr;
++
++
+ 	pr_info("Inside %s\n",__func__);
+ 
+ 	if (args->num_of_bos == 0) {
+@@ -1938,6 +2013,8 @@ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 	if (!bo_bucket)
+ 		return -ENOMEM;
+ 
++	pr_debug("num of queues = %u\n", args->num_of_queues);
++
+ 	mutex_lock(&p->mutex);
+ 
+ 	if (!kfd_has_process_device_data(p)) {
+@@ -1946,9 +2023,17 @@ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 		goto err_unlock;
+ 	}
+ 
++	ret = kfd_process_evict_queues(p);
++	if (ret) {
++		pr_err("Failed to evict queues\n");
++		goto err_unlock;
++	}
++
+ 	ret = kfd_devinfo_dump(p, args);
+-	if (ret)
++	if (ret) {
++		pr_err("Failed to dump devices\n");
+ 		goto err_unlock;
++	}
+ 
+ 	/* Run over all PDDs of the process */
+ 	for (index = 0; index < p->n_pdds; index++) {
+@@ -2005,6 +2090,11 @@ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 				i++;
+ 			}
+ 		}
++
++		ret = criu_dump_queues_device(pdd, &q_index,
++					args->num_of_queues, user_buckets);
++		if (ret)
++			goto err_unlock;
+ 	}
+ 
+ 	ret = copy_to_user((void __user *)args->kfd_criu_bo_buckets_ptr,
+@@ -2012,15 +2102,131 @@ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 			(args->num_of_bos *
+ 			 sizeof(struct kfd_criu_bo_buckets)));
+ 	kvfree(bo_bucket);
++
++	kfd_process_restore_queues(p);
+ 	mutex_unlock(&p->mutex);
+-	return ret ? -EFAULT : 0;
++	return 0;
+ 
+ err_unlock:
++	kfd_process_restore_queues(p);
+ 	mutex_unlock(&p->mutex);
+ 	pr_err("Dumper ioctl failed err:%d\n", ret);
+ 	return ret;
+ }
+ 
++static void set_queue_properties_from_criu(struct queue_properties *qp,
++                                       struct kfd_criu_q_bucket *q_bucket)
++{
++	qp->is_interop = false;
++	qp->is_gws = q_bucket->is_gws;
++	qp->queue_percent = q_bucket->q_percent;
++	qp->priority = q_bucket->priority;
++	qp->queue_address = q_bucket->q_address;
++	qp->queue_size = q_bucket->q_size;
++	qp->read_ptr = (uint32_t *) q_bucket->read_ptr_addr;
++	qp->write_ptr = (uint32_t *) q_bucket->write_ptr_addr;
++	qp->eop_ring_buffer_address = q_bucket->eop_ring_buffer_address;
++	qp->eop_ring_buffer_size = q_bucket->eop_ring_buffer_size;
++	qp->ctx_save_restore_area_address = q_bucket->ctx_save_restore_area_address;
++	qp->ctx_save_restore_area_size = q_bucket->ctx_save_restore_area_size;
++	qp->ctl_stack_size = q_bucket->ctl_stack_size;
++	qp->type = q_bucket->type;
++	qp->format = q_bucket->format;
++}
++
++/* criu_restore_queue runs with the process mutex locked */
++int criu_restore_queue(struct kfd_process *p,
++					struct kfd_dev *dev,
++					struct kfd_process_device *pdd,
++					struct kfd_criu_q_bucket *q_bucket)
++{
++	int ret = 0;
++	unsigned int queue_id;
++	struct queue_properties qp;
++
++	pr_debug("Restoring Queue: gpu_id:%x type:%x format:%x queue_id:%u "
++			"address:%llx size:%llx priority:%u percent:%u "
++			"read_ptr:%llx write_ptr:%llx doorbell_id:%x "
++			"doorbell_off:%llx queue_address:%llx\n",
++			q_bucket->gpu_id,
++			q_bucket->type,
++			q_bucket->format,
++			q_bucket->q_id,
++			q_bucket->q_address,
++			q_bucket->q_size,
++			q_bucket->priority,
++			q_bucket->q_percent,
++			q_bucket->read_ptr_addr,
++			q_bucket->write_ptr_addr,
++			q_bucket->doorbell_id,
++			q_bucket->doorbell_off,
++			q_bucket->q_address);
++
++	memset(&qp, 0, sizeof(qp));
++	set_queue_properties_from_criu(&qp, q_bucket);
++	print_queue_properties(&qp);
++
++	ret = pqm_create_queue(&p->pqm, dev, NULL, &qp, &queue_id, NULL);
++	if (ret) {
++		pr_err("Failed to create new queue err:%d\n", ret);
++		return -EINVAL;
++	}
++	pr_debug("Queue id %d was restored successfully\n", queue_id);
++
++	return 0;
++}
++
++/* criu_restore_queues runs with the process mutex locked */
++static int criu_restore_queues(struct kfd_process *p,
++			struct kfd_ioctl_criu_restorer_args *args)
++{
++	struct kfd_process_device *pdd;
++	struct kfd_dev *dev;
++	int i;
++	int ret;
++	struct kfd_criu_q_bucket *user_buckets =
++		(struct kfd_criu_q_bucket*) args->kfd_criu_q_buckets_ptr;
++	/*
++         * This process will not have any queues at this point, but we are
++         * setting all the dqm's for this process to evicted state.
++         */
++        kfd_process_evict_queues(p);
++
++	for (i = 0; i < args->num_of_queues; i++) {
++		struct kfd_criu_q_bucket q_bucket;
++		ret = copy_from_user(&q_bucket, (void __user *)&user_buckets[i],
++				sizeof(struct kfd_criu_q_bucket));
++
++		if (ret) {
++			ret = -EFAULT;
++			pr_err("Failed to access");
++			return ret;
++		}
++
++		dev = kfd_device_by_id(q_bucket.gpu_id);
++		if (!dev) {
++			pr_err("Could not get kfd_dev from gpu_id = 0x%x\n",
++			q_bucket.gpu_id);
++
++			ret = -EINVAL;
++			return ret;
++		}
++
++		pdd = kfd_get_process_device_data(dev, p);
++		if (!pdd) {
++			pr_err("Failed to get pdd\n");
++			ret = -EFAULT;
++			return ret;
++		}
++		ret = criu_restore_queue(p, dev, pdd, &q_bucket);
++		if (ret) {
++			pr_err("Failed to restore queue (%d)\n", ret);
++			break;
++		}
++	}
++	return ret;
++}
++
+ static int kfd_ioctl_criu_restorer(struct file *filep,
+ 				struct kfd_process *p, void *data)
+ {
+@@ -2245,6 +2451,12 @@ static int kfd_ioctl_criu_restorer(struct file *filep,
+ 		kfd_flush_tlb(peer_pdd);
+ 	}
+ 
++	ret = criu_restore_queues(p, args);
++	if (ret) {
++		err = ret;
++		goto err_unlock;
++	}
++
+ 	ret = copy_to_user((void __user *)args->restored_bo_array_ptr,
+ 			   restored_bo_offsets_arr,
+ 			   (args->num_of_bos * sizeof(*restored_bo_offsets_arr)));
+@@ -2302,8 +2514,10 @@ static int kfd_ioctl_criu_helper(struct file *filep,
+ {
+ 	struct kfd_ioctl_criu_helper_args *args = data;
+ 	struct kgd_mem *kgd_mem;
++	struct queue *q;
+ 	u64 num_of_bos = 0;
+ 	int id, i = 0;
++	u32 q_index = 0;
+ 	void *mem;
+ 	int ret = 0;
+ 
+@@ -2330,12 +2544,26 @@ static int kfd_ioctl_criu_helper(struct file *filep,
+ 			if ((uint64_t)kgd_mem->va > pdd->gpuvm_base)
+ 				num_of_bos++;
+ 		}
++
++		list_for_each_entry(q, &pdd->qpd.queues_list, list) {
++			if (q->properties.type == KFD_QUEUE_TYPE_COMPUTE ||
++				q->properties.type == KFD_QUEUE_TYPE_SDMA ||
++				q->properties.type == KFD_QUEUE_TYPE_SDMA_XGMI) {
++
++				q_index++;
++			} else {
++				pr_err("Unsupported queue type (%d)\n", q->properties.type);
++				ret = -ENOTSUPP;
++				goto err_unlock;
++			}
++		}
+ 	}
+ 
+ 	args->task_pid = task_pid_nr_ns(p->lead_thread,
+ 					task_active_pid_ns(p->lead_thread));
+ 	args->num_of_devices = p->n_pdds;
+ 	args->num_of_bos = num_of_bos;
++	args->num_of_queues = q_index;
+ 	dev_dbg(kfd_device, "Num of bos = %llu\n", num_of_bos);
+ 
+ err_unlock:
+-- 
+2.34.1
+
+
+From 223628a303b7b34691f38188bd9f341d27de2a0a Mon Sep 17 00:00:00 2001
+From: David Yat Sin <david.yatsin@amd.com>
+Date: Mon, 25 Jan 2021 11:03:31 -0500
+Subject: [PATCH 07/17] drm/amdkfd: CRIU restore queue ids
+
+When re-creating queues during CRIU restore, restore the queue with the
+same queue id value used during CRIU dump. Adding a new private
+structure queue_restore_data to store queue restore information.
+
+Signed-off-by: Rajneesh Bhardwaj <rajneesh.bhardwaj@amd.com>
+Signed-off-by: David Yat Sin <david.yatsin@amd.com>
+Change-Id: I6959da5d3aeebe5be6623483883ef79676591134
+---
+ drivers/gpu/drm/amd/amdkfd/kfd_chardev.c      | 18 ++++++++++-----
+ drivers/gpu/drm/amd/amdkfd/kfd_dbgdev.c       |  2 +-
+ drivers/gpu/drm/amd/amdkfd/kfd_priv.h         |  6 +++++
+ .../amd/amdkfd/kfd_process_queue_manager.c    | 22 ++++++++++++++++++-
+ 4 files changed, 41 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+index fedb86247774..d3a22c3af533 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+@@ -313,7 +313,7 @@ static int kfd_ioctl_create_queue(struct file *filep, struct kfd_process *p,
+ 			dev->id);
+ 
+ 	err = pqm_create_queue(&p->pqm, dev, filep, &q_properties, &queue_id,
+-			&doorbell_offset_in_process);
++			NULL, &doorbell_offset_in_process);
+ 	if (err != 0)
+ 		goto err_create_queue;
+ 
+@@ -1921,7 +1921,7 @@ static void criu_dump_queue(struct kfd_process_device *pdd,
+ 	q_bucket->read_ptr_addr = (uint64_t)q->properties.read_ptr;
+ 	q_bucket->write_ptr_addr = (uint64_t)q->properties.write_ptr;
+ 	q_bucket->doorbell_id = q->doorbell_id;
+-	q_bucket->doorbell_off = q->properties.doorbell_off;
++
+ 	q_bucket->sdma_id = q->sdma_id;
+ 
+ 	q_bucket->eop_ring_buffer_address =
+@@ -2138,7 +2138,8 @@ static void set_queue_properties_from_criu(struct queue_properties *qp,
+ int criu_restore_queue(struct kfd_process *p,
+ 					struct kfd_dev *dev,
+ 					struct kfd_process_device *pdd,
+-					struct kfd_criu_q_bucket *q_bucket)
++					struct kfd_criu_q_bucket *q_bucket,
++					struct queue_restore_data *qrd)
+ {
+ 	int ret = 0;
+ 	unsigned int queue_id;
+@@ -2166,11 +2167,14 @@ int criu_restore_queue(struct kfd_process *p,
+ 	set_queue_properties_from_criu(&qp, q_bucket);
+ 	print_queue_properties(&qp);
+ 
+-	ret = pqm_create_queue(&p->pqm, dev, NULL, &qp, &queue_id, NULL);
++	qrd->qid = q_bucket->q_id;
++
++	ret = pqm_create_queue(&p->pqm, dev, NULL, &qp, &queue_id, qrd, NULL);
+ 	if (ret) {
+ 		pr_err("Failed to create new queue err:%d\n", ret);
+ 		return -EINVAL;
+ 	}
++
+ 	pr_debug("Queue id %d was restored successfully\n", queue_id);
+ 
+ 	return 0;
+@@ -2194,6 +2198,10 @@ static int criu_restore_queues(struct kfd_process *p,
+ 
+ 	for (i = 0; i < args->num_of_queues; i++) {
+ 		struct kfd_criu_q_bucket q_bucket;
++		struct queue_restore_data qrd;
++
++		memset(&qrd, 0, sizeof(qrd));
++
+ 		ret = copy_from_user(&q_bucket, (void __user *)&user_buckets[i],
+ 				sizeof(struct kfd_criu_q_bucket));
+ 
+@@ -2218,7 +2226,7 @@ static int criu_restore_queues(struct kfd_process *p,
+ 			ret = -EFAULT;
+ 			return ret;
+ 		}
+-		ret = criu_restore_queue(p, dev, pdd, &q_bucket);
++		ret = criu_restore_queue(p, dev, pdd, &q_bucket, &qrd);
+ 		if (ret) {
+ 			pr_err("Failed to restore queue (%d)\n", ret);
+ 			break;
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_dbgdev.c b/drivers/gpu/drm/amd/amdkfd/kfd_dbgdev.c
+index 159add0f5aaa..749a7a3bf191 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_dbgdev.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_dbgdev.c
+@@ -185,7 +185,7 @@ static int dbgdev_register_diq(struct kfd_dbgdev *dbgdev)
+ 	properties.type = KFD_QUEUE_TYPE_DIQ;
+ 
+ 	status = pqm_create_queue(dbgdev->pqm, dbgdev->dev, NULL,
+-				&properties, &qid, NULL);
++				&properties, &qid, NULL, NULL);
+ 
+ 	if (status) {
+ 		pr_err("Failed to create DIQ\n");
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+index c5fd468c2cb2..246b23747e8c 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+@@ -470,6 +470,11 @@ enum KFD_QUEUE_PRIORITY {
+  * it's user mode or kernel mode queue.
+  *
+  */
++
++struct queue_restore_data {
++	uint32_t qid;
++};
++
+ struct queue_properties {
+ 	enum kfd_queue_type type;
+ 	enum kfd_queue_format format;
+@@ -1070,6 +1075,7 @@ int pqm_create_queue(struct process_queue_manager *pqm,
+ 			    struct file *f,
+ 			    struct queue_properties *properties,
+ 			    unsigned int *qid,
++			    const struct queue_restore_data *qrd,
+ 			    uint32_t *p_doorbell_offset_in_process);
+ int pqm_destroy_queue(struct process_queue_manager *pqm, unsigned int qid);
+ int pqm_update_queue(struct process_queue_manager *pqm, unsigned int qid,
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_process_queue_manager.c b/drivers/gpu/drm/amd/amdkfd/kfd_process_queue_manager.c
+index 243dd1efcdbf..588f023bf7a8 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_process_queue_manager.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_process_queue_manager.c
+@@ -42,6 +42,20 @@ static inline struct process_queue_node *get_queue_by_qid(
+ 	return NULL;
+ }
+ 
++static int assign_queue_slot_by_qid(struct process_queue_manager *pqm,
++				    unsigned int qid)
++{
++	if (qid >= KFD_MAX_NUM_OF_QUEUES_PER_PROCESS)
++		return -EINVAL;
++
++	if (__test_and_set_bit(qid, pqm->queue_slot_bitmap)) {
++		pr_err("Cannot create new queue because requested qid(%u) is in use\n", qid);
++		return -ENOSPC;
++	}
++
++	return 0;
++}
++
+ static int find_available_queue_slot(struct process_queue_manager *pqm,
+ 					unsigned int *qid)
+ {
+@@ -194,6 +208,7 @@ int pqm_create_queue(struct process_queue_manager *pqm,
+ 			    struct file *f,
+ 			    struct queue_properties *properties,
+ 			    unsigned int *qid,
++			    const struct queue_restore_data *qrd,
+ 			    uint32_t *p_doorbell_offset_in_process)
+ {
+ 	int retval;
+@@ -225,7 +240,12 @@ int pqm_create_queue(struct process_queue_manager *pqm,
+ 	if (pdd->qpd.queue_count >= max_queues)
+ 		return -ENOSPC;
+ 
+-	retval = find_available_queue_slot(pqm, qid);
++	if (qrd) {
++		retval = assign_queue_slot_by_qid(pqm, qrd->qid);
++		*qid = qrd->qid;
++	} else
++		retval = find_available_queue_slot(pqm, qid);
++
+ 	if (retval != 0)
+ 		return retval;
+ 
+-- 
+2.34.1
+
+
+From 93c79d7178914b5313efcdc45a90508419078f23 Mon Sep 17 00:00:00 2001
+From: David Yat Sin <david.yatsin@amd.com>
+Date: Mon, 25 Jan 2021 11:29:30 -0500
+Subject: [PATCH 08/17] drm/amdkfd: CRIU restore sdma id for queues
+
+When re-creating queues during CRIU restore, restore the queue with the
+same sdma id value used during CRIU dump.
+
+Signed-off-by: David Yat Sin <david.yatsin@amd.com>
+Change-Id: I8ed667edb8b9b7b5089e59b78de9be80493a2808
+---
+ drivers/gpu/drm/amd/amdkfd/kfd_chardev.c      |  1 +
+ .../drm/amd/amdkfd/kfd_device_queue_manager.c | 48 ++++++++++++++-----
+ .../drm/amd/amdkfd/kfd_device_queue_manager.h |  3 +-
+ drivers/gpu/drm/amd/amdkfd/kfd_priv.h         |  1 +
+ .../amd/amdkfd/kfd_process_queue_manager.c    |  4 +-
+ 5 files changed, 42 insertions(+), 15 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+index d3a22c3af533..b30d6e3ae8f1 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+@@ -2168,6 +2168,7 @@ int criu_restore_queue(struct kfd_process *p,
+ 	print_queue_properties(&qp);
+ 
+ 	qrd->qid = q_bucket->q_id;
++	qrd->sdma_id = q_bucket->sdma_id;
+ 
+ 	ret = pqm_create_queue(&p->pqm, dev, NULL, &qp, &queue_id, qrd, NULL);
+ 	if (ret) {
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c b/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c
+index 442857f3bde7..49c36a6ac797 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c
+@@ -58,7 +58,7 @@ static inline void deallocate_hqd(struct device_queue_manager *dqm,
+ 				struct queue *q);
+ static int allocate_hqd(struct device_queue_manager *dqm, struct queue *q);
+ static int allocate_sdma_queue(struct device_queue_manager *dqm,
+-				struct queue *q);
++				struct queue *q, const uint32_t *restore_sdma_id);
+ static void kfd_process_hw_exception(struct work_struct *work);
+ 
+ static inline
+@@ -323,7 +323,8 @@ static void deallocate_vmid(struct device_queue_manager *dqm,
+ 
+ static int create_queue_nocpsch(struct device_queue_manager *dqm,
+ 				struct queue *q,
+-				struct qcm_process_device *qpd)
++				struct qcm_process_device *qpd,
++				const struct queue_restore_data *qrd)
+ {
+ 	struct mqd_manager *mqd_mgr;
+ 	int retval;
+@@ -363,7 +364,7 @@ static int create_queue_nocpsch(struct device_queue_manager *dqm,
+ 			q->pipe, q->queue);
+ 	} else if (q->properties.type == KFD_QUEUE_TYPE_SDMA ||
+ 		q->properties.type == KFD_QUEUE_TYPE_SDMA_XGMI) {
+-		retval = allocate_sdma_queue(dqm, q);
++		retval = allocate_sdma_queue(dqm, q, qrd ? &qrd->sdma_id : NULL);
+ 		if (retval)
+ 			goto deallocate_vmid;
+ 		dqm->asic_ops.init_sdma_vm(dqm, q, qpd);
+@@ -1040,7 +1041,7 @@ static void pre_reset(struct device_queue_manager *dqm)
+ }
+ 
+ static int allocate_sdma_queue(struct device_queue_manager *dqm,
+-				struct queue *q)
++				struct queue *q, const uint32_t *restore_sdma_id)
+ {
+ 	int bit;
+ 
+@@ -1050,9 +1051,21 @@ static int allocate_sdma_queue(struct device_queue_manager *dqm,
+ 			return -ENOMEM;
+ 		}
+ 
+-		bit = __ffs64(dqm->sdma_bitmap);
+-		dqm->sdma_bitmap &= ~(1ULL << bit);
+-		q->sdma_id = bit;
++		if (restore_sdma_id) {
++			/* Re-use existing sdma_id */
++			if (!(dqm->sdma_bitmap & (1ULL << *restore_sdma_id))) {
++				pr_err("SDMA queue already in use\n");
++				return -EBUSY;
++			}
++			dqm->sdma_bitmap &= ~(1ULL << *restore_sdma_id);
++			q->sdma_id = *restore_sdma_id;
++		} else {
++			/* Find first available sdma_id */
++			bit = __ffs64(dqm->sdma_bitmap);
++			dqm->sdma_bitmap &= ~(1ULL << bit);
++			q->sdma_id = bit;
++		}
++
+ 		q->properties.sdma_engine_id = q->sdma_id %
+ 				get_num_sdma_engines(dqm);
+ 		q->properties.sdma_queue_id = q->sdma_id /
+@@ -1062,9 +1075,19 @@ static int allocate_sdma_queue(struct device_queue_manager *dqm,
+ 			pr_err("No more XGMI SDMA queue to allocate\n");
+ 			return -ENOMEM;
+ 		}
+-		bit = __ffs64(dqm->xgmi_sdma_bitmap);
+-		dqm->xgmi_sdma_bitmap &= ~(1ULL << bit);
+-		q->sdma_id = bit;
++		if (restore_sdma_id) {
++			/* Re-use existing sdma_id */
++			if (!(dqm->xgmi_sdma_bitmap & (1ULL << *restore_sdma_id))) {
++				pr_err("SDMA queue already in use\n");
++				return -EBUSY;
++			}
++			dqm->xgmi_sdma_bitmap &= ~(1ULL << *restore_sdma_id);
++			q->sdma_id = *restore_sdma_id;
++		} else {
++			bit = __ffs64(dqm->xgmi_sdma_bitmap);
++			dqm->xgmi_sdma_bitmap &= ~(1ULL << bit);
++			q->sdma_id = bit;
++		}
+ 		/* sdma_engine_id is sdma id including
+ 		 * both PCIe-optimized SDMAs and XGMI-
+ 		 * optimized SDMAs. The calculation below
+@@ -1293,7 +1316,8 @@ static void destroy_kernel_queue_cpsch(struct device_queue_manager *dqm,
+ }
+ 
+ static int create_queue_cpsch(struct device_queue_manager *dqm, struct queue *q,
+-			struct qcm_process_device *qpd)
++			struct qcm_process_device *qpd,
++			const struct queue_restore_data *qrd)
+ {
+ 	int retval;
+ 	struct mqd_manager *mqd_mgr;
+@@ -1308,7 +1332,7 @@ static int create_queue_cpsch(struct device_queue_manager *dqm, struct queue *q,
+ 	if (q->properties.type == KFD_QUEUE_TYPE_SDMA ||
+ 		q->properties.type == KFD_QUEUE_TYPE_SDMA_XGMI) {
+ 		dqm_lock(dqm);
+-		retval = allocate_sdma_queue(dqm, q);
++		retval = allocate_sdma_queue(dqm, q, qrd ? &qrd->sdma_id : NULL);
+ 		dqm_unlock(dqm);
+ 		if (retval)
+ 			goto out;
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.h b/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.h
+index c8719682c4da..abc8f2e958a8 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.h
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.h
+@@ -86,7 +86,8 @@ struct device_process_node {
+ struct device_queue_manager_ops {
+ 	int	(*create_queue)(struct device_queue_manager *dqm,
+ 				struct queue *q,
+-				struct qcm_process_device *qpd);
++				struct qcm_process_device *qpd,
++				const struct queue_restore_data* qrd);
+ 
+ 	int	(*destroy_queue)(struct device_queue_manager *dqm,
+ 				struct qcm_process_device *qpd,
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+index 246b23747e8c..e002805b2eea 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+@@ -473,6 +473,7 @@ enum KFD_QUEUE_PRIORITY {
+ 
+ struct queue_restore_data {
+ 	uint32_t qid;
++	uint32_t sdma_id;
+ };
+ 
+ struct queue_properties {
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_process_queue_manager.c b/drivers/gpu/drm/amd/amdkfd/kfd_process_queue_manager.c
+index 588f023bf7a8..c714bf55c58b 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_process_queue_manager.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_process_queue_manager.c
+@@ -273,7 +273,7 @@ int pqm_create_queue(struct process_queue_manager *pqm,
+ 			goto err_create_queue;
+ 		pqn->q = q;
+ 		pqn->kq = NULL;
+-		retval = dev->dqm->ops.create_queue(dev->dqm, q, &pdd->qpd);
++		retval = dev->dqm->ops.create_queue(dev->dqm, q, &pdd->qpd, qrd);
+ 		print_queue(q);
+ 		break;
+ 
+@@ -293,7 +293,7 @@ int pqm_create_queue(struct process_queue_manager *pqm,
+ 			goto err_create_queue;
+ 		pqn->q = q;
+ 		pqn->kq = NULL;
+-		retval = dev->dqm->ops.create_queue(dev->dqm, q, &pdd->qpd);
++		retval = dev->dqm->ops.create_queue(dev->dqm, q, &pdd->qpd, qrd);
+ 		print_queue(q);
+ 		break;
+ 	case KFD_QUEUE_TYPE_DIQ:
+-- 
+2.34.1
+
+
+From a61b9d257cf3834cb0522e1bbfcc403267cbf446 Mon Sep 17 00:00:00 2001
+From: David Yat Sin <david.yatsin@amd.com>
+Date: Mon, 25 Jan 2021 12:01:19 -0500
+Subject: [PATCH 09/17] drm/amdkfd: CRIU restore queue doorbell id
+
+When re-creating queues during CRIU restore, restore the queue with the
+same doorbell id value used during CRIU dump.
+
+Signed-off-by: David Yat Sin <david.yatsin@amd.com>
+Change-Id: I6a79de1f8c760d5a9d28e7951740296f2f8796a7
+---
+ drivers/gpu/drm/amd/amdkfd/kfd_chardev.c      |  1 +
+ .../drm/amd/amdkfd/kfd_device_queue_manager.c | 58 +++++++++++++------
+ drivers/gpu/drm/amd/amdkfd/kfd_priv.h         |  1 +
+ 3 files changed, 41 insertions(+), 19 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+index b30d6e3ae8f1..9b9d4a20d8cd 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+@@ -2169,6 +2169,7 @@ int criu_restore_queue(struct kfd_process *p,
+ 
+ 	qrd->qid = q_bucket->q_id;
+ 	qrd->sdma_id = q_bucket->sdma_id;
++	qrd->doorbell_id = q_bucket->doorbell_id;
+ 
+ 	ret = pqm_create_queue(&p->pqm, dev, NULL, &qp, &queue_id, qrd, NULL);
+ 	if (ret) {
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c b/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c
+index 49c36a6ac797..6ce1ed993ef4 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c
+@@ -167,7 +167,11 @@ static void decrement_queue_count(struct device_queue_manager *dqm,
+ 	}
+ }
+ 
+-static int allocate_doorbell(struct qcm_process_device *qpd, struct queue *q)
++/*
++ * Allocate a doorbell ID to this queue.
++ * If doorbell_id is passed in, make sure requested ID is valid then allocate it.
++ */
++static int allocate_doorbell(struct qcm_process_device *qpd, struct queue *q, uint32_t const *restore_id)
+ {
+ 	struct kfd_dev *dev = qpd->dqm->dev;
+ 
+@@ -175,6 +179,9 @@ static int allocate_doorbell(struct qcm_process_device *qpd, struct queue *q)
+ 		/* On pre-SOC15 chips we need to use the queue ID to
+ 		 * preserve the user mode ABI.
+ 		 */
++		if (restore_id && *restore_id != q->properties.queue_id)
++			return -EINVAL;
++
+ 		q->doorbell_id = q->properties.queue_id;
+ 	} else if (q->properties.type == KFD_QUEUE_TYPE_SDMA ||
+ 			q->properties.type == KFD_QUEUE_TYPE_SDMA_XGMI) {
+@@ -183,25 +190,38 @@ static int allocate_doorbell(struct qcm_process_device *qpd, struct queue *q)
+ 		 * The doobell index distance between RLC (2*i) and (2*i+1)
+ 		 * for a SDMA engine is 512.
+ 		 */
+-		uint32_t *idx_offset =
+-				dev->shared_resources.sdma_doorbell_idx;
+ 
+-		q->doorbell_id = idx_offset[q->properties.sdma_engine_id]
+-			+ (q->properties.sdma_queue_id & 1)
+-			* KFD_QUEUE_DOORBELL_MIRROR_OFFSET
+-			+ (q->properties.sdma_queue_id >> 1);
++		uint32_t *idx_offset = dev->shared_resources.sdma_doorbell_idx;
++		uint32_t valid_id = idx_offset[q->properties.sdma_engine_id]
++						+ (q->properties.sdma_queue_id & 1)
++						* KFD_QUEUE_DOORBELL_MIRROR_OFFSET
++						+ (q->properties.sdma_queue_id >> 1);
++
++		if (restore_id && *restore_id != valid_id)
++			return -EINVAL;
++		q->doorbell_id = valid_id;
+ 	} else {
+-		/* For CP queues on SOC15 reserve a free doorbell ID */
+-		unsigned int found;
+-
+-		found = find_first_zero_bit(qpd->doorbell_bitmap,
+-					    KFD_MAX_NUM_OF_QUEUES_PER_PROCESS);
+-		if (found >= KFD_MAX_NUM_OF_QUEUES_PER_PROCESS) {
+-			pr_debug("No doorbells available");
+-			return -EBUSY;
++		/* For CP queues on SOC15 */
++		if (restore_id) {
++			/* make sure that ID is free  */
++			if (__test_and_set_bit(*restore_id, qpd->doorbell_bitmap)) {
++				return -EINVAL;
++			}
++
++			q->doorbell_id = *restore_id;
++		} else {
++                       /* or reserve a free doorbell ID */
++			unsigned int found;
++
++			found = find_first_zero_bit(qpd->doorbell_bitmap,
++						KFD_MAX_NUM_OF_QUEUES_PER_PROCESS);
++			if (found >= KFD_MAX_NUM_OF_QUEUES_PER_PROCESS) {
++				pr_debug("No doorbells available");
++				return -EBUSY;
++			}
++			set_bit(found, qpd->doorbell_bitmap);
++			q->doorbell_id = found;
+ 		}
+-		set_bit(found, qpd->doorbell_bitmap);
+-		q->doorbell_id = found;
+ 	}
+ 
+ 	q->properties.doorbell_off =
+@@ -370,7 +390,7 @@ static int create_queue_nocpsch(struct device_queue_manager *dqm,
+ 		dqm->asic_ops.init_sdma_vm(dqm, q, qpd);
+ 	}
+ 
+-	retval = allocate_doorbell(qpd, q);
++	retval = allocate_doorbell(qpd, q, qrd ? &qrd->doorbell_id : NULL);
+ 	if (retval)
+ 		goto out_deallocate_hqd;
+ 
+@@ -1338,7 +1358,7 @@ static int create_queue_cpsch(struct device_queue_manager *dqm, struct queue *q,
+ 			goto out;
+ 	}
+ 
+-	retval = allocate_doorbell(qpd, q);
++	retval = allocate_doorbell(qpd, q, qrd ? &qrd->doorbell_id : NULL);
+ 	if (retval)
+ 		goto out_deallocate_sdma_queue;
+ 
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+index e002805b2eea..de2db3a3eb4f 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+@@ -474,6 +474,7 @@ enum KFD_QUEUE_PRIORITY {
+ struct queue_restore_data {
+ 	uint32_t qid;
+ 	uint32_t sdma_id;
++	uint32_t doorbell_id;
+ };
+ 
+ struct queue_properties {
+-- 
+2.34.1
+
+
+From bae5349da1f93027189c988f36137f0334c7f5cb Mon Sep 17 00:00:00 2001
+From: David Yat Sin <david.yatsin@amd.com>
+Date: Mon, 25 Jan 2021 12:16:22 -0500
+Subject: [PATCH 10/17] drm/amdkfd: CRIU restore CU mask for queues
+
+When re-creating queues during CRIU restore, restore the queue
+with the same CU mask value used during CRIU dump.
+
+Signed-off-by: David Yat Sin <david.yatsin@amd.com>
+Change-Id: I1822fa2488f90365dfe7a3c5971a2ed6c0046b4a
+---
+ drivers/gpu/drm/amd/amdkfd/kfd_chardev.c | 160 +++++++++++++++++++++--
+ drivers/gpu/drm/amd/amdkfd/kfd_priv.h    |   3 +
+ 2 files changed, 154 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+index 9b9d4a20d8cd..8a21c08b2e89 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+@@ -1906,9 +1906,21 @@ static int kfd_devinfo_restore(struct kfd_process *p, struct kfd_criu_devinfo_bu
+ 	}
+ 	return 0;
+ }
+-static void criu_dump_queue(struct kfd_process_device *pdd,
++
++static int get_queue_data_sizes(struct kfd_process_device *pdd,
++				struct queue *q,
++				uint32_t *cu_mask_size)
++{
++	int ret = 0;
++
++	*cu_mask_size = sizeof(uint32_t) * (q->properties.cu_mask_count / 32);
++	return ret;
++}
++
++static int criu_dump_queue(struct kfd_process_device *pdd,
+                            struct queue *q,
+-                           struct kfd_criu_q_bucket *q_bucket)
++                           struct kfd_criu_q_bucket *q_bucket,
++			   struct queue_restore_data *qrd)
+ {
+ 	q_bucket->gpu_id = pdd->dev->id;
+ 	q_bucket->type = q->properties.type;
+@@ -1936,18 +1948,30 @@ static void criu_dump_queue(struct kfd_process_device *pdd,
+ 		q->properties.ctx_save_restore_area_size;
+ 
+ 	q_bucket->ctl_stack_size = q->properties.ctl_stack_size;
++	if (qrd->cu_mask_size)
++		memcpy(qrd->cu_mask, q->properties.cu_mask, qrd->cu_mask_size);
++
++	q_bucket->cu_mask_size = qrd->cu_mask_size;
++	return 0;
+ }
+ 
+ static int criu_dump_queues_device(struct kfd_process_device *pdd,
+ 				unsigned *q_index,
+ 				unsigned int max_num_queues,
+-				struct kfd_criu_q_bucket *user_buckets)
++				struct kfd_criu_q_bucket *user_buckets,
++				uint8_t *queues_data,
++				uint32_t *queues_data_offset,
++				uint32_t queues_data_size)
+ {
+ 	struct queue *q;
++	struct queue_restore_data qrd;
+ 	struct kfd_criu_q_bucket q_bucket;
++	uint8_t *data_ptr = NULL;
++	unsigned int data_ptr_size = 0;
+ 	int ret = 0;
+ 
+ 	list_for_each_entry(q, &pdd->qpd.queues_list, list) {
++		unsigned int q_data_size;
+ 		if (q->properties.type != KFD_QUEUE_TYPE_COMPUTE &&
+ 			q->properties.type != KFD_QUEUE_TYPE_SDMA &&
+ 			q->properties.type != KFD_QUEUE_TYPE_SDMA_XGMI) {
+@@ -1965,7 +1989,49 @@ static int criu_dump_queues_device(struct kfd_process_device *pdd,
+ 		}
+ 
+ 		memset(&q_bucket, 0, sizeof(q_bucket));
+-		criu_dump_queue(pdd, q, &q_bucket);
++		memset(&qrd, 0, sizeof(qrd));
++
++		ret = get_queue_data_sizes(pdd, q, &qrd.cu_mask_size);
++		if (ret) {
++			pr_err("Failed to get queue dump info (%d)\n", ret);
++			ret = -EFAULT;
++			break;
++		}
++
++		q_data_size = qrd.cu_mask_size;
++
++		/* Increase local buffer space if needed */
++		if (data_ptr_size < q_data_size) {
++			if (data_ptr)
++				kfree(data_ptr);
++
++			data_ptr = (uint8_t*)kzalloc(q_data_size, GFP_KERNEL);
++			if (!data_ptr) {
++				ret = -ENOMEM;
++				break;
++			}
++			data_ptr_size = q_data_size;
++		}
++
++		qrd.cu_mask = data_ptr;
++		ret = criu_dump_queue(pdd, q, &q_bucket, &qrd);
++		if (ret)
++			break;
++
++		if (*queues_data_offset + q_data_size > queues_data_size) {
++			pr_err("Required memory exceeds user provided\n");
++			ret = -ENOSPC;
++			break;
++		}
++		ret = copy_to_user((void __user *) (queues_data + *queues_data_offset),
++				data_ptr, q_data_size);
++		if (ret) {
++			ret = -EFAULT;
++			break;
++		}
++		q_bucket.queues_data_offset = *queues_data_offset;
++		*queues_data_offset += q_data_size;
++
+ 		ret = copy_to_user((void __user *)&user_buckets[*q_index],
+ 					&q_bucket, sizeof(q_bucket));
+ 		if (ret) {
+@@ -1975,6 +2041,10 @@ static int criu_dump_queues_device(struct kfd_process_device *pdd,
+ 		}
+ 		*q_index = *q_index + 1;
+ 	}
++
++	if (data_ptr)
++		kfree(data_ptr);
++
+ 	return ret;
+ }
+ 
+@@ -1992,6 +2062,8 @@ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 	struct kfd_criu_q_bucket *user_buckets =
+ 		(struct kfd_criu_q_bucket*) args->kfd_criu_q_buckets_ptr;
+ 
++	uint8_t *queues_data = (uint8_t*)args->queues_data_ptr;
++	uint32_t queues_data_offset = 0;
+ 
+ 	pr_info("Inside %s\n",__func__);
+ 
+@@ -2092,7 +2164,10 @@ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 		}
+ 
+ 		ret = criu_dump_queues_device(pdd, &q_index,
+-					args->num_of_queues, user_buckets);
++					args->num_of_queues, user_buckets,
++					queues_data, &queues_data_offset,
++					args->queues_data_size);
++
+ 		if (ret)
+ 			goto err_unlock;
+ 	}
+@@ -2114,8 +2189,9 @@ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 	return ret;
+ }
+ 
+-static void set_queue_properties_from_criu(struct queue_properties *qp,
+-                                       struct kfd_criu_q_bucket *q_bucket)
++static int set_queue_properties_from_criu(struct queue_properties *qp,
++                                       struct kfd_criu_q_bucket *q_bucket,
++				       struct queue_restore_data *qrd)
+ {
+ 	qp->is_interop = false;
+ 	qp->is_gws = q_bucket->is_gws;
+@@ -2132,6 +2208,19 @@ static void set_queue_properties_from_criu(struct queue_properties *qp,
+ 	qp->ctl_stack_size = q_bucket->ctl_stack_size;
+ 	qp->type = q_bucket->type;
+ 	qp->format = q_bucket->format;
++
++	if (qrd->cu_mask_size) {
++		qp->cu_mask = kzalloc(qrd->cu_mask_size, GFP_KERNEL);
++		if (!qp->cu_mask) {
++			pr_err("Failed to allocate memory for CU mask\n");
++			return -ENOMEM;
++		}
++
++		memcpy(qp->cu_mask, qrd->cu_mask, qrd->cu_mask_size);
++		qp->cu_mask_count = (qrd->cu_mask_size / sizeof(uint32_t)) * 32;
++	}
++
++	return 0;
+ }
+ 
+ /* criu_restore_queue runs with the process mutex locked */
+@@ -2164,7 +2253,10 @@ int criu_restore_queue(struct kfd_process *p,
+ 			q_bucket->q_address);
+ 
+ 	memset(&qp, 0, sizeof(qp));
+-	set_queue_properties_from_criu(&qp, q_bucket);
++	ret = set_queue_properties_from_criu(&qp, q_bucket, qrd);
++	if (ret)
++		goto err_create_queue;
++
+ 	print_queue_properties(&qp);
+ 
+ 	qrd->qid = q_bucket->q_id;
+@@ -2174,12 +2266,18 @@ int criu_restore_queue(struct kfd_process *p,
+ 	ret = pqm_create_queue(&p->pqm, dev, NULL, &qp, &queue_id, qrd, NULL);
+ 	if (ret) {
+ 		pr_err("Failed to create new queue err:%d\n", ret);
+-		return -EINVAL;
++		ret = -EINVAL;
++		goto err_create_queue;
+ 	}
+ 
+ 	pr_debug("Queue id %d was restored successfully\n", queue_id);
+ 
+ 	return 0;
++err_create_queue:
++	if (qp.cu_mask)
++		kfree(qp.cu_mask);
++
++	return ret;
+ }
+ 
+ /* criu_restore_queues runs with the process mutex locked */
+@@ -2192,6 +2290,11 @@ static int criu_restore_queues(struct kfd_process *p,
+ 	int ret;
+ 	struct kfd_criu_q_bucket *user_buckets =
+ 		(struct kfd_criu_q_bucket*) args->kfd_criu_q_buckets_ptr;
++
++	uint8_t *queues_data = (uint8_t*)args->queues_data_ptr;
++	uint8_t *data_ptr = NULL;
++	uint32_t data_ptr_size = 0;
++
+ 	/*
+          * This process will not have any queues at this point, but we are
+          * setting all the dqm's for this process to evicted state.
+@@ -2201,6 +2304,7 @@ static int criu_restore_queues(struct kfd_process *p,
+ 	for (i = 0; i < args->num_of_queues; i++) {
+ 		struct kfd_criu_q_bucket q_bucket;
+ 		struct queue_restore_data qrd;
++		uint32_t q_data_size;
+ 
+ 		memset(&qrd, 0, sizeof(qrd));
+ 
+@@ -2228,12 +2332,42 @@ static int criu_restore_queues(struct kfd_process *p,
+ 			ret = -EFAULT;
+ 			return ret;
+ 		}
++
++		q_data_size = q_bucket.cu_mask_size;
++
++		/* Increase local buffer space if needed */
++		if (q_data_size > data_ptr_size) {
++			if (data_ptr)
++				kfree(data_ptr);
++
++			data_ptr = (uint8_t*)kzalloc(q_data_size, GFP_KERNEL);
++			if (!data_ptr) {
++				ret = -ENOMEM;
++				break;
++			}
++			data_ptr_size = q_data_size;
++		}
++
++		ret = copy_from_user(data_ptr,
++				(void __user *) queues_data + q_bucket.queues_data_offset,
++				q_data_size);
++		if (ret) {
++			ret = -EFAULT;
++			break;
++		}
++
++		qrd.cu_mask_size = q_bucket.cu_mask_size;
++		qrd.cu_mask = data_ptr;
++
+ 		ret = criu_restore_queue(p, dev, pdd, &q_bucket, &qrd);
+ 		if (ret) {
+ 			pr_err("Failed to restore queue (%d)\n", ret);
+ 			break;
+ 		}
+ 	}
++
++	if (data_ptr)
++		kfree(data_ptr);
+ 	return ret;
+ }
+ 
+@@ -2523,6 +2657,7 @@ static int kfd_ioctl_criu_helper(struct file *filep,
+ 				struct kfd_process *p, void *data)
+ {
+ 	struct kfd_ioctl_criu_helper_args *args = data;
++	u32 queues_data_size = 0;
+ 	struct kgd_mem *kgd_mem;
+ 	struct queue *q;
+ 	u64 num_of_bos = 0;
+@@ -2560,6 +2695,12 @@ static int kfd_ioctl_criu_helper(struct file *filep,
+ 				q->properties.type == KFD_QUEUE_TYPE_SDMA ||
+ 				q->properties.type == KFD_QUEUE_TYPE_SDMA_XGMI) {
+ 
++				u32 cu_mask_size = 0;
++				ret = get_queue_data_sizes(pdd, q, &cu_mask_size);
++				if (ret)
++					goto err_unlock;
++
++				queues_data_size += cu_mask_size;
+ 				q_index++;
+ 			} else {
+ 				pr_err("Unsupported queue type (%d)\n", q->properties.type);
+@@ -2574,6 +2715,7 @@ static int kfd_ioctl_criu_helper(struct file *filep,
+ 	args->num_of_devices = p->n_pdds;
+ 	args->num_of_bos = num_of_bos;
+ 	args->num_of_queues = q_index;
++	args->queues_data_size = queues_data_size;
+ 	dev_dbg(kfd_device, "Num of bos = %llu\n", num_of_bos);
+ 
+ err_unlock:
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+index de2db3a3eb4f..e4e0b84f3892 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+@@ -475,6 +475,9 @@ struct queue_restore_data {
+ 	uint32_t qid;
+ 	uint32_t sdma_id;
+ 	uint32_t doorbell_id;
++
++	void *cu_mask;
++	uint32_t cu_mask_size;
+ };
+ 
+ struct queue_properties {
+-- 
+2.34.1
+
+
+From 05e4a4ec81cf474bab55f163b615f11b27cf2f00 Mon Sep 17 00:00:00 2001
+From: David Yat Sin <david.yatsin@amd.com>
+Date: Mon, 25 Jan 2021 12:50:14 -0500
+Subject: [PATCH 11/17] drm/amdkfd: CRIU dump and restore queue mqds
+
+Dump contents of queue MQD's on CRIU dump and restore them during CRIU
+restore.
+
+Signed-off-by: David Yat Sin <david.yatsin@amd.com>
+Change-Id: If54f892fb6cb8a5bde8a993891dad0dbb997c239
+---
+ drivers/gpu/drm/amd/amdkfd/kfd_chardev.c      | 35 ++++++++--
+ .../drm/amd/amdkfd/kfd_device_queue_manager.c | 64 +++++++++++++++--
+ .../drm/amd/amdkfd/kfd_device_queue_manager.h |  8 +++
+ drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager.h  |  8 +++
+ .../gpu/drm/amd/amdkfd/kfd_mqd_manager_cik.c  | 66 ++++++++++++++++++
+ .../gpu/drm/amd/amdkfd/kfd_mqd_manager_v10.c  | 67 ++++++++++++++++++
+ .../gpu/drm/amd/amdkfd/kfd_mqd_manager_v9.c   | 68 +++++++++++++++++++
+ .../gpu/drm/amd/amdkfd/kfd_mqd_manager_vi.c   | 67 ++++++++++++++++++
+ drivers/gpu/drm/amd/amdkfd/kfd_priv.h         |  8 +++
+ .../amd/amdkfd/kfd_process_queue_manager.c    | 42 ++++++++++++
+ 10 files changed, 422 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+index 8a21c08b2e89..3ee819033468 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+@@ -1909,11 +1909,18 @@ static int kfd_devinfo_restore(struct kfd_process *p, struct kfd_criu_devinfo_bu
+ 
+ static int get_queue_data_sizes(struct kfd_process_device *pdd,
+ 				struct queue *q,
+-				uint32_t *cu_mask_size)
++				uint32_t *cu_mask_size,
++				uint32_t *mqd_size)
+ {
+ 	int ret = 0;
+ 
+ 	*cu_mask_size = sizeof(uint32_t) * (q->properties.cu_mask_count / 32);
++
++	ret = pqm_get_queue_dump_info(&pdd->process->pqm, q->properties.queue_id, mqd_size);
++	if (ret) {
++		pr_err("Failed to get queue dump info (%d)\n", ret);
++		return ret;
++	}
+ 	return ret;
+ }
+ 
+@@ -1922,6 +1929,8 @@ static int criu_dump_queue(struct kfd_process_device *pdd,
+                            struct kfd_criu_q_bucket *q_bucket,
+ 			   struct queue_restore_data *qrd)
+ {
++	int ret = 0;
++
+ 	q_bucket->gpu_id = pdd->dev->id;
+ 	q_bucket->type = q->properties.type;
+ 	q_bucket->format = q->properties.format;
+@@ -1951,8 +1960,15 @@ static int criu_dump_queue(struct kfd_process_device *pdd,
+ 	if (qrd->cu_mask_size)
+ 		memcpy(qrd->cu_mask, q->properties.cu_mask, qrd->cu_mask_size);
+ 
++	ret = pqm_dump_mqd(&pdd->process->pqm, q->properties.queue_id, qrd);
++	if (ret) {
++		pr_err("Failed dump queue_mqd (%d)\n", ret);
++		return ret;
++	}
++
+ 	q_bucket->cu_mask_size = qrd->cu_mask_size;
+-	return 0;
++	q_bucket->mqd_size = qrd->mqd_size;
++	return ret;
+ }
+ 
+ static int criu_dump_queues_device(struct kfd_process_device *pdd,
+@@ -1991,14 +2007,14 @@ static int criu_dump_queues_device(struct kfd_process_device *pdd,
+ 		memset(&q_bucket, 0, sizeof(q_bucket));
+ 		memset(&qrd, 0, sizeof(qrd));
+ 
+-		ret = get_queue_data_sizes(pdd, q, &qrd.cu_mask_size);
++		ret = get_queue_data_sizes(pdd, q, &qrd.cu_mask_size, &qrd.mqd_size);
+ 		if (ret) {
+ 			pr_err("Failed to get queue dump info (%d)\n", ret);
+ 			ret = -EFAULT;
+ 			break;
+ 		}
+ 
+-		q_data_size = qrd.cu_mask_size;
++		q_data_size = qrd.cu_mask_size + qrd.mqd_size;
+ 
+ 		/* Increase local buffer space if needed */
+ 		if (data_ptr_size < q_data_size) {
+@@ -2014,6 +2030,7 @@ static int criu_dump_queues_device(struct kfd_process_device *pdd,
+ 		}
+ 
+ 		qrd.cu_mask = data_ptr;
++		qrd.mqd = data_ptr + qrd.cu_mask_size;
+ 		ret = criu_dump_queue(pdd, q, &q_bucket, &qrd);
+ 		if (ret)
+ 			break;
+@@ -2333,7 +2350,7 @@ static int criu_restore_queues(struct kfd_process *p,
+ 			return ret;
+ 		}
+ 
+-		q_data_size = q_bucket.cu_mask_size;
++		q_data_size = q_bucket.cu_mask_size + q_bucket.mqd_size;
+ 
+ 		/* Increase local buffer space if needed */
+ 		if (q_data_size > data_ptr_size) {
+@@ -2359,6 +2376,9 @@ static int criu_restore_queues(struct kfd_process *p,
+ 		qrd.cu_mask_size = q_bucket.cu_mask_size;
+ 		qrd.cu_mask = data_ptr;
+ 
++		qrd.mqd_size = q_bucket.mqd_size;
++		qrd.mqd = data_ptr + qrd.cu_mask_size;
++
+ 		ret = criu_restore_queue(p, dev, pdd, &q_bucket, &qrd);
+ 		if (ret) {
+ 			pr_err("Failed to restore queue (%d)\n", ret);
+@@ -2696,11 +2716,12 @@ static int kfd_ioctl_criu_helper(struct file *filep,
+ 				q->properties.type == KFD_QUEUE_TYPE_SDMA_XGMI) {
+ 
+ 				u32 cu_mask_size = 0;
+-				ret = get_queue_data_sizes(pdd, q, &cu_mask_size);
++				u32 mqd_size = 0;
++				ret = get_queue_data_sizes(pdd, q, &cu_mask_size, &mqd_size);
+ 				if (ret)
+ 					goto err_unlock;
+ 
+-				queues_data_size += cu_mask_size;
++				queues_data_size += cu_mask_size + mqd_size;
+ 				q_index++;
+ 			} else {
+ 				pr_err("Unsupported queue type (%d)\n", q->properties.type);
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c b/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c
+index 6ce1ed993ef4..5bfb81f5e95a 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c
+@@ -403,8 +403,14 @@ static int create_queue_nocpsch(struct device_queue_manager *dqm,
+ 		retval = -ENOMEM;
+ 		goto out_deallocate_doorbell;
+ 	}
+-	mqd_mgr->init_mqd(mqd_mgr, &q->mqd, q->mqd_mem_obj,
+-				&q->gart_mqd_addr, &q->properties);
++
++	if (qrd)
++		mqd_mgr->restore_mqd(mqd_mgr, &q->mqd, q->mqd_mem_obj,
++				&q->gart_mqd_addr, &q->properties, qrd);
++	else
++		mqd_mgr->init_mqd(mqd_mgr, &q->mqd, q->mqd_mem_obj,
++					&q->gart_mqd_addr, &q->properties);
++
+ 	if (q->properties.is_active) {
+ 		if (!dqm->sched_running) {
+ 			WARN_ONCE(1, "Load non-HWS mqd while stopped\n");
+@@ -1383,8 +1389,13 @@ static int create_queue_cpsch(struct device_queue_manager *dqm, struct queue *q,
+ 	 * updates the is_evicted flag but is a no-op otherwise.
+ 	 */
+ 	q->properties.is_evicted = !!qpd->evicted;
+-	mqd_mgr->init_mqd(mqd_mgr, &q->mqd, q->mqd_mem_obj,
+-				&q->gart_mqd_addr, &q->properties);
++
++	if (qrd)
++		mqd_mgr->restore_mqd(mqd_mgr, &q->mqd, q->mqd_mem_obj,
++				&q->gart_mqd_addr, &q->properties, qrd);
++	else
++		mqd_mgr->init_mqd(mqd_mgr, &q->mqd, q->mqd_mem_obj,
++					&q->gart_mqd_addr, &q->properties);
+ 
+ 	list_add(&q->list, &qpd->queues_list);
+ 	qpd->queue_count++;
+@@ -1768,6 +1779,47 @@ static int get_wave_state(struct device_queue_manager *dqm,
+ 			ctl_stack_used_size, save_area_used_size);
+ }
+ 
++static void get_queue_dump_info(struct device_queue_manager *dqm,
++			const struct queue *q,
++			u32 *mqd_size)
++{
++	struct mqd_manager *mqd_mgr;
++	enum KFD_MQD_TYPE mqd_type =
++			get_mqd_type_from_queue_type(q->properties.type);
++
++	mqd_mgr = dqm->mqd_mgrs[mqd_type];
++	*mqd_size = mqd_mgr->mqd_size;
++}
++
++static int dump_mqd(struct device_queue_manager *dqm,
++			  const struct queue *q,
++			  struct queue_restore_data *qrd)
++{
++	struct mqd_manager *mqd_mgr;
++	int r = 0;
++	enum KFD_MQD_TYPE mqd_type =
++			get_mqd_type_from_queue_type(q->properties.type);
++
++	dqm_lock(dqm);
++
++	if (q->properties.is_active || !q->device->cwsr_enabled) {
++		r = -EINVAL;
++		goto dqm_unlock;
++	}
++
++	mqd_mgr = dqm->mqd_mgrs[mqd_type];
++	if (!mqd_mgr->dump_mqd) {
++		r = -ENOTSUPP;
++		goto dqm_unlock;
++	}
++
++	mqd_mgr->dump_mqd(mqd_mgr, q->mqd, qrd);
++
++dqm_unlock:
++	dqm_unlock(dqm);
++	return r;
++}
++
+ static int process_termination_cpsch(struct device_queue_manager *dqm,
+ 		struct qcm_process_device *qpd)
+ {
+@@ -1939,6 +1991,8 @@ struct device_queue_manager *device_queue_manager_init(struct kfd_dev *dev)
+ 		dqm->ops.evict_process_queues = evict_process_queues_cpsch;
+ 		dqm->ops.restore_process_queues = restore_process_queues_cpsch;
+ 		dqm->ops.get_wave_state = get_wave_state;
++		dqm->ops.get_queue_dump_info = get_queue_dump_info;
++		dqm->ops.dump_mqd = dump_mqd;
+ 		break;
+ 	case KFD_SCHED_POLICY_NO_HWS:
+ 		/* initialize dqm for no cp scheduling */
+@@ -1958,6 +2012,8 @@ struct device_queue_manager *device_queue_manager_init(struct kfd_dev *dev)
+ 		dqm->ops.restore_process_queues =
+ 			restore_process_queues_nocpsch;
+ 		dqm->ops.get_wave_state = get_wave_state;
++		dqm->ops.get_queue_dump_info = get_queue_dump_info;
++		dqm->ops.dump_mqd = dump_mqd;
+ 		break;
+ 	default:
+ 		pr_err("Invalid scheduling policy %d\n", dqm->sched_policy);
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.h b/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.h
+index abc8f2e958a8..2d9d36b206b3 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.h
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.h
+@@ -135,6 +135,14 @@ struct device_queue_manager_ops {
+ 				  void __user *ctl_stack,
+ 				  u32 *ctl_stack_used_size,
+ 				  u32 *save_area_used_size);
++
++	void	(*get_queue_dump_info)(struct device_queue_manager *dqm,
++				  const struct queue *q,
++				  u32 *mqd_size);
++
++	int	(*dump_mqd)(struct device_queue_manager *dqm,
++				  const struct queue *q,
++				  struct queue_restore_data *qrd);
+ };
+ 
+ struct device_queue_manager_asic_ops {
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager.h b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager.h
+index 6e6918ccedfd..f402dc1aa33a 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager.h
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager.h
+@@ -99,6 +99,14 @@ struct mqd_manager {
+ 				  u32 *ctl_stack_used_size,
+ 				  u32 *save_area_used_size);
+ 
++	void	(*dump_mqd)(struct mqd_manager *mm, void *mqd,
++				struct queue_restore_data *qrd);
++
++	void	(*restore_mqd)(struct mqd_manager *mm, void **mqd,
++				struct kfd_mem_obj *mqd_mem_obj, uint64_t *gart_addr,
++				struct queue_properties *p,
++				const struct queue_restore_data *qrd);
++
+ #if defined(CONFIG_DEBUG_FS)
+ 	int	(*debugfs_show_mqd)(struct seq_file *m, void *data);
+ #endif
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_cik.c b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_cik.c
+index 064914e1e8d6..3f59466a5104 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_cik.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_cik.c
+@@ -275,6 +275,68 @@ static int destroy_mqd(struct mqd_manager *mm, void *mqd,
+ 					pipe_id, queue_id);
+ }
+ 
++static void dump_mqd(struct mqd_manager *mm, void *mqd,
++                       struct queue_restore_data *qrd)
++{
++	struct cik_mqd *m;
++	m = get_mqd(mqd);
++
++	memcpy(qrd->mqd, m, sizeof(struct cik_mqd));
++}
++
++static void restore_mqd(struct mqd_manager *mm, void **mqd,
++                       struct kfd_mem_obj *mqd_mem_obj, uint64_t *gart_addr,
++                       struct queue_properties *qp,
++                       const struct queue_restore_data *qrd)
++{
++	uint64_t addr;
++	struct cik_mqd *m;
++	m = (struct cik_mqd *) mqd_mem_obj->cpu_ptr;
++	addr = mqd_mem_obj->gpu_addr;
++
++	memcpy(m, qrd->mqd, sizeof(*m));
++
++	*mqd = m;
++	if (gart_addr)
++		*gart_addr = addr;
++
++	m->cp_hqd_pq_doorbell_control = DOORBELL_OFFSET(qp->doorbell_off);
++
++	pr_debug("cp_hqd_pq_doorbell_control 0x%x\n",
++			m->cp_hqd_pq_doorbell_control);
++
++	qp->is_active = 0;
++}
++
++static void dump_mqd_sdma(struct mqd_manager *mm, void *mqd,
++                       struct queue_restore_data *qrd)
++{
++	struct cik_sdma_rlc_registers *m;
++	m = get_sdma_mqd(mqd);
++
++	memcpy(qrd->mqd, m, sizeof(struct cik_sdma_rlc_registers));
++}
++
++static void restore_mqd_sdma(struct mqd_manager *mm, void **mqd,
++                       struct kfd_mem_obj *mqd_mem_obj, uint64_t *gart_addr,
++                       struct queue_properties *qp,
++                       const struct queue_restore_data *qrd)
++{
++	uint64_t addr;
++	struct cik_sdma_rlc_registers *m;
++
++	m = (struct cik_sdma_rlc_registers *) mqd_mem_obj->cpu_ptr;
++	addr = mqd_mem_obj->gpu_addr;
++
++	memcpy(m, qrd->mqd, sizeof(*m));
++
++	*mqd = m;
++	if (gart_addr)
++		*gart_addr = addr;
++
++	qp->is_active = 0;
++}
++
+ /*
+  * preempt type here is ignored because there is only one way
+  * to preempt sdma queue
+@@ -388,6 +450,8 @@ struct mqd_manager *mqd_manager_init_cik(enum KFD_MQD_TYPE type,
+ 		mqd->update_mqd = update_mqd;
+ 		mqd->destroy_mqd = destroy_mqd;
+ 		mqd->is_occupied = is_occupied;
++		mqd->dump_mqd = dump_mqd;
++		mqd->restore_mqd = restore_mqd;
+ 		mqd->mqd_size = sizeof(struct cik_mqd);
+ #if defined(CONFIG_DEBUG_FS)
+ 		mqd->debugfs_show_mqd = debugfs_show_mqd;
+@@ -428,6 +492,8 @@ struct mqd_manager *mqd_manager_init_cik(enum KFD_MQD_TYPE type,
+ 		mqd->update_mqd = update_mqd_sdma;
+ 		mqd->destroy_mqd = destroy_mqd_sdma;
+ 		mqd->is_occupied = is_occupied_sdma;
++		mqd->dump_mqd = dump_mqd_sdma;
++		mqd->restore_mqd = restore_mqd_sdma;
+ 		mqd->mqd_size = sizeof(struct cik_sdma_rlc_registers);
+ #if defined(CONFIG_DEBUG_FS)
+ 		mqd->debugfs_show_mqd = debugfs_show_mqd_sdma;
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_v10.c b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_v10.c
+index c7fb59ca597f..126c0dc63f10 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_v10.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_v10.c
+@@ -283,6 +283,40 @@ static int get_wave_state(struct mqd_manager *mm, void *mqd,
+ 	return 0;
+ }
+ 
++static void dump_mqd(struct mqd_manager *mm, void *mqd,
++                       struct queue_restore_data *qrd)
++{
++	struct v10_compute_mqd *m;
++	m = get_mqd(mqd);
++
++	memcpy(qrd->mqd, m, sizeof(struct v10_compute_mqd));
++}
++
++static void restore_mqd(struct mqd_manager *mm, void **mqd,
++                       struct kfd_mem_obj *mqd_mem_obj, uint64_t *gart_addr,
++                       struct queue_properties *qp,
++                       const struct queue_restore_data *qrd)
++{
++	uint64_t addr;
++	struct v10_compute_mqd *m;
++	m = (struct v10_compute_mqd *) mqd_mem_obj->cpu_ptr;
++	addr = mqd_mem_obj->gpu_addr;
++
++	memcpy(m, qrd->mqd, sizeof(*m));
++
++	*mqd = m;
++	if (gart_addr)
++		*gart_addr = addr;
++
++	m->cp_hqd_pq_doorbell_control =
++		qp->doorbell_off <<
++			CP_HQD_PQ_DOORBELL_CONTROL__DOORBELL_OFFSET__SHIFT;
++	pr_debug("cp_hqd_pq_doorbell_control 0x%x\n",
++			m->cp_hqd_pq_doorbell_control);
++
++	qp->is_active = 0;
++}
++
+ static void init_mqd_hiq(struct mqd_manager *mm, void **mqd,
+ 			struct kfd_mem_obj *mqd_mem_obj, uint64_t *gart_addr,
+ 			struct queue_properties *q)
+@@ -370,6 +404,35 @@ static bool is_occupied_sdma(struct mqd_manager *mm, void *mqd,
+ 	return mm->dev->kfd2kgd->hqd_sdma_is_occupied(mm->dev->kgd, mqd);
+ }
+ 
++static void dump_mqd_sdma(struct mqd_manager *mm, void *mqd,
++                       struct queue_restore_data *qrd)
++{
++	struct v10_sdma_mqd *m;
++	m = get_sdma_mqd(mqd);
++
++	memcpy(qrd->mqd, m, sizeof(struct v10_sdma_mqd));
++}
++
++static void restore_mqd_sdma(struct mqd_manager *mm, void **mqd,
++                       struct kfd_mem_obj *mqd_mem_obj, uint64_t *gart_addr,
++                       struct queue_properties *qp,
++                       const struct queue_restore_data *qrd)
++{
++	uint64_t addr;
++	struct v10_sdma_mqd *m;
++
++	m = (struct v10_sdma_mqd *) mqd_mem_obj->cpu_ptr;
++	addr = mqd_mem_obj->gpu_addr;
++
++	memcpy(m, qrd->mqd, sizeof(*m));
++
++	*mqd = m;
++	if (gart_addr)
++		*gart_addr = addr;
++
++	qp->is_active = 0;
++}
++
+ #if defined(CONFIG_DEBUG_FS)
+ 
+ static int debugfs_show_mqd(struct seq_file *m, void *data)
+@@ -414,6 +477,8 @@ struct mqd_manager *mqd_manager_init_v10(enum KFD_MQD_TYPE type,
+ 		mqd->is_occupied = is_occupied;
+ 		mqd->mqd_size = sizeof(struct v10_compute_mqd);
+ 		mqd->get_wave_state = get_wave_state;
++		mqd->dump_mqd = dump_mqd;
++		mqd->restore_mqd = restore_mqd;
+ #if defined(CONFIG_DEBUG_FS)
+ 		mqd->debugfs_show_mqd = debugfs_show_mqd;
+ #endif
+@@ -458,6 +523,8 @@ struct mqd_manager *mqd_manager_init_v10(enum KFD_MQD_TYPE type,
+ 		mqd->destroy_mqd = destroy_mqd_sdma;
+ 		mqd->is_occupied = is_occupied_sdma;
+ 		mqd->mqd_size = sizeof(struct v10_sdma_mqd);
++		mqd->dump_mqd = dump_mqd_sdma;
++		mqd->restore_mqd = restore_mqd_sdma;
+ #if defined(CONFIG_DEBUG_FS)
+ 		mqd->debugfs_show_mqd = debugfs_show_mqd_sdma;
+ #endif
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_v9.c b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_v9.c
+index ddaafcd7b825..a77079a25c20 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_v9.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_v9.c
+@@ -339,6 +339,41 @@ static int get_wave_state(struct mqd_manager *mm, void *mqd,
+ 	return 0;
+ }
+ 
++static void dump_mqd(struct mqd_manager *mm, void *mqd,
++                       struct queue_restore_data *qrd)
++{
++	struct v9_mqd *m;
++	m = get_mqd(mqd);
++
++	memcpy(qrd->mqd, m, sizeof(struct v9_mqd));
++}
++
++static void restore_mqd(struct mqd_manager *mm, void **mqd,
++                       struct kfd_mem_obj *mqd_mem_obj, uint64_t *gart_addr,
++                       struct queue_properties *qp,
++                       const struct queue_restore_data *qrd)
++{
++	uint64_t addr;
++	struct v9_mqd *m;
++	m = (struct v9_mqd *) mqd_mem_obj->cpu_ptr;
++	addr = mqd_mem_obj->gpu_addr;
++
++	memcpy(m, qrd->mqd, sizeof(*m));
++
++	*mqd = m;
++	if (gart_addr)
++		*gart_addr = addr;
++
++	/* Control stack is located one page after MQD. */
++	m->cp_hqd_pq_doorbell_control =
++		qp->doorbell_off <<
++			CP_HQD_PQ_DOORBELL_CONTROL__DOORBELL_OFFSET__SHIFT;
++	pr_debug("cp_hqd_pq_doorbell_control 0x%x\n",
++				m->cp_hqd_pq_doorbell_control);
++
++	qp->is_active = 0;
++}
++
+ static void init_mqd_hiq(struct mqd_manager *mm, void **mqd,
+ 			struct kfd_mem_obj *mqd_mem_obj, uint64_t *gart_addr,
+ 			struct queue_properties *q)
+@@ -426,6 +461,35 @@ static bool is_occupied_sdma(struct mqd_manager *mm, void *mqd,
+ 	return mm->dev->kfd2kgd->hqd_sdma_is_occupied(mm->dev->kgd, mqd);
+ }
+ 
++static void dump_mqd_sdma(struct mqd_manager *mm, void *mqd,
++                       struct queue_restore_data *qrd)
++{
++	struct v9_sdma_mqd *m;
++	m = get_sdma_mqd(mqd);
++
++	memcpy(qrd->mqd, m, sizeof(struct v9_sdma_mqd));
++}
++
++static void restore_mqd_sdma(struct mqd_manager *mm, void **mqd,
++                       struct kfd_mem_obj *mqd_mem_obj, uint64_t *gart_addr,
++                       struct queue_properties *qp,
++                       const struct queue_restore_data *qrd)
++{
++	uint64_t addr;
++	struct v9_sdma_mqd *m;
++
++	m = (struct v9_sdma_mqd *) mqd_mem_obj->cpu_ptr;
++	addr = mqd_mem_obj->gpu_addr;
++
++	memcpy(m, qrd->mqd, sizeof(*m));
++
++	*mqd = m;
++	if (gart_addr)
++		*gart_addr = addr;
++
++	qp->is_active = 0;
++}
++
+ #if defined(CONFIG_DEBUG_FS)
+ 
+ static int debugfs_show_mqd(struct seq_file *m, void *data)
+@@ -468,6 +532,8 @@ struct mqd_manager *mqd_manager_init_v9(enum KFD_MQD_TYPE type,
+ 		mqd->destroy_mqd = destroy_mqd;
+ 		mqd->is_occupied = is_occupied;
+ 		mqd->get_wave_state = get_wave_state;
++		mqd->dump_mqd = dump_mqd;
++		mqd->restore_mqd = restore_mqd;
+ 		mqd->mqd_size = sizeof(struct v9_mqd);
+ #if defined(CONFIG_DEBUG_FS)
+ 		mqd->debugfs_show_mqd = debugfs_show_mqd;
+@@ -508,6 +574,8 @@ struct mqd_manager *mqd_manager_init_v9(enum KFD_MQD_TYPE type,
+ 		mqd->update_mqd = update_mqd_sdma;
+ 		mqd->destroy_mqd = destroy_mqd_sdma;
+ 		mqd->is_occupied = is_occupied_sdma;
++		mqd->dump_mqd = dump_mqd_sdma;
++		mqd->restore_mqd = restore_mqd_sdma;
+ 		mqd->mqd_size = sizeof(struct v9_sdma_mqd);
+ #if defined(CONFIG_DEBUG_FS)
+ 		mqd->debugfs_show_mqd = debugfs_show_mqd_sdma;
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_vi.c b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_vi.c
+index 33dbd22d290f..ff436737b717 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_vi.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_vi.c
+@@ -303,6 +303,40 @@ static int get_wave_state(struct mqd_manager *mm, void *mqd,
+ 	return 0;
+ }
+ 
++static void dump_mqd(struct mqd_manager *mm, void *mqd,
++                       struct queue_restore_data *qrd)
++{
++	struct vi_mqd *m;
++	m = get_mqd(mqd);
++
++	memcpy(qrd->mqd, m, sizeof(struct vi_mqd));
++}
++
++static void restore_mqd(struct mqd_manager *mm, void **mqd,
++                       struct kfd_mem_obj *mqd_mem_obj, uint64_t *gart_addr,
++                       struct queue_properties *qp,
++                       const struct queue_restore_data *qrd)
++{
++	uint64_t addr;
++	struct vi_mqd *m;
++	m = (struct vi_mqd *) mqd_mem_obj->cpu_ptr;
++	addr = mqd_mem_obj->gpu_addr;
++
++	memcpy(m, qrd->mqd, sizeof(*m));
++
++	*mqd = m;
++	if (gart_addr)
++		*gart_addr = addr;
++
++	m->cp_hqd_pq_doorbell_control =
++		qp->doorbell_off <<
++			CP_HQD_PQ_DOORBELL_CONTROL__DOORBELL_OFFSET__SHIFT;
++	pr_debug("cp_hqd_pq_doorbell_control 0x%x\n",
++			m->cp_hqd_pq_doorbell_control);
++
++	qp->is_active = 0;
++}
++
+ static void init_mqd_hiq(struct mqd_manager *mm, void **mqd,
+ 			struct kfd_mem_obj *mqd_mem_obj, uint64_t *gart_addr,
+ 			struct queue_properties *q)
+@@ -394,6 +428,35 @@ static bool is_occupied_sdma(struct mqd_manager *mm, void *mqd,
+ 	return mm->dev->kfd2kgd->hqd_sdma_is_occupied(mm->dev->kgd, mqd);
+ }
+ 
++static void dump_mqd_sdma(struct mqd_manager *mm, void *mqd,
++                       struct queue_restore_data *qrd)
++{
++	struct vi_sdma_mqd *m;
++	m = get_sdma_mqd(mqd);
++
++	memcpy(qrd->mqd, m, sizeof(struct vi_sdma_mqd));
++}
++
++static void restore_mqd_sdma(struct mqd_manager *mm, void **mqd,
++                       struct kfd_mem_obj *mqd_mem_obj, uint64_t *gart_addr,
++                       struct queue_properties *qp,
++                       const struct queue_restore_data *qrd)
++{
++	uint64_t addr;
++	struct vi_sdma_mqd *m;
++
++	m = (struct vi_sdma_mqd *) mqd_mem_obj->cpu_ptr;
++	addr = mqd_mem_obj->gpu_addr;
++
++	memcpy(m, qrd->mqd, sizeof(*m));
++
++	*mqd = m;
++	if (gart_addr)
++		*gart_addr = addr;
++
++	qp->is_active = 0;
++}
++
+ #if defined(CONFIG_DEBUG_FS)
+ 
+ static int debugfs_show_mqd(struct seq_file *m, void *data)
+@@ -436,6 +499,8 @@ struct mqd_manager *mqd_manager_init_vi(enum KFD_MQD_TYPE type,
+ 		mqd->destroy_mqd = destroy_mqd;
+ 		mqd->is_occupied = is_occupied;
+ 		mqd->get_wave_state = get_wave_state;
++		mqd->dump_mqd = dump_mqd;
++		mqd->restore_mqd = restore_mqd;
+ 		mqd->mqd_size = sizeof(struct vi_mqd);
+ #if defined(CONFIG_DEBUG_FS)
+ 		mqd->debugfs_show_mqd = debugfs_show_mqd;
+@@ -476,6 +541,8 @@ struct mqd_manager *mqd_manager_init_vi(enum KFD_MQD_TYPE type,
+ 		mqd->update_mqd = update_mqd_sdma;
+ 		mqd->destroy_mqd = destroy_mqd_sdma;
+ 		mqd->is_occupied = is_occupied_sdma;
++		mqd->dump_mqd = dump_mqd_sdma;
++		mqd->restore_mqd = restore_mqd_sdma;
+ 		mqd->mqd_size = sizeof(struct vi_sdma_mqd);
+ #if defined(CONFIG_DEBUG_FS)
+ 		mqd->debugfs_show_mqd = debugfs_show_mqd_sdma;
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+index e4e0b84f3892..fafd99cddea5 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+@@ -478,6 +478,8 @@ struct queue_restore_data {
+ 
+ 	void *cu_mask;
+ 	uint32_t cu_mask_size;
++	void *mqd;
++	uint32_t mqd_size;
+ };
+ 
+ struct queue_properties {
+@@ -1102,6 +1104,12 @@ int pqm_get_wave_state(struct process_queue_manager *pqm,
+ int amdkfd_fence_wait_timeout(uint64_t *fence_addr,
+ 			      uint64_t fence_value,
+ 			      unsigned int timeout_ms);
++int pqm_get_queue_dump_info(struct process_queue_manager *pqm,
++			unsigned int qid,
++			u32 *mqd_size);
++int pqm_dump_mqd(struct process_queue_manager *pqm,
++		       unsigned int qid,
++		       struct queue_restore_data* qrd);
+ 
+ /* Packet Manager */
+ 
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_process_queue_manager.c b/drivers/gpu/drm/amd/amdkfd/kfd_process_queue_manager.c
+index c714bf55c58b..e325f51992bd 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_process_queue_manager.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_process_queue_manager.c
+@@ -528,6 +528,48 @@ int pqm_get_wave_state(struct process_queue_manager *pqm,
+ 						       save_area_used_size);
+ }
+ 
++int pqm_get_queue_dump_info(struct process_queue_manager *pqm,
++			unsigned int qid,
++			u32 *mqd_size)
++{
++	struct process_queue_node *pqn;
++
++	pqn = get_queue_by_qid(pqm, qid);
++	if (!pqn) {
++		pr_debug("amdkfd: No queue %d exists for operation\n", qid);
++		return -EFAULT;
++	}
++
++	if (!pqn->q->device->dqm->ops.get_queue_dump_info) {
++		pr_err("amdkfd: queue dumping not supported on this device\n");
++		return -ENOTSUPP;
++	}
++
++	pqn->q->device->dqm->ops.get_queue_dump_info(pqn->q->device->dqm,
++						       pqn->q, mqd_size);
++	return 0;
++}
++
++int pqm_dump_mqd(struct process_queue_manager *pqm,
++		       unsigned int qid, struct queue_restore_data* qrd)
++{
++	struct process_queue_node *pqn;
++
++	pqn = get_queue_by_qid(pqm, qid);
++	if (!pqn) {
++		pr_debug("amdkfd: No queue %d exists for operation\n", qid);
++		return -EFAULT;
++	}
++
++	if (!pqn->q->device->dqm->ops.dump_mqd) {
++		pr_err("amdkfd: queue dumping not supported on this device\n");
++		return -ENOTSUPP;
++	}
++
++	return pqn->q->device->dqm->ops.dump_mqd(pqn->q->device->dqm,
++						       pqn->q, qrd);
++}
++
+ #if defined(CONFIG_DEBUG_FS)
+ 
+ int pqm_debugfs_mqds(struct seq_file *m, void *data)
+-- 
+2.34.1
+
+
+From e66706932e06e86564ebf3eedd8e7556b9f791d3 Mon Sep 17 00:00:00 2001
+From: David Yat Sin <david.yatsin@amd.com>
+Date: Mon, 25 Jan 2021 14:09:32 -0500
+Subject: [PATCH 12/17] drm/amdkfd: CRIU dump/restore queue control stack
+
+Dump contents of queue control stacks on CRIU dump and restore them
+during CRIU restore.
+
+(rajneesh: rebased to 5.11 and fixed merge conflict)
+Signed-off-by: Rajneesh Bhardwaj <rajneesh.bhardwaj@amd.com>
+Signed-off-by: David Yat Sin <david.yatsin@amd.com>
+Change-Id: Ia1f38f3d4309e1f026981b16d26306672f3bf266
+---
+ drivers/gpu/drm/amd/amdkfd/kfd_chardev.c      | 32 +++++++++++++++----
+ .../drm/amd/amdkfd/kfd_device_queue_manager.c | 10 +++++-
+ .../drm/amd/amdkfd/kfd_device_queue_manager.h |  4 +--
+ drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager.h  |  3 ++
+ .../gpu/drm/amd/amdkfd/kfd_mqd_manager_cik.c  |  8 +++++
+ .../gpu/drm/amd/amdkfd/kfd_mqd_manager_v10.c  |  8 +++++
+ .../gpu/drm/amd/amdkfd/kfd_mqd_manager_v9.c   | 18 +++++++++++
+ .../gpu/drm/amd/amdkfd/kfd_mqd_manager_vi.c   |  8 +++++
+ drivers/gpu/drm/amd/amdkfd/kfd_priv.h         |  6 ++--
+ .../amd/amdkfd/kfd_process_queue_manager.c    |  8 ++---
+ 10 files changed, 89 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+index 3ee819033468..5f48ac2b2b43 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+@@ -1910,13 +1910,15 @@ static int kfd_devinfo_restore(struct kfd_process *p, struct kfd_criu_devinfo_bu
+ static int get_queue_data_sizes(struct kfd_process_device *pdd,
+ 				struct queue *q,
+ 				uint32_t *cu_mask_size,
+-				uint32_t *mqd_size)
++				uint32_t *mqd_size,
++				uint32_t *ctl_stack_size)
+ {
+ 	int ret = 0;
+ 
+ 	*cu_mask_size = sizeof(uint32_t) * (q->properties.cu_mask_count / 32);
+ 
+-	ret = pqm_get_queue_dump_info(&pdd->process->pqm, q->properties.queue_id, mqd_size);
++	ret = pqm_get_queue_dump_info(&pdd->process->pqm,
++			q->properties.queue_id, mqd_size, ctl_stack_size);
+ 	if (ret) {
+ 		pr_err("Failed to get queue dump info (%d)\n", ret);
+ 		return ret;
+@@ -1957,6 +1959,8 @@ static int criu_dump_queue(struct kfd_process_device *pdd,
+ 		q->properties.ctx_save_restore_area_size;
+ 
+ 	q_bucket->ctl_stack_size = q->properties.ctl_stack_size;
++
++	/* queue_data contains data in this order cu_mask, mqd, ctl_stack */
+ 	if (qrd->cu_mask_size)
+ 		memcpy(qrd->cu_mask, q->properties.cu_mask, qrd->cu_mask_size);
+ 
+@@ -1968,6 +1972,7 @@ static int criu_dump_queue(struct kfd_process_device *pdd,
+ 
+ 	q_bucket->cu_mask_size = qrd->cu_mask_size;
+ 	q_bucket->mqd_size = qrd->mqd_size;
++	q_bucket->ctl_stack_size = qrd->ctl_stack_size;
+ 	return ret;
+ }
+ 
+@@ -2007,14 +2012,15 @@ static int criu_dump_queues_device(struct kfd_process_device *pdd,
+ 		memset(&q_bucket, 0, sizeof(q_bucket));
+ 		memset(&qrd, 0, sizeof(qrd));
+ 
+-		ret = get_queue_data_sizes(pdd, q, &qrd.cu_mask_size, &qrd.mqd_size);
++		ret = get_queue_data_sizes(pdd, q, &qrd.cu_mask_size,
++				&qrd.mqd_size, &qrd.ctl_stack_size);
+ 		if (ret) {
+ 			pr_err("Failed to get queue dump info (%d)\n", ret);
+ 			ret = -EFAULT;
+ 			break;
+ 		}
+ 
+-		q_data_size = qrd.cu_mask_size + qrd.mqd_size;
++		q_data_size = qrd.cu_mask_size + qrd.mqd_size + qrd.ctl_stack_size;
+ 
+ 		/* Increase local buffer space if needed */
+ 		if (data_ptr_size < q_data_size) {
+@@ -2029,8 +2035,11 @@ static int criu_dump_queues_device(struct kfd_process_device *pdd,
+ 			data_ptr_size = q_data_size;
+ 		}
+ 
++		/* data stored in this order: cu_mask, mqd, mqd_ctl_stack */
+ 		qrd.cu_mask = data_ptr;
+ 		qrd.mqd = data_ptr + qrd.cu_mask_size;
++		qrd.mqd_ctl_stack = qrd.mqd + qrd.mqd_size;
++
+ 		ret = criu_dump_queue(pdd, q, &q_bucket, &qrd);
+ 		if (ret)
+ 			break;
+@@ -2350,7 +2359,8 @@ static int criu_restore_queues(struct kfd_process *p,
+ 			return ret;
+ 		}
+ 
+-		q_data_size = q_bucket.cu_mask_size + q_bucket.mqd_size;
++		q_data_size = q_bucket.cu_mask_size + q_bucket.mqd_size
++				+ q_bucket.ctl_stack_size;
+ 
+ 		/* Increase local buffer space if needed */
+ 		if (q_data_size > data_ptr_size) {
+@@ -2379,6 +2389,9 @@ static int criu_restore_queues(struct kfd_process *p,
+ 		qrd.mqd_size = q_bucket.mqd_size;
+ 		qrd.mqd = data_ptr + qrd.cu_mask_size;
+ 
++		qrd.ctl_stack_size = q_bucket.ctl_stack_size;
++		qrd.mqd_ctl_stack = qrd.mqd + qrd.mqd_size;
++
+ 		ret = criu_restore_queue(p, dev, pdd, &q_bucket, &qrd);
+ 		if (ret) {
+ 			pr_err("Failed to restore queue (%d)\n", ret);
+@@ -2717,11 +2730,16 @@ static int kfd_ioctl_criu_helper(struct file *filep,
+ 
+ 				u32 cu_mask_size = 0;
+ 				u32 mqd_size = 0;
+-				ret = get_queue_data_sizes(pdd, q, &cu_mask_size, &mqd_size);
++				u32 ctl_stack_size = 0;
++
++				ret = get_queue_data_sizes(pdd, q,
++					&cu_mask_size, &mqd_size,
++					&ctl_stack_size);
+ 				if (ret)
+ 					goto err_unlock;
+ 
+-				queues_data_size += cu_mask_size + mqd_size;
++				queues_data_size += cu_mask_size + mqd_size
++							+ ctl_stack_size;
+ 				q_index++;
+ 			} else {
+ 				pr_err("Unsupported queue type (%d)\n", q->properties.type);
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c b/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c
+index 5bfb81f5e95a..3dc2cdcf1295 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c
+@@ -1781,14 +1781,22 @@ static int get_wave_state(struct device_queue_manager *dqm,
+ 
+ static void get_queue_dump_info(struct device_queue_manager *dqm,
+ 			const struct queue *q,
+-			u32 *mqd_size)
++			u32 *mqd_size,
++			u32 *ctl_stack_size)
+ {
+ 	struct mqd_manager *mqd_mgr;
+ 	enum KFD_MQD_TYPE mqd_type =
+ 			get_mqd_type_from_queue_type(q->properties.type);
+ 
++	dqm_lock(dqm);
+ 	mqd_mgr = dqm->mqd_mgrs[mqd_type];
+ 	*mqd_size = mqd_mgr->mqd_size;
++	*ctl_stack_size = 0;
++
++	if (q->properties.type == KFD_QUEUE_TYPE_COMPUTE && mqd_mgr->get_dump_info)
++		mqd_mgr->get_dump_info(mqd_mgr, q->mqd, ctl_stack_size);
++
++	dqm_unlock(dqm);
+ }
+ 
+ static int dump_mqd(struct device_queue_manager *dqm,
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.h b/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.h
+index 2d9d36b206b3..30ac0a36f9e3 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.h
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.h
+@@ -137,8 +137,8 @@ struct device_queue_manager_ops {
+ 				  u32 *save_area_used_size);
+ 
+ 	void	(*get_queue_dump_info)(struct device_queue_manager *dqm,
+-				  const struct queue *q,
+-				  u32 *mqd_size);
++				  const struct queue *q, u32 *mqd_size,
++				  u32 *ctl_stack_size);
+ 
+ 	int	(*dump_mqd)(struct device_queue_manager *dqm,
+ 				  const struct queue *q,
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager.h b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager.h
+index f402dc1aa33a..4b681a5dcf3a 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager.h
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager.h
+@@ -99,6 +99,9 @@ struct mqd_manager {
+ 				  u32 *ctl_stack_used_size,
+ 				  u32 *save_area_used_size);
+ 
++	void	(*get_dump_info)(struct mqd_manager *mm, void *mqd,
++				uint32_t *ctl_stack_size);
++
+ 	void	(*dump_mqd)(struct mqd_manager *mm, void *mqd,
+ 				struct queue_restore_data *qrd);
+ 
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_cik.c b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_cik.c
+index 3f59466a5104..98b2b3b9c740 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_cik.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_cik.c
+@@ -275,6 +275,13 @@ static int destroy_mqd(struct mqd_manager *mm, void *mqd,
+ 					pipe_id, queue_id);
+ }
+ 
++static void get_dump_info(struct mqd_manager *mm, void *mqd,
++			 u32 *ctl_stack_size)
++{
++	/* Control stack is stored in user mode */
++	*ctl_stack_size = 0;
++}
++
+ static void dump_mqd(struct mqd_manager *mm, void *mqd,
+                        struct queue_restore_data *qrd)
+ {
+@@ -450,6 +457,7 @@ struct mqd_manager *mqd_manager_init_cik(enum KFD_MQD_TYPE type,
+ 		mqd->update_mqd = update_mqd;
+ 		mqd->destroy_mqd = destroy_mqd;
+ 		mqd->is_occupied = is_occupied;
++		mqd->get_dump_info = get_dump_info;
+ 		mqd->dump_mqd = dump_mqd;
+ 		mqd->restore_mqd = restore_mqd;
+ 		mqd->mqd_size = sizeof(struct cik_mqd);
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_v10.c b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_v10.c
+index 126c0dc63f10..c4c05a71352d 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_v10.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_v10.c
+@@ -283,6 +283,13 @@ static int get_wave_state(struct mqd_manager *mm, void *mqd,
+ 	return 0;
+ }
+ 
++static void get_dump_info(struct mqd_manager *mm, void *mqd,
++			 u32 *ctl_stack_size)
++{
++	/* Control stack is stored in user mode */
++	*ctl_stack_size = 0;
++}
++
+ static void dump_mqd(struct mqd_manager *mm, void *mqd,
+                        struct queue_restore_data *qrd)
+ {
+@@ -477,6 +484,7 @@ struct mqd_manager *mqd_manager_init_v10(enum KFD_MQD_TYPE type,
+ 		mqd->is_occupied = is_occupied;
+ 		mqd->mqd_size = sizeof(struct v10_compute_mqd);
+ 		mqd->get_wave_state = get_wave_state;
++		mqd->get_dump_info = get_dump_info;
+ 		mqd->dump_mqd = dump_mqd;
+ 		mqd->restore_mqd = restore_mqd;
+ #if defined(CONFIG_DEBUG_FS)
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_v9.c b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_v9.c
+index a77079a25c20..e5dee72ead43 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_v9.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_v9.c
+@@ -339,13 +339,24 @@ static int get_wave_state(struct mqd_manager *mm, void *mqd,
+ 	return 0;
+ }
+ 
++static void get_dump_info(struct mqd_manager *mm, void *mqd, u32 *ctl_stack_size)
++{
++	struct v9_mqd *m = get_mqd(mqd);
++
++	*ctl_stack_size = m->cp_hqd_cntl_stack_size;
++}
++
+ static void dump_mqd(struct mqd_manager *mm, void *mqd,
+                        struct queue_restore_data *qrd)
+ {
+ 	struct v9_mqd *m;
++	/* Control stack is located one page after MQD. */
++	void *mqd_ctl_stack = (void *)((uintptr_t)mqd + PAGE_SIZE);
++
+ 	m = get_mqd(mqd);
+ 
+ 	memcpy(qrd->mqd, m, sizeof(struct v9_mqd));
++	memcpy(qrd->mqd_ctl_stack, mqd_ctl_stack, m->cp_hqd_cntl_stack_size);
+ }
+ 
+ static void restore_mqd(struct mqd_manager *mm, void **mqd,
+@@ -355,6 +366,8 @@ static void restore_mqd(struct mqd_manager *mm, void **mqd,
+ {
+ 	uint64_t addr;
+ 	struct v9_mqd *m;
++	void *mqd_ctl_stack;
++
+ 	m = (struct v9_mqd *) mqd_mem_obj->cpu_ptr;
+ 	addr = mqd_mem_obj->gpu_addr;
+ 
+@@ -365,6 +378,10 @@ static void restore_mqd(struct mqd_manager *mm, void **mqd,
+ 		*gart_addr = addr;
+ 
+ 	/* Control stack is located one page after MQD. */
++	mqd_ctl_stack = (void *)((uintptr_t)*mqd + PAGE_SIZE);
++	memcpy(mqd_ctl_stack, qrd->mqd_ctl_stack, qrd->ctl_stack_size);
++
++	/* TODO: Confirm that qp->doorbell_off is restored properly */
+ 	m->cp_hqd_pq_doorbell_control =
+ 		qp->doorbell_off <<
+ 			CP_HQD_PQ_DOORBELL_CONTROL__DOORBELL_OFFSET__SHIFT;
+@@ -532,6 +549,7 @@ struct mqd_manager *mqd_manager_init_v9(enum KFD_MQD_TYPE type,
+ 		mqd->destroy_mqd = destroy_mqd;
+ 		mqd->is_occupied = is_occupied;
+ 		mqd->get_wave_state = get_wave_state;
++		mqd->get_dump_info = get_dump_info;
+ 		mqd->dump_mqd = dump_mqd;
+ 		mqd->restore_mqd = restore_mqd;
+ 		mqd->mqd_size = sizeof(struct v9_mqd);
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_vi.c b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_vi.c
+index ff436737b717..9ae3a16ae69b 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_vi.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_mqd_manager_vi.c
+@@ -303,6 +303,13 @@ static int get_wave_state(struct mqd_manager *mm, void *mqd,
+ 	return 0;
+ }
+ 
++static void get_dump_info(struct mqd_manager *mm, void *mqd,
++                       u32 *ctl_stack_size)
++{
++	/* Control stack is stored in user mode */
++	*ctl_stack_size = 0;
++}
++
+ static void dump_mqd(struct mqd_manager *mm, void *mqd,
+                        struct queue_restore_data *qrd)
+ {
+@@ -499,6 +506,7 @@ struct mqd_manager *mqd_manager_init_vi(enum KFD_MQD_TYPE type,
+ 		mqd->destroy_mqd = destroy_mqd;
+ 		mqd->is_occupied = is_occupied;
+ 		mqd->get_wave_state = get_wave_state;
++		mqd->get_dump_info = get_dump_info;
+ 		mqd->dump_mqd = dump_mqd;
+ 		mqd->restore_mqd = restore_mqd;
+ 		mqd->mqd_size = sizeof(struct vi_mqd);
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+index fafd99cddea5..7bd96a35383a 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+@@ -480,6 +480,8 @@ struct queue_restore_data {
+ 	uint32_t cu_mask_size;
+ 	void *mqd;
+ 	uint32_t mqd_size;
++	void *mqd_ctl_stack;
++	uint32_t ctl_stack_size;
+ };
+ 
+ struct queue_properties {
+@@ -1105,8 +1107,8 @@ int amdkfd_fence_wait_timeout(uint64_t *fence_addr,
+ 			      uint64_t fence_value,
+ 			      unsigned int timeout_ms);
+ int pqm_get_queue_dump_info(struct process_queue_manager *pqm,
+-			unsigned int qid,
+-			u32 *mqd_size);
++			    unsigned int qid,
++			    u32 *mqd_size, u32 *ctl_stack_size);
+ int pqm_dump_mqd(struct process_queue_manager *pqm,
+ 		       unsigned int qid,
+ 		       struct queue_restore_data* qrd);
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_process_queue_manager.c b/drivers/gpu/drm/amd/amdkfd/kfd_process_queue_manager.c
+index e325f51992bd..c256721d18ab 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_process_queue_manager.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_process_queue_manager.c
+@@ -528,9 +528,8 @@ int pqm_get_wave_state(struct process_queue_manager *pqm,
+ 						       save_area_used_size);
+ }
+ 
+-int pqm_get_queue_dump_info(struct process_queue_manager *pqm,
+-			unsigned int qid,
+-			u32 *mqd_size)
++int pqm_get_queue_dump_info(struct process_queue_manager *pqm, unsigned int qid,
++			u32 *mqd_size, u32 *ctl_stack_size)
+ {
+ 	struct process_queue_node *pqn;
+ 
+@@ -546,7 +545,8 @@ int pqm_get_queue_dump_info(struct process_queue_manager *pqm,
+ 	}
+ 
+ 	pqn->q->device->dqm->ops.get_queue_dump_info(pqn->q->device->dqm,
+-						       pqn->q, mqd_size);
++						       pqn->q, mqd_size,
++						       ctl_stack_size);
+ 	return 0;
+ }
+ 
+-- 
+2.34.1
+
+
+From 7f46304f140193812e1b9a14a34f1a8b378574d3 Mon Sep 17 00:00:00 2001
+From: David Yat Sin <david.yatsin@amd.com>
+Date: Fri, 5 Mar 2021 16:06:41 -0500
+Subject: [PATCH 13/17] drm/amdkfd: CRIU dump and restore events
+
+Add support to existing CRIU ioctl's to save and restore events during
+criu checkpoint and restore.
+
+Signed-off-by: David Yat Sin <david.yatsin@amd.com>
+Change-Id: I1635b1fa91a81abcbd19290cb88c8ca142c390e0
+---
+ drivers/gpu/drm/amd/amdkfd/kfd_chardev.c | 185 ++++++++++++++++-------
+ drivers/gpu/drm/amd/amdkfd/kfd_events.c  | 163 ++++++++++++++++----
+ drivers/gpu/drm/amd/amdkfd/kfd_priv.h    |  11 +-
+ 3 files changed, 279 insertions(+), 80 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+index 5f48ac2b2b43..20d32be2fa93 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+@@ -997,6 +997,55 @@ static int kfd_ioctl_get_process_apertures_new(struct file *filp,
+ 	return 0;
+ }
+ 
++static int kmap_event_page(struct kfd_process *p, uint64_t event_page_offset)
++{
++	struct kfd_dev *kfd;
++	struct kfd_process_device *pdd;
++	void *mem, *kern_addr;
++	uint64_t size;
++	int err = 0;
++
++	if (p->signal_page) {
++		pr_err("Event page is already set\n");
++		return -EINVAL;
++	}
++
++	kfd = kfd_device_by_id(GET_GPU_ID(event_page_offset));
++	if (!kfd) {
++		pr_err("Getting device by id failed in %s\n", __func__);
++		return -EINVAL;
++	}
++
++	pdd = kfd_bind_process_to_device(kfd, p);
++	if (IS_ERR(pdd)) {
++		mutex_unlock(&p->mutex);
++		return PTR_ERR(pdd);
++	}
++
++	mem = kfd_process_device_translate_handle(pdd,
++			GET_IDR_HANDLE(event_page_offset));
++	if (!mem) {
++		pr_err("Can't find BO, offset is 0x%llx\n", event_page_offset);
++
++		mutex_unlock(&p->mutex);
++		return -EINVAL;
++	}
++
++	err = amdgpu_amdkfd_gpuvm_map_gtt_bo_to_kernel(kfd->kgd,
++					mem, &kern_addr, &size);
++	if (err) {
++		pr_err("Failed to map event page to kernel\n");
++		return err;
++	}
++
++	err = kfd_event_page_set(p, kern_addr, size, event_page_offset);
++	if (err) {
++		pr_err("Failed to set event page\n");
++		return err;
++	}
++	return err;
++}
++
+ static int kfd_ioctl_create_event(struct file *filp, struct kfd_process *p,
+ 					void *data)
+ {
+@@ -1008,51 +1057,11 @@ static int kfd_ioctl_create_event(struct file *filp, struct kfd_process *p,
+ 	 * through the event_page_offset field.
+ 	 */
+ 	if (args->event_page_offset) {
+-		struct kfd_dev *kfd;
+-		struct kfd_process_device *pdd;
+-		void *mem, *kern_addr;
+-		uint64_t size;
+-
+-		if (p->signal_page) {
+-			pr_err("Event page is already set\n");
+-			return -EINVAL;
+-		}
+-
+-		kfd = kfd_device_by_id(GET_GPU_ID(args->event_page_offset));
+-		if (!kfd) {
+-			pr_err("Getting device by id failed in %s\n", __func__);
+-			return -EINVAL;
+-		}
+-
+ 		mutex_lock(&p->mutex);
+-		pdd = kfd_bind_process_to_device(kfd, p);
+-		if (IS_ERR(pdd)) {
+-			err = PTR_ERR(pdd);
+-			goto out_unlock;
+-		}
+-
+-		mem = kfd_process_device_translate_handle(pdd,
+-				GET_IDR_HANDLE(args->event_page_offset));
+-		if (!mem) {
+-			pr_err("Can't find BO, offset is 0x%llx\n",
+-			       args->event_page_offset);
+-			err = -EINVAL;
+-			goto out_unlock;
+-		}
++		err = kmap_event_page(p, args->event_page_offset);
+ 		mutex_unlock(&p->mutex);
+-
+-		err = amdgpu_amdkfd_gpuvm_map_gtt_bo_to_kernel(kfd->kgd,
+-						mem, &kern_addr, &size);
+-		if (err) {
+-			pr_err("Failed to map event page to kernel\n");
+-			return err;
+-		}
+-
+-		err = kfd_event_page_set(p, kern_addr, size);
+-		if (err) {
+-			pr_err("Failed to set event page\n");
++		if (err)
+ 			return err;
+-		}
+ 	}
+ 
+ 	err = kfd_event_create(filp, p, args->event_type,
+@@ -1061,10 +1070,7 @@ static int kfd_ioctl_create_event(struct file *filp, struct kfd_process *p,
+ 				&args->event_page_offset,
+ 				&args->event_slot_index);
+ 
+-	return err;
+-
+-out_unlock:
+-	mutex_unlock(&p->mutex);
++	pr_debug("Created event (id:0x%08x) (%s)\n", args->event_id, __func__);
+ 	return err;
+ }
+ 
+@@ -2078,6 +2084,7 @@ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 				struct kfd_process *p, void *data)
+ {
+ 	struct kfd_ioctl_criu_dumper_args *args = data;
++	struct kfd_criu_ev_bucket *ev_buckets = NULL;
+ 	struct kfd_criu_bo_buckets *bo_bucket;
+ 	struct amdgpu_bo *dumper_bo;
+ 	int ret, id, index, i = 0;
+@@ -2104,14 +2111,22 @@ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 		return -EINVAL;
+ 	}
+ 
+-	pr_debug("num of bos = %llu\n", args->num_of_bos);
++	pr_debug("num of bos = %llu queues = %u events = %u\n", args->num_of_bos, args->num_of_queues, args->num_of_events);
+ 
+ 	bo_bucket = kvzalloc((sizeof(struct kfd_criu_bo_buckets) *
+ 			     args->num_of_bos), GFP_KERNEL);
+ 	if (!bo_bucket)
+ 		return -ENOMEM;
+ 
+-	pr_debug("num of queues = %u\n", args->num_of_queues);
++	if (args->num_of_events) {
++		ev_buckets = kvzalloc((sizeof(struct kfd_criu_ev_bucket) *
++				args->num_of_events), GFP_KERNEL);
++
++		if (!ev_buckets) {
++			ret = -ENOMEM;
++			goto clean;
++		}
++	}
+ 
+ 	mutex_lock(&p->mutex);
+ 
+@@ -2198,6 +2213,23 @@ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 			goto err_unlock;
+ 	}
+ 
++	/* Dump events */
++	ret = kfd_event_dump(p, &args->event_page_offset, ev_buckets,
++				args->num_of_events);
++	if (ret) {
++		pr_err("failed to dump events, ret=%d\n", ret);
++		goto err_unlock;
++	}
++	ret = copy_to_user((void __user *)args->kfd_criu_ev_buckets_ptr,
++			ev_buckets,
++			(args->num_of_events *
++			sizeof(struct kfd_criu_ev_bucket)));
++	kvfree(ev_buckets);
++	if (ret) {
++		ret = -EFAULT;
++		goto err_unlock;
++	}
++
+ 	ret = copy_to_user((void __user *)args->kfd_criu_bo_buckets_ptr,
+ 			bo_bucket,
+ 			(args->num_of_bos *
+@@ -2211,6 +2243,8 @@ static int kfd_ioctl_criu_dumper(struct file *filep,
+ err_unlock:
+ 	kfd_process_restore_queues(p);
+ 	mutex_unlock(&p->mutex);
++clean:
++	kvfree(ev_buckets);
+ 	pr_err("Dumper ioctl failed err:%d\n", ret);
+ 	return ret;
+ }
+@@ -2404,6 +2438,47 @@ static int criu_restore_queues(struct kfd_process *p,
+ 	return ret;
+ }
+ 
++/* criu_restore_queues_events runs with the process mutex locked */
++static int criu_restore_events(struct file *filp, struct kfd_process *p,
++			struct kfd_ioctl_criu_restorer_args *args)
++{
++	int i;
++	struct kfd_criu_ev_bucket *events;
++	int ret = 0;
++
++	if (args->event_page_offset) {
++		ret = kmap_event_page(p, args->event_page_offset);
++		if (ret)
++			return ret;
++	}
++
++	if (!args->num_of_events)
++		return 0;
++
++	events = kvmalloc_array(args->num_of_events,
++				sizeof(struct kfd_criu_ev_bucket),
++				GFP_KERNEL);
++	if (!events)
++		return -ENOMEM;
++
++	ret = copy_from_user(events, (void __user *) args->kfd_criu_ev_buckets_ptr,
++			args->num_of_events * sizeof(struct kfd_criu_ev_bucket));
++
++	if (ret) {
++		ret = -EFAULT;
++		goto exit;
++	}
++
++	for (i = 0; i < args->num_of_events; i++) {
++		ret = kfd_event_restore(filp, p, &events[i]);
++		if (ret)
++			pr_err("Failed to restore event with id (%d)\n", ret);
++	}
++exit:
++	kvfree(events);
++	return ret;
++}
++
+ static int kfd_ioctl_criu_restorer(struct file *filep,
+ 				struct kfd_process *p, void *data)
+ {
+@@ -2634,13 +2709,18 @@ static int kfd_ioctl_criu_restorer(struct file *filep,
+ 		goto err_unlock;
+ 	}
+ 
++	ret = criu_restore_events(filep, p, args);
++	if (ret) {
++		pr_err("Failed to restore events (%d)", ret);
++		err = ret;
++		goto err_unlock;
++	}
++
+ 	ret = copy_to_user((void __user *)args->restored_bo_array_ptr,
+ 			   restored_bo_offsets_arr,
+ 			   (args->num_of_bos * sizeof(*restored_bo_offsets_arr)));
+-	if (ret) {
++	if (ret)
+ 		err = -EFAULT;
+-		goto err_unlock;
+-	}
+ 
+ err_unlock:
+ 	mutex_unlock(&p->mutex);
+@@ -2755,8 +2835,9 @@ static int kfd_ioctl_criu_helper(struct file *filep,
+ 	args->num_of_bos = num_of_bos;
+ 	args->num_of_queues = q_index;
+ 	args->queues_data_size = queues_data_size;
+-	dev_dbg(kfd_device, "Num of bos = %llu\n", num_of_bos);
++	args->num_of_events = kfd_get_num_events(p);
+ 
++	dev_dbg(kfd_device, "Num of bos = %llu queues:%u events:%u\n", args->num_of_bos, args->num_of_queues, args->num_of_events);
+ err_unlock:
+ 	mutex_unlock(&p->mutex);
+ 	return ret;
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_events.c b/drivers/gpu/drm/amd/amdkfd/kfd_events.c
+index 8b5c82af2acd..a4ed0acd2760 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_events.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_events.c
+@@ -53,9 +53,9 @@ struct kfd_signal_page {
+ 	uint64_t *kernel_address;
+ 	uint64_t __user *user_address;
+ 	bool need_to_free_pages;
++	uint64_t user_handle; /* Needed for CRIU dumped and restore */
+ };
+ 
+-
+ static uint64_t *page_slots(struct kfd_signal_page *page)
+ {
+ 	return page->kernel_address;
+@@ -92,7 +92,8 @@ static struct kfd_signal_page *allocate_signal_page(struct kfd_process *p)
+ }
+ 
+ static int allocate_event_notification_slot(struct kfd_process *p,
+-					    struct kfd_event *ev)
++					    struct kfd_event *ev,
++					    const int *restore_id)
+ {
+ 	int id;
+ 
+@@ -104,14 +105,19 @@ static int allocate_event_notification_slot(struct kfd_process *p,
+ 		p->signal_mapped_size = 256*8;
+ 	}
+ 
+-	/*
+-	 * Compatibility with old user mode: Only use signal slots
+-	 * user mode has mapped, may be less than
+-	 * KFD_SIGNAL_EVENT_LIMIT. This also allows future increase
+-	 * of the event limit without breaking user mode.
+-	 */
+-	id = idr_alloc(&p->event_idr, ev, 0, p->signal_mapped_size / 8,
+-		       GFP_KERNEL);
++	if (restore_id) {
++		id = idr_alloc(&p->event_idr, ev, *restore_id, *restore_id + 1,
++				GFP_KERNEL);
++	} else {
++		/*
++		 * Compatibility with old user mode: Only use signal slots
++		 * user mode has mapped, may be less than
++		 * KFD_SIGNAL_EVENT_LIMIT. This also allows future increase
++		 * of the event limit without breaking user mode.
++		 */
++		id = idr_alloc(&p->event_idr, ev, 0, p->signal_mapped_size / 8,
++				GFP_KERNEL);
++	}
+ 	if (id < 0)
+ 		return id;
+ 
+@@ -178,9 +184,8 @@ static struct kfd_event *lookup_signaled_event_by_partial_id(
+ 	return ev;
+ }
+ 
+-static int create_signal_event(struct file *devkfd,
+-				struct kfd_process *p,
+-				struct kfd_event *ev)
++static int create_signal_event(struct file *devkfd, struct kfd_process *p,
++				struct kfd_event *ev, const int *restore_id)
+ {
+ 	int ret;
+ 
+@@ -193,7 +198,7 @@ static int create_signal_event(struct file *devkfd,
+ 		return -ENOSPC;
+ 	}
+ 
+-	ret = allocate_event_notification_slot(p, ev);
++	ret = allocate_event_notification_slot(p, ev, restore_id);
+ 	if (ret) {
+ 		pr_warn("Signal event wasn't created because out of kernel memory\n");
+ 		return ret;
+@@ -209,16 +214,21 @@ static int create_signal_event(struct file *devkfd,
+ 	return 0;
+ }
+ 
+-static int create_other_event(struct kfd_process *p, struct kfd_event *ev)
++static int create_other_event(struct kfd_process *p, struct kfd_event *ev, const int *restore_id)
+ {
+-	/* Cast KFD_LAST_NONSIGNAL_EVENT to uint32_t. This allows an
+-	 * intentional integer overflow to -1 without a compiler
+-	 * warning. idr_alloc treats a negative value as "maximum
+-	 * signed integer".
+-	 */
+-	int id = idr_alloc(&p->event_idr, ev, KFD_FIRST_NONSIGNAL_EVENT_ID,
+-			   (uint32_t)KFD_LAST_NONSIGNAL_EVENT_ID + 1,
+-			   GFP_KERNEL);
++	int id;
++	if (restore_id)
++		id = idr_alloc(&p->event_idr, ev, *restore_id, *restore_id + 1,
++			GFP_KERNEL);
++	else
++		/* Cast KFD_LAST_NONSIGNAL_EVENT to uint32_t. This allows an
++		 * intentional integer overflow to -1 without a compiler
++		 * warning. idr_alloc treats a negative value as "maximum
++		 * signed integer".
++		 */
++		id = idr_alloc(&p->event_idr, ev, KFD_FIRST_NONSIGNAL_EVENT_ID,
++				(uint32_t)KFD_LAST_NONSIGNAL_EVENT_ID + 1,
++				GFP_KERNEL);
+ 
+ 	if (id < 0)
+ 		return id;
+@@ -296,7 +306,7 @@ static bool event_can_be_cpu_signaled(const struct kfd_event *ev)
+ }
+ 
+ int kfd_event_page_set(struct kfd_process *p, void *kernel_address,
+-		       uint64_t size)
++		       uint64_t size, uint64_t user_handle)
+ {
+ 	struct kfd_signal_page *page;
+ 
+@@ -315,7 +325,7 @@ int kfd_event_page_set(struct kfd_process *p, void *kernel_address,
+ 
+ 	p->signal_page = page;
+ 	p->signal_mapped_size = size;
+-
++	p->signal_page->user_handle = user_handle;
+ 	return 0;
+ }
+ 
+@@ -343,14 +353,14 @@ int kfd_event_create(struct file *devkfd, struct kfd_process *p,
+ 	switch (event_type) {
+ 	case KFD_EVENT_TYPE_SIGNAL:
+ 	case KFD_EVENT_TYPE_DEBUG:
+-		ret = create_signal_event(devkfd, p, ev);
++		ret = create_signal_event(devkfd, p, ev, NULL);
+ 		if (!ret) {
+ 			*event_page_offset = KFD_MMAP_TYPE_EVENTS;
+ 			*event_slot_index = ev->event_id;
+ 		}
+ 		break;
+ 	default:
+-		ret = create_other_event(p, ev);
++		ret = create_other_event(p, ev, NULL);
+ 		break;
+ 	}
+ 
+@@ -366,6 +376,105 @@ int kfd_event_create(struct file *devkfd, struct kfd_process *p,
+ 	return ret;
+ }
+ 
++int kfd_event_restore(struct file *devkfd, struct kfd_process *p,
++		     struct kfd_criu_ev_bucket *restore_ev)
++{
++	int ret = 0;
++	struct kfd_event *ev = kzalloc(sizeof(*ev), GFP_KERNEL);
++
++	if (!ev)
++		return -ENOMEM;
++
++	ev->type = restore_ev->type;
++	ev->auto_reset = restore_ev->auto_reset;
++	ev->signaled = restore_ev->signaled;
++
++	init_waitqueue_head(&ev->wq);
++
++	mutex_lock(&p->event_mutex);
++	switch (ev->type) {
++	case KFD_EVENT_TYPE_SIGNAL:
++	case KFD_EVENT_TYPE_DEBUG:
++		ret = create_signal_event(devkfd, p, ev, &restore_ev->event_id);
++		break;
++	case KFD_EVENT_TYPE_MEMORY:
++		memcpy(&ev->memory_exception_data,
++			&restore_ev->memory_exception_data,
++			sizeof(struct kfd_hsa_memory_exception_data));
++
++		ret = create_other_event(p, ev, &restore_ev->event_id);
++		break;
++	case KFD_EVENT_TYPE_HW_EXCEPTION:
++		memcpy(&ev->hw_exception_data,
++			&restore_ev->hw_exception_data,
++			sizeof(struct kfd_hsa_hw_exception_data));
++
++		ret = create_other_event(p, ev, &restore_ev->event_id);
++		break;
++	}
++
++	if (ret)
++		kfree(ev);
++
++	mutex_unlock(&p->event_mutex);
++
++	return ret;
++}
++
++int kfd_event_dump(struct kfd_process *p, uint64_t *user_handle,
++			struct kfd_criu_ev_bucket *ev_buckets,
++			uint32_t num_events)
++{
++	struct kfd_event *ev;
++	uint32_t ev_id;
++	int i = 0;
++
++	*user_handle = 0;
++
++	if (p->signal_page)
++		*user_handle = p->signal_page->user_handle;
++
++	idr_for_each_entry(&p->event_idr, ev, ev_id) {
++		if (i >= num_events) {
++			pr_err("Number of events exceeds number allocated\n");
++			return -ENOMEM;
++		}
++
++		ev_buckets[i].event_id = ev->event_id;
++		ev_buckets[i].auto_reset = ev->auto_reset;
++		ev_buckets[i].type = ev->type;
++		ev_buckets[i].signaled = ev->signaled;
++
++		if (ev_buckets[i].type == KFD_EVENT_TYPE_MEMORY) {
++			memcpy(&ev_buckets[i].memory_exception_data,
++				&ev->memory_exception_data,
++				sizeof(struct kfd_hsa_memory_exception_data));
++
++		} else if (ev_buckets[i].type == KFD_EVENT_TYPE_HW_EXCEPTION) {
++			memcpy(&ev_buckets[i].hw_exception_data,
++				&ev->hw_exception_data,
++				sizeof(struct kfd_hsa_hw_exception_data));
++		}
++		pr_debug("Dumped event[%d] id = 0x%08x auto_reset = %x type = %x signaled = %x\n",
++			i, ev_buckets[i].event_id, ev_buckets[i].auto_reset,
++			ev_buckets[i].type, ev_buckets[i].signaled);
++		i++;
++	}
++	return 0;
++}
++
++int kfd_get_num_events(struct kfd_process *p)
++{
++	struct kfd_event *ev;
++	uint32_t id;
++	u32 num_events = 0;
++
++	idr_for_each_entry(&p->event_idr, ev, id)
++		num_events++;
++
++	return num_events++;
++}
++
+ /* Assumes that p is current. */
+ int kfd_event_destroy(struct kfd_process *p, uint32_t event_id)
+ {
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+index 7bd96a35383a..07947ec9113e 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+@@ -1205,11 +1205,20 @@ void kfd_signal_hw_exception_event(u32 pasid);
+ int kfd_set_event(struct kfd_process *p, uint32_t event_id);
+ int kfd_reset_event(struct kfd_process *p, uint32_t event_id);
+ int kfd_event_page_set(struct kfd_process *p, void *kernel_address,
+-		       uint64_t size);
++		       uint64_t size, uint64_t user_handle);
++
+ int kfd_event_create(struct file *devkfd, struct kfd_process *p,
+ 		     uint32_t event_type, bool auto_reset, uint32_t node_id,
+ 		     uint32_t *event_id, uint32_t *event_trigger_data,
+ 		     uint64_t *event_page_offset, uint32_t *event_slot_index);
++
++int kfd_event_restore(struct file *devkfd, struct kfd_process *p,
++		     struct kfd_criu_ev_bucket *restore_ev);
++
++int kfd_event_dump(struct kfd_process *p, uint64_t *user_handle,
++		    struct kfd_criu_ev_bucket *ev_buckets, uint32_t num_events);
++
++int kfd_get_num_events(struct kfd_process *p);
+ int kfd_event_destroy(struct kfd_process *p, uint32_t event_id);
+ 
+ void kfd_signal_vm_fault_event(struct kfd_dev *dev, u32 pasid,
+-- 
+2.34.1
+
+
+From 64bad019097b341b0c0bcc19e6a95690aa5f8af6 Mon Sep 17 00:00:00 2001
+From: David Yat Sin <david.yatsin@amd.com>
+Date: Fri, 9 Apr 2021 12:30:43 -0400
+Subject: [PATCH 14/17] drm/amdkfd: CRIU implement gpu_id remapping
+
+---
+ drivers/gpu/drm/amd/amdkfd/kfd_chardev.c | 250 +++++++++++++----------
+ drivers/gpu/drm/amd/amdkfd/kfd_priv.h    |   3 +
+ drivers/gpu/drm/amd/amdkfd/kfd_process.c |  18 ++
+ 3 files changed, 167 insertions(+), 104 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+index 20d32be2fa93..a60cffe72a07 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+@@ -294,13 +294,14 @@ static int kfd_ioctl_create_queue(struct file *filep, struct kfd_process *p,
+ 		return err;
+ 
+ 	pr_debug("Looking for gpu id 0x%x\n", args->gpu_id);
+-	dev = kfd_device_by_id(args->gpu_id);
+-	if (!dev) {
++
++	mutex_lock(&p->mutex);
++	pdd = kfd_process_device_data_by_id(p, args->gpu_id);
++	if (!pdd) {
+ 		pr_debug("Could not find gpu id 0x%x\n", args->gpu_id);
+ 		return -EINVAL;
+ 	}
+-
+-	mutex_lock(&p->mutex);
++	dev = pdd->dev;
+ 
+ 	pdd = kfd_bind_process_to_device(dev, p);
+ 	if (IS_ERR(pdd)) {
+@@ -491,7 +492,6 @@ static int kfd_ioctl_set_memory_policy(struct file *filep,
+ 					struct kfd_process *p, void *data)
+ {
+ 	struct kfd_ioctl_set_memory_policy_args *args = data;
+-	struct kfd_dev *dev;
+ 	int err = 0;
+ 	struct kfd_process_device *pdd;
+ 	enum cache_policy default_policy, alternate_policy;
+@@ -506,13 +506,15 @@ static int kfd_ioctl_set_memory_policy(struct file *filep,
+ 		return -EINVAL;
+ 	}
+ 
+-	dev = kfd_device_by_id(args->gpu_id);
+-	if (!dev)
+-		return -EINVAL;
+-
+ 	mutex_lock(&p->mutex);
++	pdd = kfd_process_device_data_by_id(p, args->gpu_id);
++	if (!pdd) {
++		pr_debug("Could not find gpu id 0x%x\n", args->gpu_id);
++		err = -EINVAL;
++		goto out;
++	}
+ 
+-	pdd = kfd_bind_process_to_device(dev, p);
++	pdd = kfd_bind_process_to_device(pdd->dev, p);
+ 	if (IS_ERR(pdd)) {
+ 		err = -ESRCH;
+ 		goto out;
+@@ -525,7 +527,7 @@ static int kfd_ioctl_set_memory_policy(struct file *filep,
+ 		(args->alternate_policy == KFD_IOC_CACHE_POLICY_COHERENT)
+ 		   ? cache_policy_coherent : cache_policy_noncoherent;
+ 
+-	if (!dev->dqm->ops.set_cache_memory_policy(dev->dqm,
++	if (!pdd->dev->dqm->ops.set_cache_memory_policy(pdd->dev->dqm,
+ 				&pdd->qpd,
+ 				default_policy,
+ 				alternate_policy,
+@@ -543,17 +545,18 @@ static int kfd_ioctl_set_trap_handler(struct file *filep,
+ 					struct kfd_process *p, void *data)
+ {
+ 	struct kfd_ioctl_set_trap_handler_args *args = data;
+-	struct kfd_dev *dev;
+ 	int err = 0;
+ 	struct kfd_process_device *pdd;
+ 
+-	dev = kfd_device_by_id(args->gpu_id);
+-	if (!dev)
+-		return -EINVAL;
+-
+ 	mutex_lock(&p->mutex);
+ 
+-	pdd = kfd_bind_process_to_device(dev, p);
++	pdd = kfd_process_device_data_by_id(p, args->gpu_id);
++	if (!pdd) {
++		err = -EINVAL;
++		goto out;
++	}
++
++	pdd = kfd_bind_process_to_device(pdd->dev, p);
+ 	if (IS_ERR(pdd)) {
+ 		err = -ESRCH;
+ 		goto out;
+@@ -577,16 +580,20 @@ static int kfd_ioctl_dbg_register(struct file *filep,
+ 	bool create_ok;
+ 	long status = 0;
+ 
+-	dev = kfd_device_by_id(args->gpu_id);
+-	if (!dev)
+-		return -EINVAL;
++	mutex_lock(&p->mutex);
++	pdd = kfd_process_device_data_by_id(p, args->gpu_id);
++	if (!pdd) {
++		status = -EINVAL;
++		goto out_unlock_p;
++	}
++	dev = pdd->dev;
+ 
+ 	if (dev->device_info->asic_family == CHIP_CARRIZO) {
+ 		pr_debug("kfd_ioctl_dbg_register not supported on CZ\n");
+-		return -EINVAL;
++		status = -EINVAL;
++		goto out_unlock_p;
+ 	}
+ 
+-	mutex_lock(&p->mutex);
+ 	mutex_lock(kfd_get_dbgmgr_mutex());
+ 
+ 	/*
+@@ -596,7 +603,7 @@ static int kfd_ioctl_dbg_register(struct file *filep,
+ 	pdd = kfd_bind_process_to_device(dev, p);
+ 	if (IS_ERR(pdd)) {
+ 		status = PTR_ERR(pdd);
+-		goto out;
++		goto out_unlock_dbg;
+ 	}
+ 
+ 	if (!dev->dbgmgr) {
+@@ -614,8 +621,9 @@ static int kfd_ioctl_dbg_register(struct file *filep,
+ 		status = -EINVAL;
+ 	}
+ 
+-out:
++out_unlock_dbg:
+ 	mutex_unlock(kfd_get_dbgmgr_mutex());
++out_unlock_p:
+ 	mutex_unlock(&p->mutex);
+ 
+ 	return status;
+@@ -625,12 +633,18 @@ static int kfd_ioctl_dbg_unregister(struct file *filep,
+ 				struct kfd_process *p, void *data)
+ {
+ 	struct kfd_ioctl_dbg_unregister_args *args = data;
++	struct kfd_process_device *pdd;
+ 	struct kfd_dev *dev;
+ 	long status;
+ 
+-	dev = kfd_device_by_id(args->gpu_id);
+-	if (!dev || !dev->dbgmgr)
++	mutex_lock(&p->mutex);
++	pdd = kfd_process_device_data_by_id(p, args->gpu_id);
++	if (!pdd || !pdd->dev->dbgmgr) {
++		mutex_unlock(&p->mutex);
+ 		return -EINVAL;
++	}
++	dev = pdd->dev;
++	mutex_unlock(&p->mutex);
+ 
+ 	if (dev->device_info->asic_family == CHIP_CARRIZO) {
+ 		pr_debug("kfd_ioctl_dbg_unregister not supported on CZ\n");
+@@ -664,6 +678,7 @@ static int kfd_ioctl_dbg_address_watch(struct file *filep,
+ {
+ 	struct kfd_ioctl_dbg_address_watch_args *args = data;
+ 	struct kfd_dev *dev;
++	struct kfd_process_device *pdd;
+ 	struct dbg_address_watch_info aw_info;
+ 	unsigned char *args_buff;
+ 	long status;
+@@ -673,9 +688,15 @@ static int kfd_ioctl_dbg_address_watch(struct file *filep,
+ 
+ 	memset((void *) &aw_info, 0, sizeof(struct dbg_address_watch_info));
+ 
+-	dev = kfd_device_by_id(args->gpu_id);
+-	if (!dev)
++	mutex_lock(&p->mutex);
++	pdd = kfd_process_device_data_by_id(p, args->gpu_id);
++	if (!pdd) {
++		mutex_unlock(&p->mutex);
++		pr_debug("Could not find gpu id 0x%x\n", args->gpu_id);
+ 		return -EINVAL;
++	}
++	dev = pdd->dev;
++	mutex_unlock(&p->mutex);
+ 
+ 	if (dev->device_info->asic_family == CHIP_CARRIZO) {
+ 		pr_debug("kfd_ioctl_dbg_wave_control not supported on CZ\n");
+@@ -764,6 +785,7 @@ static int kfd_ioctl_dbg_wave_control(struct file *filep,
+ {
+ 	struct kfd_ioctl_dbg_wave_control_args *args = data;
+ 	struct kfd_dev *dev;
++	struct kfd_process_device *pdd;
+ 	struct dbg_wave_control_info wac_info;
+ 	unsigned char *args_buff;
+ 	uint32_t computed_buff_size;
+@@ -781,9 +803,15 @@ static int kfd_ioctl_dbg_wave_control(struct file *filep,
+ 				sizeof(wac_info.dbgWave_msg.MemoryVA) +
+ 				sizeof(wac_info.trapId);
+ 
+-	dev = kfd_device_by_id(args->gpu_id);
+-	if (!dev)
++	mutex_lock(&p->mutex);
++	pdd = kfd_process_device_data_by_id(p, args->gpu_id);
++	if (!pdd) {
++		mutex_unlock(&p->mutex);
++		pr_debug("Could not find gpu id 0x%x\n", args->gpu_id);
+ 		return -EINVAL;
++	}
++	dev = pdd->dev;
++	mutex_unlock(&p->mutex);
+ 
+ 	if (dev->device_info->asic_family == CHIP_CARRIZO) {
+ 		pr_debug("kfd_ioctl_dbg_wave_control not supported on CZ\n");
+@@ -847,16 +875,19 @@ static int kfd_ioctl_get_clock_counters(struct file *filep,
+ 				struct kfd_process *p, void *data)
+ {
+ 	struct kfd_ioctl_get_clock_counters_args *args = data;
+-	struct kfd_dev *dev;
++	struct kfd_process_device *pdd;
+ 
+-	dev = kfd_device_by_id(args->gpu_id);
+-	if (dev)
++	mutex_lock(&p->mutex);
++	pdd = kfd_process_device_data_by_id(p, args->gpu_id);
++	if (pdd)
+ 		/* Reading GPU clock counter from KGD */
+-		args->gpu_clock_counter = amdgpu_amdkfd_get_gpu_clock_counter(dev->kgd);
++		args->gpu_clock_counter = amdgpu_amdkfd_get_gpu_clock_counter(pdd->dev->kgd);
+ 	else
+ 		/* Node without GPU resource */
+ 		args->gpu_clock_counter = 0;
+ 
++	mutex_unlock(&p->mutex);
++
+ 	/* No access to rdtsc. Using raw monotonic time */
+ 	args->cpu_clock_counter = ktime_get_raw_ns();
+ 	args->system_clock_counter = ktime_get_boottime_ns();
+@@ -1010,15 +1041,15 @@ static int kmap_event_page(struct kfd_process *p, uint64_t event_page_offset)
+ 		return -EINVAL;
+ 	}
+ 
+-	kfd = kfd_device_by_id(GET_GPU_ID(event_page_offset));
+-	if (!kfd) {
++	pdd = kfd_process_device_data_by_id(p, GET_GPU_ID(event_page_offset));
++	if (!pdd) {
+ 		pr_err("Getting device by id failed in %s\n", __func__);
+ 		return -EINVAL;
+ 	}
++	kfd = pdd->dev;
+ 
+ 	pdd = kfd_bind_process_to_device(kfd, p);
+ 	if (IS_ERR(pdd)) {
+-		mutex_unlock(&p->mutex);
+ 		return PTR_ERR(pdd);
+ 	}
+ 
+@@ -1026,8 +1057,6 @@ static int kmap_event_page(struct kfd_process *p, uint64_t event_page_offset)
+ 			GET_IDR_HANDLE(event_page_offset));
+ 	if (!mem) {
+ 		pr_err("Can't find BO, offset is 0x%llx\n", event_page_offset);
+-
+-		mutex_unlock(&p->mutex);
+ 		return -EINVAL;
+ 	}
+ 
+@@ -1119,11 +1148,13 @@ static int kfd_ioctl_set_scratch_backing_va(struct file *filep,
+ 	struct kfd_dev *dev;
+ 	long err;
+ 
+-	dev = kfd_device_by_id(args->gpu_id);
+-	if (!dev)
+-		return -EINVAL;
+-
+ 	mutex_lock(&p->mutex);
++	pdd = kfd_process_device_data_by_id(p, args->gpu_id);
++	if (!pdd) {
++		err = -EINVAL;
++		goto bind_process_to_device_fail;
++	}
++	dev = pdd->dev;
+ 
+ 	pdd = kfd_bind_process_to_device(dev, p);
+ 	if (IS_ERR(pdd)) {
+@@ -1151,15 +1182,20 @@ static int kfd_ioctl_get_tile_config(struct file *filep,
+ 		struct kfd_process *p, void *data)
+ {
+ 	struct kfd_ioctl_get_tile_config_args *args = data;
+-	struct kfd_dev *dev;
++	struct kfd_process_device *pdd;
+ 	struct tile_config config;
+ 	int err = 0;
+ 
+-	dev = kfd_device_by_id(args->gpu_id);
+-	if (!dev)
++	mutex_lock(&p->mutex);
++	pdd = kfd_process_device_data_by_id(p, args->gpu_id);
++	if (!pdd) {
++		mutex_unlock(&p->mutex);
+ 		return -EINVAL;
++	}
++
++	amdgpu_amdkfd_get_tile_config(pdd->dev->kgd, &config);
+ 
+-	amdgpu_amdkfd_get_tile_config(dev->kgd, &config);
++	mutex_unlock(&p->mutex);
+ 
+ 	args->gb_addr_config = config.gb_addr_config;
+ 	args->num_banks = config.num_banks;
+@@ -1194,21 +1230,15 @@ static int kfd_ioctl_acquire_vm(struct file *filep, struct kfd_process *p,
+ {
+ 	struct kfd_ioctl_acquire_vm_args *args = data;
+ 	struct kfd_process_device *pdd;
+-	struct kfd_dev *dev;
+ 	struct file *drm_file;
+ 	int ret;
+ 
+-	dev = kfd_device_by_id(args->gpu_id);
+-	if (!dev)
+-		return -EINVAL;
+-
+ 	drm_file = fget(args->drm_fd);
+ 	if (!drm_file)
+ 		return -EINVAL;
+ 
+ 	mutex_lock(&p->mutex);
+-
+-	pdd = kfd_get_process_device_data(dev, p);
++	pdd = kfd_process_device_data_by_id(p, args->gpu_id);
+ 	if (!pdd) {
+ 		ret = -EINVAL;
+ 		goto err_unlock;
+@@ -1267,19 +1297,23 @@ static int kfd_ioctl_alloc_memory_of_gpu(struct file *filep,
+ 	if (args->size == 0)
+ 		return -EINVAL;
+ 
+-	dev = kfd_device_by_id(args->gpu_id);
+-	if (!dev)
+-		return -EINVAL;
++	mutex_lock(&p->mutex);
++	pdd = kfd_process_device_data_by_id(p, args->gpu_id);
++	if (!pdd) {
++		err = -EINVAL;
++		goto err_unlock;
++	}
++
++	dev = pdd->dev;
+ 
+ 	if ((flags & KFD_IOC_ALLOC_MEM_FLAGS_PUBLIC) &&
+ 		(flags & KFD_IOC_ALLOC_MEM_FLAGS_VRAM) &&
+ 		!kfd_dev_is_large_bar(dev)) {
+ 		pr_err("Alloc host visible vram on small bar is not allowed\n");
+-		return -EINVAL;
++		err = -EINVAL;
++		goto err_unlock;
+ 	}
+ 
+-	mutex_lock(&p->mutex);
+-
+ 	pdd = kfd_bind_process_to_device(dev, p);
+ 	if (IS_ERR(pdd)) {
+ 		err = PTR_ERR(pdd);
+@@ -1350,17 +1384,12 @@ static int kfd_ioctl_free_memory_of_gpu(struct file *filep,
+ 	struct kfd_ioctl_free_memory_of_gpu_args *args = data;
+ 	struct kfd_process_device *pdd;
+ 	void *mem;
+-	struct kfd_dev *dev;
+ 	int ret;
+ 	uint64_t size = 0;
+ 
+-	dev = kfd_device_by_id(GET_GPU_ID(args->handle));
+-	if (!dev)
+-		return -EINVAL;
+-
+ 	mutex_lock(&p->mutex);
+ 
+-	pdd = kfd_get_process_device_data(dev, p);
++	pdd = kfd_process_device_data_by_id(p, GET_GPU_ID(args->handle));
+ 	if (!pdd) {
+ 		pr_err("Process device data doesn't exist\n");
+ 		ret = -EINVAL;
+@@ -1374,7 +1403,7 @@ static int kfd_ioctl_free_memory_of_gpu(struct file *filep,
+ 		goto err_unlock;
+ 	}
+ 
+-	ret = amdgpu_amdkfd_gpuvm_free_memory_of_gpu(dev->kgd,
++	ret = amdgpu_amdkfd_gpuvm_free_memory_of_gpu(pdd->dev->kgd,
+ 				(struct kgd_mem *)mem, pdd->drm_priv, &size);
+ 
+ 	/* If freeing the buffer failed, leave the handle in place for
+@@ -1397,16 +1426,12 @@ static int kfd_ioctl_map_memory_to_gpu(struct file *filep,
+ 	struct kfd_ioctl_map_memory_to_gpu_args *args = data;
+ 	struct kfd_process_device *pdd, *peer_pdd;
+ 	void *mem;
+-	struct kfd_dev *dev, *peer;
++	struct kfd_dev *dev;
+ 	long err = 0;
+ 	int i;
+ 	uint32_t *devices_arr = NULL;
+ 	bool table_freed = false;
+ 
+-	dev = kfd_device_by_id(GET_GPU_ID(args->handle));
+-	if (!dev)
+-		return -EINVAL;
+-
+ 	if (!args->n_devices) {
+ 		pr_debug("Device IDs array empty\n");
+ 		return -EINVAL;
+@@ -1430,6 +1455,12 @@ static int kfd_ioctl_map_memory_to_gpu(struct file *filep,
+ 	}
+ 
+ 	mutex_lock(&p->mutex);
++	pdd = kfd_process_device_data_by_id(p, GET_GPU_ID(args->handle));
++	if (!pdd) {
++		err = -EINVAL;
++		goto get_process_device_data_failed;
++	}
++	dev = pdd->dev;
+ 
+ 	pdd = kfd_bind_process_to_device(dev, p);
+ 	if (IS_ERR(pdd)) {
+@@ -1445,22 +1476,26 @@ static int kfd_ioctl_map_memory_to_gpu(struct file *filep,
+ 	}
+ 
+ 	for (i = args->n_success; i < args->n_devices; i++) {
+-		peer = kfd_device_by_id(devices_arr[i]);
+-		if (!peer) {
++		peer_pdd = kfd_process_device_data_by_id(p, devices_arr[i]);
++		if (!peer_pdd) {
+ 			pr_debug("Getting device by id failed for 0x%x\n",
+ 				 devices_arr[i]);
+ 			err = -EINVAL;
+ 			goto get_mem_obj_from_handle_failed;
+ 		}
+ 
+-		peer_pdd = kfd_bind_process_to_device(peer, p);
++		peer_pdd = kfd_bind_process_to_device(peer_pdd->dev, p);
+ 		if (IS_ERR(peer_pdd)) {
+ 			err = PTR_ERR(peer_pdd);
+ 			goto get_mem_obj_from_handle_failed;
+ 		}
+ 		err = amdgpu_amdkfd_gpuvm_map_memory_to_gpu(
++<<<<<<< HEAD
+ 			peer->kgd, (struct kgd_mem *)mem,
+ 			peer_pdd->drm_priv, &table_freed);
++=======
++			peer_pdd->dev->kgd, (struct kgd_mem *)mem, peer_pdd->drm_priv);
++>>>>>>> 9b452739ce55 (drm/amdkfd: CRIU implement gpu_id remapping)
+ 		if (err) {
+ 			pr_err("Failed to map to gpu %d/%d\n",
+ 			       i, args->n_devices);
+@@ -1478,6 +1513,7 @@ static int kfd_ioctl_map_memory_to_gpu(struct file *filep,
+ 	}
+ 
+ 	/* Flush TLBs after waiting for the page table updates to complete */
++<<<<<<< HEAD
+ 	if (table_freed) {
+ 		for (i = 0; i < args->n_devices; i++) {
+ 			peer = kfd_device_by_id(devices_arr[i]);
+@@ -1488,11 +1524,20 @@ static int kfd_ioctl_map_memory_to_gpu(struct file *filep,
+ 				continue;
+ 			kfd_flush_tlb(peer_pdd, TLB_FLUSH_LEGACY);
+ 		}
++=======
++	for (i = 0; i < args->n_devices; i++) {
++		peer_pdd = kfd_process_device_data_by_id(p, devices_arr[i]);
++		if (WARN_ON_ONCE(!peer_pdd))
++			continue;
++
++		kfd_flush_tlb(peer_pdd);
++>>>>>>> 9b452739ce55 (drm/amdkfd: CRIU implement gpu_id remapping)
+ 	}
+ 	kfree(devices_arr);
+ 
+ 	return err;
+ 
++get_process_device_data_failed:
+ bind_process_to_device_failed:
+ get_mem_obj_from_handle_failed:
+ map_memory_to_gpu_failed:
+@@ -1510,14 +1555,9 @@ static int kfd_ioctl_unmap_memory_from_gpu(struct file *filep,
+ 	struct kfd_ioctl_unmap_memory_from_gpu_args *args = data;
+ 	struct kfd_process_device *pdd, *peer_pdd;
+ 	void *mem;
+-	struct kfd_dev *dev, *peer;
+ 	long err = 0;
+ 	uint32_t *devices_arr = NULL, i;
+ 
+-	dev = kfd_device_by_id(GET_GPU_ID(args->handle));
+-	if (!dev)
+-		return -EINVAL;
+-
+ 	if (!args->n_devices) {
+ 		pr_debug("Device IDs array empty\n");
+ 		return -EINVAL;
+@@ -1541,8 +1581,7 @@ static int kfd_ioctl_unmap_memory_from_gpu(struct file *filep,
+ 	}
+ 
+ 	mutex_lock(&p->mutex);
+-
+-	pdd = kfd_get_process_device_data(dev, p);
++	pdd = kfd_process_device_data_by_id(p, GET_GPU_ID(args->handle));
+ 	if (!pdd) {
+ 		err = -EINVAL;
+ 		goto bind_process_to_device_failed;
+@@ -1556,19 +1595,13 @@ static int kfd_ioctl_unmap_memory_from_gpu(struct file *filep,
+ 	}
+ 
+ 	for (i = args->n_success; i < args->n_devices; i++) {
+-		peer = kfd_device_by_id(devices_arr[i]);
+-		if (!peer) {
+-			err = -EINVAL;
+-			goto get_mem_obj_from_handle_failed;
+-		}
+-
+-		peer_pdd = kfd_get_process_device_data(peer, p);
++		peer_pdd = kfd_process_device_data_by_id(p, devices_arr[i]);
+ 		if (!peer_pdd) {
+-			err = -ENODEV;
++			err = -EINVAL;
+ 			goto get_mem_obj_from_handle_failed;
+ 		}
+ 		err = amdgpu_amdkfd_gpuvm_unmap_memory_from_gpu(
+-			peer->kgd, (struct kgd_mem *)mem, peer_pdd->drm_priv);
++			peer_pdd->dev->kgd, (struct kgd_mem *)mem, peer_pdd->drm_priv);
+ 		if (err) {
+ 			pr_err("Failed to unmap from gpu %d/%d\n",
+ 			       i, args->n_devices);
+@@ -1717,23 +1750,26 @@ static int kfd_ioctl_import_dmabuf(struct file *filep,
+ 	void *mem;
+ 	int r;
+ 
+-	dev = kfd_device_by_id(args->gpu_id);
+-	if (!dev)
+-		return -EINVAL;
++	mutex_lock(&p->mutex);
++	pdd = kfd_process_device_data_by_id(p, args->gpu_id);
++	if (!pdd) {
++		r = -EINVAL;
++		goto err_unlock;
++	}
+ 
+ 	dmabuf = dma_buf_get(args->dmabuf_fd);
+-	if (IS_ERR(dmabuf))
+-		return PTR_ERR(dmabuf);
+-
+-	mutex_lock(&p->mutex);
++	if (IS_ERR(dmabuf)) {
++		r = PTR_ERR(dmabuf);
++		goto err_unlock;
++	}
+ 
+-	pdd = kfd_bind_process_to_device(dev, p);
++	pdd = kfd_bind_process_to_device(pdd->dev, p);
+ 	if (IS_ERR(pdd)) {
+ 		r = PTR_ERR(pdd);
+ 		goto err_unlock;
+ 	}
+ 
+-	r = amdgpu_amdkfd_gpuvm_import_dmabuf(dev->kgd, dmabuf,
++	r = amdgpu_amdkfd_gpuvm_import_dmabuf(pdd->dev->kgd, dmabuf,
+ 					      args->va_addr, pdd->drm_priv,
+ 					      (struct kgd_mem **)&mem, &size,
+ 					      NULL);
+@@ -1767,13 +1803,19 @@ static int kfd_ioctl_smi_events(struct file *filep,
+ 				struct kfd_process *p, void *data)
+ {
+ 	struct kfd_ioctl_smi_events_args *args = data;
+-	struct kfd_dev *dev;
++	struct kfd_process_device *pdd;
+ 
+-	dev = kfd_device_by_id(args->gpuid);
+-	if (!dev)
++	mutex_lock(&p->mutex);
++
++	pdd = kfd_process_device_data_by_id(p, args->gpuid);
++	if (!pdd) {
++		mutex_unlock(&p->mutex);
+ 		return -EINVAL;
++	}
++
++	mutex_unlock(&p->mutex);
+ 
+-	return kfd_smi_event_open(dev, &args->anon_fd);
++	return kfd_smi_event_open(pdd->dev, &args->anon_fd);
+ }
+ 
+ static int kfd_ioctl_set_xnack_mode(struct file *filep,
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+index 07947ec9113e..3454e575924e 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_priv.h
+@@ -945,6 +945,9 @@ int kfd_process_restore_queues(struct kfd_process *p);
+ void kfd_suspend_all_processes(void);
+ int kfd_resume_all_processes(void);
+ 
++struct kfd_process_device *kfd_process_device_data_by_id(struct kfd_process *process,
++				uint32_t gpu_id);
++
+ int kfd_process_device_init_vm(struct kfd_process_device *pdd,
+ 			       struct file *drm_file);
+ struct kfd_process_device *kfd_bind_process_to_device(struct kfd_dev *dev,
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_process.c b/drivers/gpu/drm/amd/amdkfd/kfd_process.c
+index cd1a95b0c974..80a2fa559422 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_process.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_process.c
+@@ -1471,6 +1471,7 @@ struct kfd_process_device *kfd_create_process_device_data(struct kfd_dev *dev,
+ 	pdd->runtime_inuse = false;
+ 	pdd->vram_usage = 0;
+ 	pdd->sdma_past_activity_counter = 0;
++	pdd->user_gpu_id = dev->id;
+ 	atomic64_set(&pdd->evict_duration_counter, 0);
+ 	p->pdds[p->n_pdds++] = pdd;
+ 
+@@ -1944,6 +1945,23 @@ void kfd_flush_tlb(struct kfd_process_device *pdd, enum TLB_FLUSH_TYPE type)
+ 	}
+ }
+ 
++struct kfd_process_device *kfd_process_device_data_by_id(struct kfd_process *p, uint32_t gpu_id)
++{
++	int i;
++
++	if (gpu_id) {
++		for (i = 0; i < p->n_pdds; i++) {
++			struct kfd_process_device *pdd = p->pdds[i];
++
++			if (pdd->user_gpu_id == gpu_id)
++				return pdd;
++		}
++
++		WARN_ONCE(1, "Failed to find mapping for gpu = 0x%x\n",  gpu_id);
++	}
++	return NULL;
++}
++
+ #if defined(CONFIG_DEBUG_FS)
+ 
+ int kfd_debugfs_mqds_by_process(struct seq_file *m, void *data)
+-- 
+2.34.1
+
+
+From 4c71391c225ad0427f179bed564c1f4b321d66f0 Mon Sep 17 00:00:00 2001
+From: Rajneesh Bhardwaj <rajneesh.bhardwaj@amd.com>
+Date: Fri, 30 Apr 2021 12:17:48 -0400
+Subject: [PATCH 15/17] revert drm/amdgpu: Remove verify_access shortcut for
+ KFD BO
+
+---
+ drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.c | 29 +++++++++++++++++++++++++
+ 1 file changed, 29 insertions(+)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.c
+index f4cf45b2e8be..bf07af5721f3 100644
+--- a/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.c
++++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.c
+@@ -171,6 +171,35 @@ static void amdgpu_evict_flags(struct ttm_buffer_object *bo,
+ }
+ 
+ /**
++<<<<<<< HEAD
++=======
++ * amdgpu_verify_access - Verify access for a mmap call
++ *
++ * @bo:	The buffer object to map
++ * @filp: The file pointer from the process performing the mmap
++ *
++ * This is called by ttm_bo_mmap() to verify whether a process
++ * has the right to mmap a BO to their process space.
++ */
++static int amdgpu_verify_access(struct ttm_buffer_object *bo, struct file *filp)
++{
++	struct amdgpu_bo *abo = ttm_to_amdgpu_bo(bo);
++
++	/*
++	 * Don't verify access for KFD BOs. They don't have a GEM
++	 * object associated with them.
++	 */
++	if (abo->kfd_bo)
++		return 0;
++
++	if (amdgpu_ttm_tt_get_usermm(bo->ttm))
++		return -EPERM;
++	return drm_vma_node_verify_access(&abo->tbo.base.vma_node,
++					  filp->private_data);
++}
++
++/**
++>>>>>>> 510e2f3d04e0 (Revert "drm/amdgpu: Remove verify_access shortcut for KFD BOs")
+  * amdgpu_ttm_map_buffer - Map memory into the GART windows
+  * @bo: buffer object to map
+  * @mem: memory object to map
+-- 
+2.34.1
+
+
+From 51801be1270e9c061790cc3cd7f3fe257d1dbe45 Mon Sep 17 00:00:00 2001
+From: Rajneesh Bhardwaj <rajneesh.bhardwaj@amd.com>
+Date: Tue, 29 Jun 2021 18:30:36 -0400
+Subject: [PATCH 16/17] drm/amdkfd: CRIU export kfd bos as prime dmabuf objects
+
+KFD buffer objects do not associate a GEM handle with them so cannot
+directly be used with libdrm to initiate a system dma (sDMA) operation
+to speedup the checkpoint and restore operation so export them as dmabuf
+objects and use with libdrm helper (amdgpu_bo_import) to further process
+the sdma command submissions.
+
+With sDMA, we see huge improvement in checkpoint and restore operations
+compared to the generic pci based access via host data path.
+
+Change-Id:  Icaa87024621d743bc55c81a674492bf03a822613
+Suggested-by: Felix Kuehling <felix.kuehling@amd.com>
+Signed-off-by: Rajneesh Bhardwaj <rajneesh.bhardwaj@amd.com>
+---
+ drivers/gpu/drm/amd/amdkfd/kfd_chardev.c | 70 ++++++++++++++++++++++++
+ include/uapi/linux/kfd_ioctl.h           |  1 +
+ 2 files changed, 71 insertions(+)
+
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+index a60cffe72a07..efc170f56048 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+@@ -35,6 +35,7 @@
+ #include <linux/mman.h>
+ #include <linux/ptrace.h>
+ #include <linux/dma-buf.h>
++#include <linux/fdtable.h>
+ #include <asm/processor.h>
+ #include "kfd_priv.h"
+ #include "kfd_device_queue_manager.h"
+@@ -43,6 +44,7 @@
+ #include "amdgpu_amdkfd.h"
+ #include "kfd_smi_events.h"
+ #include "amdgpu_object.h"
++#include "amdgpu_dma_buf.h"
+ 
+ static long kfd_ioctl(struct file *, unsigned int, unsigned long);
+ static int kfd_open(struct inode *, struct file *);
+@@ -2122,6 +2124,33 @@ static int criu_dump_queues_device(struct kfd_process_device *pdd,
+ 	return ret;
+ }
+ 
++static int criu_get_prime_handle(struct drm_gem_object *gobj, int flags,
++				      u32 *shared_fd)
++{
++	struct dma_buf *dmabuf;
++	int ret;
++
++	dmabuf = amdgpu_gem_prime_export(gobj, flags);
++	if (IS_ERR(dmabuf)) {
++		ret = PTR_ERR(dmabuf);
++		pr_err("dmabuf export failed for the BO\n");
++		return ret;
++	}
++
++	ret = dma_buf_fd(dmabuf, flags);
++	if (ret < 0) {
++		pr_err("dmabuf create fd failed, ret:%d\n", ret);
++		goto out_free_dmabuf;
++	}
++
++	*shared_fd = ret;
++	return 0;
++
++out_free_dmabuf:
++	dma_buf_put(dmabuf);
++	return ret;
++}
++
+ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 				struct kfd_process *p, void *data)
+ {
+@@ -2224,6 +2253,15 @@ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 					}
+ 				}
+ 
++				if (bo_bucket[i].bo_alloc_flags & KFD_IOC_ALLOC_MEM_FLAGS_VRAM) {
++					ret = criu_get_prime_handle(&dumper_bo->tbo.base,
++							bo_bucket[i].bo_alloc_flags &
++							KFD_IOC_ALLOC_MEM_FLAGS_WRITABLE ? DRM_RDWR : 0,
++							&bo_bucket[i].dmabuf_fd);
++					if (ret)
++						goto err_unlock;
++				}
++
+ 				if (bo_bucket[i].bo_alloc_flags & KFD_IOC_ALLOC_MEM_FLAGS_DOORBELL)
+ 					bo_bucket[i].bo_offset = KFD_MMAP_TYPE_DOORBELL |
+ 						KFD_MMAP_GPU_ID(pdd->dev->id);
+@@ -2283,6 +2321,11 @@ static int kfd_ioctl_criu_dumper(struct file *filep,
+ 	return 0;
+ 
+ err_unlock:
++	while (i--) {
++		if (bo_bucket[i].bo_alloc_flags & KFD_IOC_ALLOC_MEM_FLAGS_VRAM)
++			close_fd(bo_bucket[i].dmabuf_fd);
++	}
++
+ 	kfd_process_restore_queues(p);
+ 	mutex_unlock(&p->mutex);
+ clean:
+@@ -2584,6 +2627,7 @@ static int kfd_ioctl_criu_restorer(struct file *filep,
+ 	for (i = 0; i < args->num_of_bos; i++) {
+ 		struct kfd_dev *dev;
+ 		struct kfd_process_device *pdd;
++		struct kgd_mem *kgd_mem;
+ 		void *mem;
+ 		u64 offset;
+ 		int idr_handle;
+@@ -2729,6 +2773,17 @@ static int kfd_ioctl_criu_restorer(struct file *filep,
+ 		}
+ 
+ 		pr_info("map memory was successful for the BO\n");
++
++		/* create the dmabuf object and export the bo */
++		kgd_mem = (struct kgd_mem *)mem;
++		if (bo_bucket[i].bo_alloc_flags & KFD_IOC_ALLOC_MEM_FLAGS_VRAM) {
++			ret = criu_get_prime_handle(&kgd_mem->bo->tbo.base,
++						    DRM_RDWR,
++						    &bo_bucket[i].dmabuf_fd);
++			if (ret)
++				goto err_unlock;
++		}
++
+ 	} /* done */
+ 
+ 	/* Flush TLBs after waiting for the page table updates to complete */
+@@ -2761,10 +2816,25 @@ static int kfd_ioctl_criu_restorer(struct file *filep,
+ 	ret = copy_to_user((void __user *)args->restored_bo_array_ptr,
+ 			   restored_bo_offsets_arr,
+ 			   (args->num_of_bos * sizeof(*restored_bo_offsets_arr)));
++	if (ret) {
++		err = -EFAULT;
++		goto err_unlock;
++	}
++
++	ret = copy_to_user((void __user *)args->kfd_criu_bo_buckets_ptr,
++			bo_bucket,
++			(args->num_of_bos *
++			 sizeof(struct kfd_criu_bo_buckets)));
+ 	if (ret)
+ 		err = -EFAULT;
+ 
++
+ err_unlock:
++	while (i--) {
++		if (bo_bucket[i].bo_alloc_flags & KFD_IOC_ALLOC_MEM_FLAGS_VRAM)
++			close_fd(bo_bucket[i].dmabuf_fd);
++	}
++
+ 	mutex_unlock(&p->mutex);
+ failed:
+ 	kvfree(bo_bucket);
+diff --git a/include/uapi/linux/kfd_ioctl.h b/include/uapi/linux/kfd_ioctl.h
+index b7b6c160d254..dbd6877f6da3 100644
+--- a/include/uapi/linux/kfd_ioctl.h
++++ b/include/uapi/linux/kfd_ioctl.h
+@@ -482,6 +482,7 @@ struct kfd_criu_bo_buckets {
+ 	__u32 bo_alloc_flags;/* from KFD */
+ 	__u32 gpu_id;/* from KFD */
+ 	__u32 idr_handle;/* from KFD */
++	__u32 dmabuf_fd; /* from KFD */
+ };
+ 
+ struct kfd_criu_q_bucket {
+-- 
+2.34.1
+
+
+From 04f64352cead6bc52447db6168e39763485bd237 Mon Sep 17 00:00:00 2001
+From: Rajneesh Bhardwaj <rajneesh.bhardwaj@amd.com>
+Date: Mon, 19 Jul 2021 22:01:51 -0400
+Subject: [PATCH 17/17] drm/amdkfd: Don't close the dmabuf fd in criu restore
+
+This fixes a bug introduced by the previous commit "99d888b3b7f2
+drm/amdkfd: CRIU export kfd bos as prime dmabuf objects"
+
+During a successful criu checkpoint and restore operation, we should not
+close the dmabuf fds in the kernel mode otherwise the usermode will not
+be able to import the BOs. We should only call close_fd() in the error
+path. During a successful restore, the close_fd() was called which is
+wrong and is fixed with this patch.
+
+Change-Id: I98c721c9f9e8d9e61d165f839416bf5cbdf4afd6
+Reviewed-by: David Yat Sin <david.yatsin@amd.com>
+Signed-off-by: Rajneesh Bhardwaj <rajneesh.bhardwaj@amd.com>
+---
+ drivers/gpu/drm/amd/amdkfd/kfd_chardev.c | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+index efc170f56048..68980f1e4d2e 100644
+--- a/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
++++ b/drivers/gpu/drm/amd/amdkfd/kfd_chardev.c
+@@ -2572,8 +2572,8 @@ static int kfd_ioctl_criu_restorer(struct file *filep,
+ 	uint64_t *restored_bo_offsets_arr = NULL;
+ 	struct kfd_criu_bo_buckets *bo_bucket = NULL;
+ 	const bool criu_resume = true;
++	int ret, i = 0, j = 0;
+ 	long err = 0;
+-	int ret, i, j = 0;
+ 
+ 	devinfos = kvzalloc((sizeof(struct kfd_criu_devinfo_bucket) *
+ 			     args->num_of_devices), GFP_KERNEL);
+@@ -2780,8 +2780,11 @@ static int kfd_ioctl_criu_restorer(struct file *filep,
+ 			ret = criu_get_prime_handle(&kgd_mem->bo->tbo.base,
+ 						    DRM_RDWR,
+ 						    &bo_bucket[i].dmabuf_fd);
+-			if (ret)
++			if (ret) {
++				err = ret;
++				pr_err("Failed to obtain gem prime object\n");
+ 				goto err_unlock;
++			}
+ 		}
+ 
+ 	} /* done */
+@@ -2830,11 +2833,10 @@ static int kfd_ioctl_criu_restorer(struct file *filep,
+ 
+ 
+ err_unlock:
+-	while (i--) {
++	while (err && i--) {
+ 		if (bo_bucket[i].bo_alloc_flags & KFD_IOC_ALLOC_MEM_FLAGS_VRAM)
+ 			close_fd(bo_bucket[i].dmabuf_fd);
+ 	}
+-
+ 	mutex_unlock(&p->mutex);
+ failed:
+ 	kvfree(bo_bucket);
+-- 
+2.34.1
+
