@@ -19,7 +19,7 @@
 Summary:        Linux Kernel for MOS
 Name:           kernel-mos
 Version:        5.15.145.2
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        GPLv2
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -29,6 +29,7 @@ Source0:        https://github.com/microsoft/CBL-Mariner-Linux-Kernel/archive/ro
 Source1:        config
 Source2:        cbl-mariner-ca-20211013.pem
 Source3:        sha512hmac-openssl.sh
+Patch0:         criu_support.patch
 BuildRequires:  audit-devel
 BuildRequires:  bash
 BuildRequires:  bc
@@ -143,6 +144,7 @@ manipulation of eBPF programs and maps.
 
 %prep
 %setup -q -n CBL-Mariner-Linux-Kernel-rolling-lts-%{mariner_tag}-%{version}
+%patch0 -p1
 make mrproper
 
 cp %{config_source} .config
@@ -377,6 +379,9 @@ ln -sf linux-%{uname_r}.cfg /boot/mariner.cfg
 %{_sysconfdir}/bash_completion.d/bpftool
 
 %changelog
+* Thu Jan 25 2024 Nan Liu <liunan@microsoft.com> - 5.15.145.2-2
+- Add criu support
+
 * Tue Jan 16 2024 Gary Swalling <gaswal@microsoft.com> - 5.15.145.2-1
 - Update to 5.15.145.2
 
