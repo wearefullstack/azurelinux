@@ -1,7 +1,7 @@
 Summary:        Git for operating system binaries
 Name:           ostree
-Version:        2022.1
-Release:        3%{?dist}
+Version:        2024.3
+Release:        1%{?dist}
 License:        LGPLv2+
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -9,7 +9,7 @@ Group:          Applications/System
 URL:            https://ostree.readthedocs.io/en/latest
 Source0:        https://github.com/ostreedev/ostree/releases/download/v%{version}/lib%{name}-%{version}.tar.xz
 Source1:        91-ostree.preset
-Patch0:         dualboot-support.patch
+Patch0:         0001-dualboot-support.patch
 Patch1:         0001-ostree-Copying-photon-config-to-boot-directory.patch
 Patch2:         0002-ostree-Adding-load-env-to-menuentry.patch
 Patch3:         0003-ostree-converting-osname-to-mariner.patch
@@ -155,6 +155,9 @@ install -vdm 755 %{buildroot}%{_sysconfdir}/ostree/remotes.d
 %{_libexecdir}/libostree/grub2*
 
 %changelog
+* Mon Jan 29 2024 Sean Dougherty <sdougherty@microsoft.com> - 2024.3-1
+- Upgrade to 2024.3 for Azure Linux 3.0
+
 * Wed Sep 20 2023 Jon Slobodzian <joslobo@microsoft.com> - 2022.1-3
 - Recompile with stack-protection fixed gcc version (CVE-2023-4039)
 
