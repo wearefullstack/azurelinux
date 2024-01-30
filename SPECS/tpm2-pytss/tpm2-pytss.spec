@@ -10,7 +10,6 @@ Distribution: Mariner
 
 Source0: https://github.com/tpm2-software/tpm2-pytss/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
-
 BuildRequires: python3-devel
 BuildRequires: python3-setuptools
 BuildRequires: python3-pkgconfig
@@ -21,6 +20,7 @@ BuildRequires: tpm2-tss-devel
 
 BuildRequires: python3-packaging
 BuildRequires: python3-asn1crypto
+BuildRequires: python3-cryptography
 
 %if 0%{?with_check}
 BuildRequires: python3-pytest
