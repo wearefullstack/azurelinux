@@ -19,14 +19,11 @@ BuildRequires: python3-pip
 BuildRequires: git
 BuildRequires: tpm2-tss-devel
 
-BuildRequires: python3-packaging
-BuildRequires: python3-asn1crypto 
-BuildRequires: python3-cryptography
-BuildRequires: python3-setuptools_scm
-
 %if 0%{?with_check}
 BuildRequires: python3-pytest
+BuildRequires: python3-cryptography
 BuildRequires: python3-cffi
+BuildRequires: python3-pip
 BuildRequires: python3-PyYAML
 %endif
 
