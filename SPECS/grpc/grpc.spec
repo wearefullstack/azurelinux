@@ -154,7 +154,7 @@ export GRPC_PYTHON_BUILD_SYSTEM_ABSL=True
 * Thu Jun 22 2023 Reuben Olinsky <reubeno@microsoft.com> - 1.42.0-6
 - Add cmake modules to grpc-devel package.
 
-* Tue May 31 2023 Dallas Delaney <dadelan@microsoft.com> - 1.42.0-5
+* Wed May 31 2023 Dallas Delaney <dadelan@microsoft.com> - 1.42.0-5
 - Rebuild against c-ares to Fix CVE-2023-32067, CVE-2023-31130, CVE-2023-31147
 
 * Tue Feb 28 2023 Riken Maharjan <rmaharjan@microsoft.com> - 1.42.0-4
