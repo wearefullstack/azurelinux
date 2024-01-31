@@ -35,6 +35,7 @@ BuildRequires:  libseccomp-devel
 %endif
 %if %{with tls}
 BuildRequires:  openssl-devel
+Requires:       openssl-devel
 %endif
 Requires(pre):  shadow-utils
 
