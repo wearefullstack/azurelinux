@@ -7,7 +7,7 @@
 Summary:        High Performance, Distributed Memory Object Cache
 Name:           memcached
 Version:        1.6.21
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        BSD
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -37,7 +37,6 @@ BuildRequires:  libseccomp-devel
 BuildRequires:  openssl-devel
 %endif
 Requires(pre):  shadow-utils
-%{?systemd_requires}
 
 %description
 memcached is a high-performance, distributed memory object caching
@@ -51,6 +50,13 @@ Requires:       %{name} = %{version}-%{release}
 %description devel
 Install memcached-devel if you are developing C/C++ applications that require
 access to the memcached binary include files.
+
+%package        service
+Summary:        Includes the package dependencies to run as a service
+%{?systemd_requires}
+
+%description    service
+Install memcached-service if you want to run memcached as a service via systemd
 
 %prep
 %autosetup -p1
@@ -89,20 +95,20 @@ install -Dp -m0644 %{SOURCE1} %{buildroot}/%{_sysconfdir}/sysconfig/%{name}
 %check
 %make_build test
 
-%pre
+%pre        service
 getent group %{groupname} >/dev/null || groupadd -r %{groupname}
 getent passwd %{username} >/dev/null || \
 useradd -r -g %{groupname} -d /run/memcached \
     -s /sbin/nologin -c "Memcached daemon" %{username}
 exit 0
 
-%post
+%post       service
 %systemd_post memcached.service
 
-%preun
+%preun      service
 %systemd_preun memcached.service
 
-%postun
+%postun     service
 %systemd_postun_with_restart memcached.service
 
 %files
@@ -113,12 +119,17 @@ exit 0
 %{_bindir}/memcached
 %{_mandir}/man1/memcached-tool.1*
 %{_mandir}/man1/memcached.1*
-%{_unitdir}/memcached.service
 
-%files devel
+%files      devel
 %{_includedir}/memcached/*
 
+%files      service
+%{_unitdir}/memcached.service
+
 %changelog
+* Wed Jan 31 2023 Osama Esmail <osamaesmail@microsoft.com>
+- Separating the service into a subpackage
+
 * Fri Oct 27 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 1.6.21-1
 - Auto-upgrade to 1.6.21 - Azure Linux 3.0 - package upgrades
 
