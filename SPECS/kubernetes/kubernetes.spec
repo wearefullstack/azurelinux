@@ -10,7 +10,7 @@
 Summary:        Microsoft Kubernetes
 Name:           kubernetes
 Version:        1.28.4
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        ASL 2.0
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -37,6 +37,7 @@ Requires(postun): %{_sbindir}/groupdel
 Requires(postun): %{_sbindir}/userdel
 Requires(pre):  %{_sbindir}/groupadd
 Requires(pre):  %{_sbindir}/useradd
+Patch0:         CVE-2023-49295.patch
 
 %description
 Microsoft Kubernetes %{version}.
@@ -91,6 +92,7 @@ Pause component for Microsoft Kubernetes %{version}.
 
 %prep
 %setup -q -c -n %{name}
+%patch0 -p1
 
 %build
 # set version information using KUBE_GIT_VERSION
@@ -263,6 +265,9 @@ fi
 %{_exec_prefix}/local/bin/pause
 
 %changelog
+* Fri Feb 2 2024 Rakshaa Viswanathan <rviswanathan@microsoft.com> - 1.28.4-2
+- Add patch for CVE-2023-49295
+
 * Tue Dec 5 2023 Aadhar Agarwal <aadagarwal@microsoft.com> - 1.28.4-1
 - Upgrade to 1.28.4 to fix CVE-2023-5528
 
