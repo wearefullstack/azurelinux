@@ -91,8 +91,8 @@ Summary:        Kubernetes pause
 Pause component for Microsoft Kubernetes %{version}.
 
 %prep
-%setup -q -c -n %{name}
-%patch0 -p1
+%autosetup -N
+%autopatch 0
 
 %build
 # set version information using KUBE_GIT_VERSION
