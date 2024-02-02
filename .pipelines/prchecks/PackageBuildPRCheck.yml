@@ -98,9 +98,29 @@ extends:
                   ob_outputDirectory: $(Build.ArtifactStagingDirectory)
                   testListFromToolchain: $[ stageDependencies.Toolchain_${{ configuration.name }}.Build.outputs['CalculateToolchainPackageRetestList.toolchainPackageRetestList'] ]
                 steps:
+                  - script: |
+                      branch_name=main
+                      base_url=$(curl -s https://mariner3dailydevrepo.blob.core.windows.net/lkg/lkg-$branch_name.json | jq -r ".repo.$(uname -p)")
+                      repo_file_path="$(Pipeline.Workspace)/lkg.repo"
+
+                      cat <<EOF > "$repo_file_path"
+                      [lkg]
+                      name=LKG dev build packages repository
+                      baseurl=$base_url
+                      gpgkey=file:///etc/pki/rpm-gpg/MICROSOFT-RPM-GPG-KEY file:///etc/pki/rpm-gpg/MICROSOFT-METADATA-GPG-KEY
+                      gpgcheck=0
+                      repo_gpgcheck=0
+                      enabled=1
+                      skip_if_unavailable=True
+                      sslverify=0
+                      EOF
+
+                      echo "##vso[task.setvariable variable=extraPackageRepos]$repo_file_path"
+                    displayName: "Set extra packages repo"
                   - template: .pipelines/templates/PackageBuild.yml@self
                     parameters:
                       customToolchainArtifactName: $(toolchainArtifactNameBase)_${{ configuration.name }}
+                      extraPackageRepos: "$(extraPackageRepos)"
                       isCheckBuild: true
                       isQuickRebuildPackages: true
                       outputArtifactsFolder: $(ob_outputDirectory)
