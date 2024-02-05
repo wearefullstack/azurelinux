@@ -2,7 +2,7 @@
 %define minor 10
 
 Name:           cpprest
-Version:        2.10.18
+Version:        2.10.19
 Release:        1%{?dist}
 Summary:        C++ REST library
 Group:          Applications/File
@@ -90,6 +90,9 @@ cd Release/build.release/Binaries
 
 
 %changelog
+* Mon Feb 02 2024 Rohit Rawat <rohitrawat@microsoft.com> - 2.10.19-1
+- Upgrade to 2.10.19
+
 * Wed Jan 19 2022 Nicolas Guibourge <nicolasg@microsoft.com> - 2.10.18-1
 - Upgrade to 2.10.18
 
