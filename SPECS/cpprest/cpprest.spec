@@ -35,7 +35,7 @@ Also known as Casablanca.
 Summary:        Development files for %{name}
 Requires:       %{name}%{?_isa} = %{version}-%{release}
 Requires:       boost-devel
-Requires:       openssl-libs
+Requires:       openssl-pkcs11
 
 %description devel
 The C++ REST SDK is a Microsoft project for cloud-based client-server
