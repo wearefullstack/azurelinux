@@ -4,13 +4,13 @@
 
 Summary:        Xorg X11 libinput input driver
 Name:           xorg-x11-drv-libinput
-Version:        0.30.0
-Release:        6%{?dist}
+Version:        1.4.0
+Release:        1%{?dist}
 License:        MIT
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
 URL:            https://www.x.org
-Source0:        ftp://ftp.x.org/pub/individual/driver/%{tarball}-%{version}.tar.bz2
+Source0:        ftp://ftp.x.org/pub/individual/driver/%{tarball}-%{version}.tar.xz
 Source1:        71-libinput-overrides-wacom.conf
 
 # Fedora-only hack for hidpi screens
@@ -75,6 +75,10 @@ cp %{SOURCE1} %{buildroot}%{_datadir}/X11/xorg.conf.d/
 %{_includedir}/xorg/libinput-properties.h
 
 %changelog
+* Tue Feb 13 2024 Nan Liu <liunan@microsoft.com> - 1.4.0-1
+- Upgrade to 1.4.0
+- Update source url
+
 * Wed Sep 20 2023 Jon Slobodzian <joslobo@microsoft.com> - 0.30.0-6
 - Recompile with stack-protection fixed gcc version (CVE-2023-4039)
 
