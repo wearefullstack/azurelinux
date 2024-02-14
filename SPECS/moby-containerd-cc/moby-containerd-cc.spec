@@ -17,7 +17,6 @@ Source0:  https://github.com/microsoft/confidential-containers-containerd/archiv
 Source1: containerd.service
 Source2: containerd.toml
 Patch0: CVE-2023-47108.patch
-Patch1: CVE-2023-44487.patch
 
 %{?systemd_requires}
 
