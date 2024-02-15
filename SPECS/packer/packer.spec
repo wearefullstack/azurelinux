@@ -65,7 +65,7 @@ go test -mod=vendor
 %{_bindir}/packer
 
 %changelog
- Thu Feb 15 2024 Nan Liu <liunan@microsoft.com> - 2.17.2-8
+* Thu Feb 15 2024 Nan Liu <liunan@microsoft.com> - 2.17.2-8
 - Address CVE-2023-48795 by patching vendored golang.org/x/crypto
 
 * Fri Feb 02 2024 Daniel McIlvaney <damcilva@microsoft.com> - 1.8.7-2
