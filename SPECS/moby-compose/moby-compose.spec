@@ -1,7 +1,7 @@
 Summary:        Define and run multi-container applications with Docker
 Name:           moby-compose
 Version:        2.17.2
-Release:        7%{?dist}
+Release:        8%{?dist}
 License:        MIT
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -9,6 +9,7 @@ Group:          Tools/Container
 URL:            https://github.com/docker/compose
 Source0:        https://github.com/docker/compose/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 Patch0:         CVE-2023-44487.patch
+Patch1:		    CVE-2023-48795.patch
 
 # Leverage the `generate_source_tarball.sh` to create the vendor sources
 # NOTE: govendor-v1 format is for inplace CVE updates so that we do not have to overwrite in the blob-store.
@@ -47,6 +48,9 @@ install -D -m0755 bin/build/docker-compose %{buildroot}/%{_libexecdir}/docker/cl
 %{_libexecdir}/docker/cli-plugins/docker-compose
 
 %changelog
+* Thu Feb 15 2024 Nan Liu <liunan@microsoft.com> - 2.17.2-8
+- Address CVE-2023-48795 by patching vendored golang.org/x/crypto
+
 * Fri Feb 02 2024 Daniel McIlvaney <damcilva@microsoft.com> - 2.17.2-7
 - Address CVE-2023-44487 by patching vendored golang.org/x/net
 
