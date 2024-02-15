@@ -41,7 +41,7 @@ Terraform is an infrastructure as code deployment management tool
 %autosetup -N
 # Apply vendor before patching
 tar --no-same-owner -xf %{SOURCE1}
-%autopatch -p1
+%autopatch -v -p1
 
 %build
 export GOPATH=%{our_gopath}
