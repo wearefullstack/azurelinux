@@ -12,6 +12,7 @@ BuildRequires:  cmake
 BuildRequires:  openssl-devel
 BuildRequires:  libcurl-devel
 BuildRequires:  zlib-devel
+Requires:       openssl-libs
 
 %description
 Verify and sign routines for PE binaries (EXE,DLL)
