@@ -60,15 +60,23 @@ Data for conda tests.  Set CONDA_TEST_DATA_DIR to
 Summary:        %{summary}
 BuildRequires:  python%{python3_pkgversion}-devel
 # For tests
-BuildRequires:  python-unversioned-command
-BuildRequires:  python%{python3_pkgversion}-boto3
-BuildRequires:  python%{python3_pkgversion}-flask
+%if %{with check}
+# Mariner Comment: Azure Linux does not have python-unversioned-command
+#BuildRequires:  python-unversioned-command
+# Mariner Comment: Azure Linux does not build python3-boto, python3-flask, python3-pytest-rerunfailures, python3-pytest-timeout, 
+# or python3-pytest-xprocess. These mentioned BuildRequires are only used during the test stage, where we have network access. 
+# Here we add pip3 as a BuildRequires when running check since we will have network access and can simply download these 
+# necessary python modules. 
+#BuildRequires:  python% {python3_pkgversion}-boto3
+#BuildRequires:  python% {python3_pkgversion}-flask
 BuildRequires:  python%{python3_pkgversion}-jsonpatch
 BuildRequires:  python%{python3_pkgversion}-pytest-mock
-BuildRequires:  python%{python3_pkgversion}-pytest-rerunfailures
-BuildRequires:  python%{python3_pkgversion}-pytest-timeout
-BuildRequires:  python%{python3_pkgversion}-pytest-xprocess
+#BuildRequires:  python% {python3_pkgversion}-pytest-rerunfailures
+#BuildRequires:  python% {python3_pkgversion}-pytest-timeout
+#BuildRequires:  python% {python3_pkgversion}-pytest-xprocess
 BuildRequires:  python%{python3_pkgversion}-responses
+BuildRequires:  python%{python3_pkgversion}-pip
+%endif
  
 # Some versions in conda/_vendor/vendor.txt
 Provides:       bundled(python%{python3_pkgversion}-appdirs) = 1.2.0
@@ -93,7 +101,7 @@ sed -i -e '/splitting-algorithm/d' -e '/store-durations/d' -e '/xdoctest/d' pypr
 # or so.
 sed -r -i '1 {/#![/]usr[/]bin[/]env/d}' conda/_vendor/appdirs.py
 
-# Use Fedora's cpuinfo since it supports more arches
+# Use AzureLinux's cpuinfo since it supports more arches
 rm -r conda/_vendor/cpuinfo
 sed -i -e '/^dependencies = /a\ \ "py-cpuinfo",' pyproject.toml
 
@@ -163,9 +171,13 @@ install -m 0644 -Dt %{buildroot}%{bash_completionsdir}/ %SOURCE1
 
 
 %check
-%if %{with tests}
+%if %{with check}
+# Mariner Comment: Adding pip3 install of BuildRequires that we do not have packages for
+pip3 install boto3 flask pytest-rerunfailures pytest-timeout pytest-xprocess
+
 export PATH=%{buildroot}%{_bindir}:$PATH
 PYTHONPATH=%{buildroot}%{python3_sitelib} conda info
+
 
 # Integration tests generally require network, so skip them.
 
