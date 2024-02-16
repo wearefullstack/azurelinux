@@ -41,6 +41,32 @@ Provides:       /bin/python3
 Provides:       %{name}-docs = %{version}-%{release}
 Provides:       python%{majmin} = %{version}-%{release}
 Provides:       python%{majmin_nodots} = %{version}-%{release}
+
+Provides: bundled(python3dist(cachecontrol)) = 0.13.1
+Provides: bundled(python3dist(certifi)) = 2023.7.22
+Provides: bundled(python3dist(chardet)) = 5.1
+Provides: bundled(python3dist(colorama)) = 0.4.6
+Provides: bundled(python3dist(distlib)) = 0.3.8
+Provides: bundled(python3dist(distro)) = 1.8
+Provides: bundled(python3dist(idna)) = 3.4
+Provides: bundled(python3dist(msgpack)) = 1.0.5
+Provides: bundled(python3dist(packaging)) = 21.3
+Provides: bundled(python3dist(platformdirs)) = 3.8.1
+Provides: bundled(python3dist(pygments)) = 2.15.1
+Provides: bundled(python3dist(pyparsing)) = 3.1
+Provides: bundled(python3dist(pyproject-hooks)) = 1
+Provides: bundled(python3dist(requests)) = 2.31
+Provides: bundled(python3dist(resolvelib)) = 1.0.1
+Provides: bundled(python3dist(rich)) = 13.4.2
+Provides: bundled(python3dist(setuptools)) = 68
+Provides: bundled(python3dist(six)) = 1.16
+Provides: bundled(python3dist(tenacity)) = 8.2.2
+Provides: bundled(python3dist(tomli)) = 2.0.1
+Provides: bundled(python3dist(truststore)) = 0.8
+Provides: bundled(python3dist(typing-extensions)) = 4.7.1
+Provides: bundled(python3dist(urllib3)) = 1.26.17
+Provides: bundled(python3dist(webencodings)) = 0.5.1
+
 %if %{with_check}
 BuildRequires:  iana-etc
 BuildRequires:  tzdata

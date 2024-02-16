@@ -1,3 +1,4 @@
+%global debug_package %{nil}
 %define python3_majmin 3.12
 
 Summary:        Easily build and distribute Python packages
@@ -10,16 +11,31 @@ Distribution:   Azure Linux
 Group:          Development/Tools
 URL:            https://pypi.python.org/pypi/setuptools
 Source0:        https://pypi.org/packages/source/s/setuptools/setuptools-%{version}.tar.gz
-Requires:       python3
-Provides:       python3dist(setuptools) = %{version}-%{release}
-Provides:       python%{python3_majmin}dist(setuptools) = %{version}-%{release}
-BuildArch:      noarch
 
 %description
 Setuptools is a fully-featured, actively-maintained, and stable library designed to facilitate packaging Python projects.
 
 %package -n python3-setuptools
 Summary:        Easily download, build, install, upgrade, and uninstall Python packages
+
+Requires:       python3
+Obsoletes:      python3-setuptools < %{version}
+BuildArch:      noarch
+
+Provides:       python3dist(setuptools) = %{version}-%{release}
+Provides:       python%{python3_majmin}dist(setuptools) = %{version}-%{release}
+
+Provides: bundled(python3dist(importlib-metadata)) = 6
+Provides: bundled(python3dist(importlib-resources)) = 5.10.2
+Provides: bundled(python3dist(jaraco-text)) = 3.7
+Provides: bundled(python3dist(more-itertools)) = 8.8
+Provides: bundled(python3dist(ordered-set)) = 3.1.1
+Provides: bundled(python3dist(packaging)) = 23
+Provides: bundled(python3dist(platformdirs)) = 2.6.2
+Provides: bundled(python3dist(tomli)) = 2.0.1
+Provides: bundled(python3dist(typing-extensions)) = 4.0.1
+Provides: bundled(python3dist(typing-extensions)) = 4.4
+Provides: bundled(python3dist(zipp)) = 3.7
 
 %description -n python3-setuptools
 Setuptools is a fully-featured, actively-maintained, and stable library designed to facilitate packaging Python projects.
