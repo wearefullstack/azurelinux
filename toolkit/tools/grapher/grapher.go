@@ -252,6 +252,10 @@ func addSingleDependency(g *pkggraph.PkgGraph, packageNode *pkggraph.PkgNode, de
 	return err
 }
 
+func capabilityPathsMatchNodesPaths(pkg *pkgjson.Package, node *pkggraph.PkgNode) bool {
+	return (pkg.SrpmPath == node.SrpmPath) && (pkg.RpmPath == node.RpmPath)
+}
+
 // addDependencies adds edges for run-, build-, and test-time requirements for the
 // package described in the Package structure. Returns an error if the edges
 // could not be created.
@@ -264,6 +268,15 @@ func addPkgDependencies(g *pkggraph.PkgGraph, pkg *pkgjson.Package) (dependencie
 	}
 	if nodes == nil {
 		return dependenciesAdded, fmt.Errorf("can't add dependencies to a missing package %+v", pkg)
+	}
+
+	if !capabilityPathsMatchNodesPaths(pkg, nodes.RunNode) {
+		logger.Log.Debugf("Not adding dependencies for duplicate capability (%+v). SRPM and/or RPM paths don't match with the node we created for it in the graph.", pkg)
+		logger.Log.Debugf("Capability RPM path:  %s", pkg.RpmPath)
+		logger.Log.Debugf("Node RPM path:        %s", nodes.RunNode.RpmPath)
+		logger.Log.Debugf("Capability SRPM path: %s", pkg.SrpmPath)
+		logger.Log.Debugf("Node SRPM path:       %s", nodes.RunNode.SrpmPath)
+		return
 	}
 
 	// For each run-, build-, and test-time dependency, add the edges
