@@ -3,7 +3,7 @@
 Summary:        Mozilla's JavaScript engine.
 Name:           mozjs
 Version:        78.10.0
-Release:        5%{?dist}
+Release:        6%{?dist}
 License:        BSD AND MIT AND MPLv2.0 AND Unicode
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -25,14 +25,11 @@ BuildRequires:  llvm
 BuildRequires:  llvm-devel
 BuildRequires:  python3-devel
 BuildRequires:  python3-libs
+BuildRequires:  python3-six
 BuildRequires:  python3-xml
 BuildRequires:  rust
 BuildRequires:  which
 BuildRequires:  zlib-devel
-
-%if %{with_check}
-BuildRequires:  python3-six
-%endif
 
 Requires:       icu
 Requires:       python3
@@ -128,6 +125,9 @@ fi
 %{_libdir}/pkgconfig/mozjs-%{major}.pc
 
 %changelog
+* Fri Feb 16 2024 Andrew Phelps <anphel@microsoft.com> - 78.10.0-6
+- Always include python3-six
+
 * Thu Sep 07 2023 Daniel McIlvaney <damcilva@microsoft.com> - 78.10.0-5
 - Bump package to rebuild with rust 1.72.0
 

@@ -174,10 +174,10 @@ python3 runtests.py --no-build -- -ra -k 'not test_ppc64_ibm_double_double128'
 %{python3_sitearch}/%{name}/_typing/
 
 %files -n python3-numpy-f2py
-%{_bindir}/f2py
-%{_bindir}/f2py3
-%{_bindir}/f2py.numpy
-%{_bindir}/f2py%{python3_version}
+%{_bindir}/f2py*
+#%%{_bindir}/f2py3
+#%%{_bindir}/f2py.numpy
+#%%{_bindir}/f2py%{python3_version}
 %{python3_sitearch}/%{name}/f2py
 
 %files -n python3-numpy-doc
