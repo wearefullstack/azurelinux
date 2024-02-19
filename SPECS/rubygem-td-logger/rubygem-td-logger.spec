@@ -3,7 +3,7 @@
 Summary:        Treasure Data logging library
 Name:           rubygem-%{gem_name}
 Version:        0.3.27
-Release:        2%{?dist}
+Release:        3%{?dist}
 License:        MIT
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -15,7 +15,7 @@ BuildRequires:  git
 BuildRequires:  ruby
 Requires:       rubygem-fluent-logger < 2.0
 Requires:       rubygem-msgpack < 2.0
-Requires:       rubygem-td-client < 2.0
+Requires:       rubygem-td-client <= 2.0
 Provides:       rubygem(%{gem_name}) = %{version}-%{release}
 
 %description
@@ -36,6 +36,9 @@ gem install -V --local --force --install-dir %{buildroot}/%{gemdir} %{gem_name}-
 %{gemdir}
 
 %changelog
+* Fri Feb 16 2024 Andrew Phelps <anphel@microsoft.com> - 0.3.27-3
+- Change requirement for rubygem-td-client to <= 2.0
+
 * Wed Jun 22 2022 Neha Agarwal <nehaagarwal@microsoft.com> - 0.3.27-2
 - Build from .tar.gz source.
 

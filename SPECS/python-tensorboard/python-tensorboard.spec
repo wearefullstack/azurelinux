@@ -39,7 +39,7 @@ Requires:   python3-grpcio
 Requires:   python3-markdown
 Requires:   python3-numpy
 Requires:   python3-protobuf
-Requires:   python3-request
+Requires:   python3-requests
 Requires:   python3-setuptools
 Requires:   python3-tensorflow-estimator
 Requires:   python3-werkzeug
