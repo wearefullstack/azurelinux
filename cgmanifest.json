@@ -21914,8 +21914,8 @@
         "type": "other",
         "other": {
           "name": "python-conda-package-handling",
-          "version": "1.7.2",
-          "downloadUrl": "https://github.com/conda/conda-package-handling/archive/1.7.2/conda-package-handling-1.7.2.tar.gz"
+          "version": "2.2.0",
+          "downloadUrl": "https://github.com/conda/conda-package-handling/archive/2.2.0/conda-package-handling-2.2.0.tar.gz"
         }
       }
     },
@@ -22926,16 +22926,6 @@
           "name": "python-lxml",
           "version": "4.9.3",
           "downloadUrl": "https://github.com/lxml/lxml/releases/download/lxml-4.9.3/lxml-4.9.3.tar.gz"
-        }
-      }
-    },
-    {
-      "component": {
-        "type": "other",
-        "other": {
-          "name": "python-m2r",
-          "version": "0.3.1",
-          "downloadUrl": "https://github.com/miyakogi/m2r/archive/v0.3.1/m2r-0.3.1.tar.gz"
         }
       }
     },
