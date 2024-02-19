@@ -15,6 +15,7 @@ Distribution:   Azure Linux
 Group:          System Environment/Programming
 URL:            https://www.python.org/
 Source0:        https://www.python.org/ftp/python/%{version}/Python-%{version}.tar.xz
+# pathfix.py provided by previous source bundle (Python-3.9.14.tar.xz)
 Source1:        pathfix.py
 Patch0:         cgi3.patch
 
@@ -42,30 +43,30 @@ Provides:       %{name}-docs = %{version}-%{release}
 Provides:       python%{majmin} = %{version}-%{release}
 Provides:       python%{majmin_nodots} = %{version}-%{release}
 
-Provides: bundled(python3dist(cachecontrol)) = 0.13.1
-Provides: bundled(python3dist(certifi)) = 2023.7.22
-Provides: bundled(python3dist(chardet)) = 5.1
-Provides: bundled(python3dist(colorama)) = 0.4.6
-Provides: bundled(python3dist(distlib)) = 0.3.8
-Provides: bundled(python3dist(distro)) = 1.8
-Provides: bundled(python3dist(idna)) = 3.4
-Provides: bundled(python3dist(msgpack)) = 1.0.5
-Provides: bundled(python3dist(packaging)) = 21.3
-Provides: bundled(python3dist(platformdirs)) = 3.8.1
-Provides: bundled(python3dist(pygments)) = 2.15.1
-Provides: bundled(python3dist(pyparsing)) = 3.1
-Provides: bundled(python3dist(pyproject-hooks)) = 1
-Provides: bundled(python3dist(requests)) = 2.31
-Provides: bundled(python3dist(resolvelib)) = 1.0.1
-Provides: bundled(python3dist(rich)) = 13.4.2
-Provides: bundled(python3dist(setuptools)) = 68
-Provides: bundled(python3dist(six)) = 1.16
-Provides: bundled(python3dist(tenacity)) = 8.2.2
-Provides: bundled(python3dist(tomli)) = 2.0.1
-Provides: bundled(python3dist(truststore)) = 0.8
-Provides: bundled(python3dist(typing-extensions)) = 4.7.1
-Provides: bundled(python3dist(urllib3)) = 1.26.17
-Provides: bundled(python3dist(webencodings)) = 0.5.1
+#Provides: bundled(python3dist(cachecontrol)) = 0.13.1
+#Provides: bundled(python3dist(certifi)) = 2023.7.22
+#Provides: bundled(python3dist(chardet)) = 5.1
+#Provides: bundled(python3dist(colorama)) = 0.4.6
+#Provides: bundled(python3dist(distlib)) = 0.3.8
+#Provides: bundled(python3dist(distro)) = 1.8
+#Provides: bundled(python3dist(idna)) = 3.4
+#Provides: bundled(python3dist(msgpack)) = 1.0.5
+#Provides: bundled(python3dist(packaging)) = 21.3
+#Provides: bundled(python3dist(platformdirs)) = 3.8.1
+#Provides: bundled(python3dist(pygments)) = 2.15.1
+#Provides: bundled(python3dist(pyparsing)) = 3.1
+#Provides: bundled(python3dist(pyproject-hooks)) = 1
+#Provides: bundled(python3dist(requests)) = 2.31
+#Provides: bundled(python3dist(resolvelib)) = 1.0.1
+#Provides: bundled(python3dist(rich)) = 13.4.2
+#Provides: bundled(python3dist(setuptools)) = 68
+#Provides: bundled(python3dist(six)) = 1.16
+#Provides: bundled(python3dist(tenacity)) = 8.2.2
+#Provides: bundled(python3dist(tomli)) = 2.0.1
+#Provides: bundled(python3dist(truststore)) = 0.8
+#Provides: bundled(python3dist(typing-extensions)) = 4.7.1
+#Provides: bundled(python3dist(urllib3)) = 1.26.17
+#Provides: bundled(python3dist(webencodings)) = 0.5.1
 
 %if %{with_check}
 BuildRequires:  iana-etc
@@ -113,7 +114,8 @@ Summary:        The libraries and header files needed for Python development.
 Group:          Development/Libraries
 Requires:       expat-devel >= 2.1.0
 Requires:       %{name} = %{version}-%{release}
-Requires:       python3-setuptools
+# python3-setuptools is required, but provided in default worker chroot environment.
+#Requires:       python3-setuptools
 Provides:       python%{majmin}-devel = %{version}-%{release}
 Provides:       python%{majmin_nodots}-devel = %{version}-%{release}
 
