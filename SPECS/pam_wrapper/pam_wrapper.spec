@@ -1,6 +1,6 @@
 Name:           pam_wrapper
 Version:        1.1.5
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        A tool to test PAM applications and PAM modules
 License:        GPLv3+
 URL:            https://cwrap.org/
@@ -16,6 +16,8 @@ BuildRequires:  gnupg2
 BuildRequires:  libcmocka-devel
 BuildRequires:  pam-devel
 BuildRequires:  python3-devel
+BuildRequires:  python3-wheel
+BuildRequires:  python3-six
 
 Recommends:     cmake
 Recommends:     pkgconfig
@@ -136,9 +138,16 @@ popd
 %doc obj/doc/html
 
 %files -n python3-libpamtest
-%{python3_sitearch}/pypamtest.so
+#%%{python3_sitearch}/pypamtest.so
+
+#time="2024-02-19T13:30:00Z" level=debug msg="Processing files: python3-libpamtest-1.1.5-1.azl3.x86_64"
+#time="2024-02-19T13:30:00Z" level=debug msg="error: File not found: /usr/src/mariner/BUILDROOT/pam_wrapper-1.1.5-1.azl3.x86_64/usr/lib/python3.12/site-packages/pypamtest.so"
+
 
 %changelog
+* Fri Feb 16 2024 Andrew Phelps <anphel@microsoft.com> - 1.1.5-2
+- Fix python 3.12 build
+
 * Fri Oct 27 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 1.1.5-1
 - Auto-upgrade to 1.1.5 - Azure Linux 3.0 - package upgrades
 
@@ -149,7 +158,7 @@ popd
 - Bumping version to 1.1.4.
 - Remove gpg signature verification
 - License verified
- 
+
 * Tue Jun 08 2021 Thomas Crain <thcrain@microsoft.com> - 1.1.3-3
 - Remove python2 macros
 
