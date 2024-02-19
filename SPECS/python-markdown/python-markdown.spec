@@ -2,8 +2,8 @@
 %global pkgname markdown
 Summary:        Markdown implementation in Python
 Name:           python-%{pkgname}
-Version:        3.2.2
-Release:        4%{?dist}
+Version:        3.5.2
+Release:        1%{?dist}
 License:        BSD
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -12,23 +12,24 @@ Source0:        https://files.pythonhosted.org/packages/source/M/%{srcname}/%{sr
 BuildArch:      noarch
 
 %description
-This is a Python implementation of John Gruber’s Markdown. It is
+This is a Python implementation of John Grubers Markdown. It is
 almost completely compliant with the reference implementation, though
 there are a few very minor differences.
 
-%package -n python%{python3_pkgversion}-%{pkgname}
-%{?python_provide:%python_provide python%{python3_pkgversion}-%{pkgname}}
+%package -n python3-%{pkgname}
+%{?python_provide:%python_provide python3-%{pkgname}}
 Summary:        Markdown implementation in Python
 BuildRequires:  PyYAML
-BuildRequires:  python%{python3_pkgversion}-devel
-BuildRequires:  python%{python3_pkgversion}-importlib-metadata
-BuildRequires:  python%{python3_pkgversion}-setuptools
-BuildRequires:  python%{python3_pkgversion}-tidy
-BuildRequires:  python%{python3_pkgversion}-zipp
-Requires:       python%{python3_pkgversion}-importlib-metadata
-Conflicts:      python2-%{pkgname} < 3.1-2
+BuildRequires:  python3-devel
+BuildRequires:  python3-importlib-metadata
+BuildRequires:  python3-pip
+BuildRequires:  python3-setuptools
+BuildRequires:  python3-tidy
+BuildRequires:  python3-wheel
+BuildRequires:  python3-zipp
+Requires:       python3-importlib-metadata
 
-%description -n python%{python3_pkgversion}-%{pkgname}
+%description -n python3-%{pkgname}
 This is a Python implementation of John Gruber's Markdown. It is
 almost completely compliant with the reference implementation, though
 there are a few known issues.
@@ -37,23 +38,21 @@ there are a few known issues.
 %autosetup -p1 -n %{srcname}-%{version}
 
 %build
-%py3_build
-
+%pyproject_wheel
 
 %install
-%py3_install
+%pyproject_install
 
 # process license file
 PYTHONPATH=%{buildroot}%{python3_sitelib} \
   %{buildroot}%{_bindir}/markdown_py \
   LICENSE.md > LICENSE.html
 
-
 %check
 %{__python3} ./setup.py test
 
 
-%files -n python%{python3_pkgversion}-%{pkgname}
+%files -n python3-%{pkgname}
 # temporarily skip packaging docs - see also
 # https://github.com/Python-Markdown/markdown/issues/621
 #doc python3/build/docs/*
@@ -62,6 +61,10 @@ PYTHONPATH=%{buildroot}%{python3_sitelib} \
 %{_bindir}/markdown_py
 
 %changelog
+* Fri Feb 16 2024 Andrew Phelps <anphel@microsoft.com> - 3.5.2-1
+- Upgrade to version 3.5.2
+- Add BR for python3-pip and python3-wheel
+
 * Wed Nov 30 2022 Riken Maharjan <rmaharjan@microsoft.com> - 3.2.2-4
 - Move to Core.
 - License verified.
