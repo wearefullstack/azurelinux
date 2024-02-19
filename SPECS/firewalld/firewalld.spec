@@ -245,6 +245,11 @@ fi
 %attr(0755,root,root) %dir %{python3_sitelib}/firewall/core
 %attr(0755,root,root) %dir %{python3_sitelib}/firewall/core/io
 %attr(0755,root,root) %dir %{python3_sitelib}/firewall/server
+%{python3_sitelib}/firewall/*.py
+%{python3_sitelib}/firewall/config/*.py
+%{python3_sitelib}/firewall/core/*.py
+%{python3_sitelib}/firewall/core/io/*.py
+%{python3_sitelib}/firewall/server/*.py
 
 %files -n firewalld-filesystem
 %dir %{_libdir}/firewalld
