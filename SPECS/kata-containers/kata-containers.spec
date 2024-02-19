@@ -81,7 +81,8 @@ Requires:       busybox
 Requires:       kernel
 Requires:       libseccomp
 Requires:       qemu-kvm-core >= 4.2.0-4
-Requires:       %{_libexecdir}/virtiofsd
+#Requires:       %{_libexecdir}/virtiofsd
+
 
 Conflicts:      kata-agent
 Conflicts:      kata-ksm-throttler
