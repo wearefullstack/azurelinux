@@ -78,3 +78,8 @@ func SetupProfileFlags(k *kingpin.Application) *ProfileFlags {
 	p.TraceFile = k.Flag("trace-file", "File that stores trace data.").String()
 	return p
 }
+
+func SetupPedanticFlag(k *kingpin.Application) *bool {
+	enablePedanticMode := k.Flag("pedantic", "Enable more strict error checking").Bool()
+	return enablePedanticMode
+}
