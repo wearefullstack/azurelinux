@@ -45,7 +45,7 @@ BuildRequires:  util-linux-ng
 Requires:       findutils
 Requires:       grub2-tools
 Requires:       grub2-tools-minimal
-Requires:       installkernel
+Requires:       systemd-udev
 Requires:       util-linux
 
 %description

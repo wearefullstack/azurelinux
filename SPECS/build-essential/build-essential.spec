@@ -1,7 +1,7 @@
 Summary:        Metapackage to install all build tools
 Name:           build-essential
 Version:        0.1
-Release:        5%{?dist}
+Release:        6%{?dist}
 License:        GPLv2
 Requires:       autoconf
 Requires:       automake
@@ -11,7 +11,7 @@ Requires:       diffutils
 Requires:       gawk
 Requires:       gcc
 Requires:       glibc-devel
-Requires:       installkernel
+Requires:       systemd-udev
 Requires:       kernel-headers
 Requires:       libtool
 Requires:       make
@@ -28,6 +28,9 @@ Metapackage to install all build tools
 %defattr(-,root,root,0755)
 
 %changelog
+* Tue Feb 20 2024 Cameron Baird <cameronbaird@microsoft.com> - 0.1-6
+- Use systemd-udev for installkernel
+
 * Wed Mar 30 2022 Chris Co <chrco@microsoft.com> - 0.1-5
 - Add installkernel
 - License verified
