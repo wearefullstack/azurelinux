@@ -91,7 +91,7 @@ Group:          Development/Libraries
 Requires:       expat-devel >= 2.1.0
 Requires:       %{name} = %{version}-%{release}
 # python3-setuptools is required, but provided in default worker chroot environment.
-#Requires:       python3-setuptools
+Requires:       python3-setuptools
 Provides:       python3-devel
 Provides:       python%{majmin}-devel = %{version}-%{release}
 Provides:       python%{majmin_nodots}-devel = %{version}-%{release}
