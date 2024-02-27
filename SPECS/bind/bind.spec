@@ -33,6 +33,7 @@ Source14:       setup-named-softhsm.sh
 Source15:       named-chroot.files
 
 BuildRequires:  gcc
+BuildRequires:  git
 BuildRequires:  json-c-devel
 BuildRequires:  krb5-devel
 BuildRequires:  libcap-devel
