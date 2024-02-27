@@ -40,12 +40,22 @@ Patch104: 0104-libiscsi-build-fixes.patch
 # Mariner: add patch to fix build refrences to lib*
 Patch201: 0201-mariner-fixes.patch
  
-BuildRequires: meson git
-BuildRequires: flex bison doxygen kmod-devel systemd-units
-BuildRequires: autoconf automake libtool libmount-devel openssl-devel
-BuildRequires: libselinux
+BuildRequires: autoconf
+BuildRequires: automake
+BuildRequires: bison
+BuildRequires: doxygen
+BuildRequires: flex
+BuildRequires: git
 BuildRequires: isns-utils-devel
+BuildRequires: kmod-devel
+BuildRequires: libmount-devel
+BuildRequires: libselinux-devel
+BuildRequires: libtool
+BuildRequires: meson
+BuildRequires: openssl-devel
 BuildRequires: systemd-devel
+BuildRequires: systemd-rpm-macros
+BuildRequires: systemd-units
 Requires: %{name}-iscsiuio >= %{version}-%{release}
 %if 0%{?fedora}
 Requires: (fedora-release-common >= 38-0.23 if fedora-release-common)
@@ -111,14 +121,14 @@ The %{name}-python3 package contains Python %{python3_version} bindings to the
 libiscsi interface for interacting with %{name}
 %endif
 # ended with python3
- 
+
 %prep
 %autosetup -p1 -n open-iscsi-%{commit0} -Sgit_am
- 
+
 %build
 # avoid undefined references linking failures
 %undefine _ld_as_needed
- 
+
 %meson -Diqn_prefix=iqn.1994-05.com.redhat
 %meson_build
 %make_build LDFLAGS="%{build_ldflags}" iqn_prefix=iqn.1994-05.com.redhat DBROOT=/var/lib/iscsi libiscsi
