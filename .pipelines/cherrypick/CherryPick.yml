@@ -30,4 +30,5 @@ jobs:
     - template: spec-auto-patch-update/pipelines/CherryPick.yml@CBL-Mariner-Pipelines
       parameters:
         commitId: $(Build.SourceVersion)
+        pipelinesRepoName: CBL-Mariner-Pipelines
         sourceBranch: $(Build.SourceBranch)
