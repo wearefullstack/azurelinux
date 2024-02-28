@@ -17,6 +17,7 @@ BuildRequires:  libtool
 BuildRequires:  pkg-config
 BuildRequires:  kmod-devel
 BuildRequires:  systemd-devel
+BuildRequires:  systemd
 BuildRequires:  json-c-devel
 BuildRequires:  bash-completion-devel
 BuildRequires:  keyutils-devel
