@@ -232,7 +232,7 @@ cp -r bin/dnssec{,-pkcs11}
 cp -r lib/dns{,-pkcs11}
 cp -r lib/ns{,-pkcs11}
 
-libtoolize -c -f; aclocal -I libtool.m4 --force; autoconf -f
+libtoolize -c -f; aclocal -I m4 --force; autoconf -f
 
 %build
 
