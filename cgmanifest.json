@@ -994,6 +994,16 @@
       "component": {
         "type": "other",
         "other": {
+          "name": "bazel6",
+          "version": "6.5.0",
+          "downloadUrl": "https://github.com/bazelbuild/bazel/releases/download/6.5.0/bazel-6.5.0-dist.zip"
+        }
+      }
+    },
+    {
+      "component": {
+        "type": "other",
+        "other": {
           "name": "bazel-workspaces",
           "version": "20200113",
           "downloadUrl": "https://github.com/kubic-project/bazel-workspaces/archive/7c8f2656c458e1fc3c5177f1ab92a6f8563c0ca6.tar.gz"
