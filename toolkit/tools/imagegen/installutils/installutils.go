@@ -651,13 +651,13 @@ func TdnfDeleteCache(installRoot string) (err error) {
 	defer timestamp.StopEvent(nil)
 
 	// TDNF 3.x uses repositories from installchroot instead of host. Passing setopt for repo files directory to use local repo for installroot installation
-	err = shell.ExecuteLiveWithCallback(logger.Log.Debug, logger.Log.Warn, true, "tdnf", "-y", "clean", "all")
+	err = shell.ExecuteLiveWithCallback(logger.Log.Debug, logger.Log.Warn, true, "tdnf", "-y", "clean", "all", "--installroot", installRoot)
 	if err != nil {
 		logger.Log.Warnf("Failed to tdnf clean all: %v.", err)
 	}
 
 	// TDNF 3.x uses repositories from installchroot instead of host. Passing setopt for repo files directory to use local repo for installroot installation
-	err = shell.ExecuteLiveWithCallback(logger.Log.Debug, logger.Log.Warn, true, "rm", "-rf", installRoot+"/var/cache/tdnf")
+	err = shell.ExecuteLiveWithCallback(logger.Log.Debug, logger.Log.Warn, true, "rm", "-rf", "/var/cache/tdnf")
 	if err != nil {
 		logger.Log.Warnf("Failed to rm -rf %v/var/cache/tdnf: %v.", installRoot, err)
 	}
