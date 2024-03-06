@@ -1,6 +1,6 @@
 Summary:        TensorFlow is an open source machine learning framework for everyone.
 Name:           tensorflow
-Version:        2.11.1
+Version:        2.15.0
 Release:        1%{?dist}
 License:        ASL 2.0
 Vendor:         Microsoft Corporation
@@ -107,19 +107,15 @@ Python 3 version.
 
 
 %build
-tar -xf %{SOURCE1} -C /root/
+MD5_HASH=$(echo -n $PWD | md5sum | awk '{print $1}')
+tar -xvf %{SOURCE1} -C /root/TF_temp/$MD5_HASH/external
 
 ln -s %{_bindir}/python3 %{_bindir}/python
 # Remove the .bazelversion file so that latest bazel version available will be used to build TensorFlow.
 rm .bazelversion
-bazel --batch build  --verbose_explanations //tensorflow/tools/pip_package:build_pip_package
-# ---------
-# steps to create the cache tar. network connection is required to create the cache.
-#----------------------------------
-# pushd /root
-# tar -czvf cacheroot.tar.gz .cache  #creating the cache using the /root/.cache directory
-# popd
-# mv /root/cacheroot.tar.gz /usr/
+
+bazel --batch  --output_user_root=/root/TF_temp build  //tensorflow/tools/pip_package:build_pip_package
+
 
 ./bazel-bin/tensorflow/tools/pip_package/build_pip_package pyproject-wheeldir/
 # --------

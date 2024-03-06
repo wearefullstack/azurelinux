@@ -1,0 +1,36 @@
+FROM mcr.microsoft.com/cbl-mariner/base/core:2.0
+
+ARG TF_VERSION
+
+WORKDIR /root/
+#bazel version must match with the .bazelversion
+RUN tdnf -y install build-essential tar bazel6 python3-devel python3-numpy python3-pip python3-packaging python3-wheel python3-requests libstdc++-devel wget ca-certificates
+
+RUN wget https://github.com/tensorflow/tensorflow/archive/refs/tags/v$TF_VERSION.tar.gz
+RUN tar -xvf v$TF_VERSION.tar.gz
+WORKDIR tensorflow-$TF_VERSION
+RUN rm .bazelversion
+
+# create cache 
+RUN bazel --output_user_root=`pwd`/../tf_tmp fetch  //tensorflow/tools/pip_package:build_pip_package
+
+# some of the tertiary dependencies need build command to be downloaded.
+# once compiling start we exit the command
+# should take 5-10 mins 
+RUN bazel --output_user_root=/root/tf_tmp build //tensorflow/tools/pip_package:build_pip_package > /tmp/bazel_output.log 2>&1 & \
+    pid=$! && \
+    while true; do \
+        if grep -q "Compiling" /tmp/bazel_output.log; then \
+            echo "Compiling detected, exiting..." && \
+            kill $pid && \
+            exit 0; \
+        fi; \
+        sleep 1; \
+    done
+#bazel puts cache in the md5 hash of the working directory
+RUN MD5_HASH=$(echo -n $PWD | md5sum | awk '{print $1}') && \
+    mkdir -p /root/tf_tmp/$MD5_HASH && \
+    cd /root/tf_tmp/$MD5_HASH && \
+    tar -czvf cache-$TF_VERSION.tar.gz -C /root/tf_tmp/$MD5_HASH/external . && \
+    cp cache-$TF_VERSION.tar.gz /root/
+CMD ["bash"]
