@@ -107,7 +107,7 @@ Python 3 version.
 
 
 %build
-MD5_HASH=$(echo -n $PWD | md5sum | awk '{print $1}')
+MD5_HASH=$(echo -n /root/tensorflow-%{version} | md5sum | awk '{print $1}')
 mkdir -p /root/tf_tmp/$MD5_HASH/external
 tar -xvf %{SOURCE1} -C /root/tf_tmp/$MD5_HASH/external
 
