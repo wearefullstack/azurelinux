@@ -143,6 +143,9 @@ bazel --batch  --output_user_root=/root/TF_temp build  //tensorflow/tools/pip_pa
 
 
 %changelog
+* Tue Mar 05 2024 Riken Maharjan <rmaharjan@microsoft> - 2.15.0-1
+- Update to 2.15.0
+
 * Wed Oct 11 2023 Mitch Zhu <mitchzhu@microsoft> - 2.11.1-1
 - Update to 2.11.1 to fix CVEs
 

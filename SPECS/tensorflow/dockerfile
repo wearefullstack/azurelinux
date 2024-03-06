@@ -31,6 +31,6 @@ RUN bazel --output_user_root=/root/tf_tmp build //tensorflow/tools/pip_package:b
 RUN MD5_HASH=$(echo -n $PWD | md5sum | awk '{print $1}') && \
     mkdir -p /root/tf_tmp/$MD5_HASH && \
     cd /root/tf_tmp/$MD5_HASH && \
-    tar -czvf cache-$TF_VERSION.tar.gz -C /root/tf_tmp/$MD5_HASH/external . && \
-    cp cache-$TF_VERSION.tar.gz /root/
+    tar -czvf tensorflow-$TF_VERSION-cache.tar.gz -C /root/tf_tmp/$MD5_HASH/external . && \
+    cp tensorflow-$TF_VERSION-cache.tar.gz /root/
 CMD ["bash"]
