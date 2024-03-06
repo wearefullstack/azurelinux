@@ -107,7 +107,7 @@ Python 3 version.
 
 
 %build
-MD5_HASH=$(echo -n /root/tensorflow-%{version} | md5sum | awk '{print $1}')
+MD5_HASH=$(echo -n $PWD | md5sum | awk '{print $1}')
 mkdir -p /root/tf_tmp/$MD5_HASH/external
 tar -xvf %{SOURCE1} -C /root/tf_tmp/$MD5_HASH/external
 
@@ -115,6 +115,8 @@ ln -s %{_bindir}/python3 %{_bindir}/python
 # Remove the .bazelversion file so that latest bazel version available will be used to build TensorFlow.
 rm .bazelversion
 
+#remove any compiled code from the cache
+bazel --output_user_root=/root/tf_tmp clean
 bazel --batch  --output_user_root=/root/tf_tmp build  //tensorflow/tools/pip_package:build_pip_package
 
 
