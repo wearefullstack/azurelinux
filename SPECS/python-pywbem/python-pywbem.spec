@@ -36,7 +36,6 @@ BuildRequires:  python3-setuptools
 BuildRequires:  python3-wheel
 Requires:       python3
 Requires:       python3-PyYAML
-Requires:       python3-nocasedict
 Requires:       python3-ply
 Requires:       python3-requests
 Requires:       python3-xml
