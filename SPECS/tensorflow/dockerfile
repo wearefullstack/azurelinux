@@ -4,7 +4,7 @@ ARG TF_VERSION
 
 WORKDIR /root/
 #bazel version must match with the .bazelversion
-RUN tdnf -y install build-essential tar bazel6 python3-devel python3-numpy python3-pip python3-packaging python3-wheel python3-requests libstdc++-devel wget ca-certificates
+RUN tdnf -y install build-essential tar bazel python3-devel python3-numpy python3-pip python3-packaging python3-wheel python3-requests libstdc++-devel wget ca-certificates
 
 RUN wget https://github.com/tensorflow/tensorflow/archive/refs/tags/v$TF_VERSION.tar.gz
 RUN tar -xvf v$TF_VERSION.tar.gz
@@ -12,12 +12,13 @@ WORKDIR tensorflow-$TF_VERSION
 RUN rm .bazelversion
 
 # create cache 
-RUN bazel --output_user_root=`pwd`/../tf_tmp fetch  //tensorflow/tools/pip_package:build_pip_package
+# doesn't grab all the dependencies
+# RUN bazel --output_user_root=`pwd`/../tf_tmp fetch  //tensorflow/tools/pip_package:build_pip_package
 
 # some of the tertiary dependencies need build command to be downloaded.
 # once compiling start we exit the command
 # should take 5-10 mins 
-RUN bazel --output_user_root=/root/tf_tmp build //tensorflow/tools/pip_package:build_pip_package > /tmp/bazel_output.log 2>&1 & \
+RUN bazel  //tensorflow/tools/pip_package:build_pip_package > /tmp/bazel_output.log 2>&1 & \
     pid=$! && \
     while true; do \
         if grep -q "Compiling" /tmp/bazel_output.log; then \
@@ -27,10 +28,17 @@ RUN bazel --output_user_root=/root/tf_tmp build //tensorflow/tools/pip_package:b
         fi; \
         sleep 1; \
     done
+
 #bazel puts cache in the md5 hash of the working directory
-RUN MD5_HASH=$(echo -n $PWD | md5sum | awk '{print $1}') && \
-    mkdir -p /root/tf_tmp/$MD5_HASH && \
-    cd /root/tf_tmp/$MD5_HASH && \
-    tar -czvf tensorflow-$TF_VERSION-cache.tar.gz -C /root/tf_tmp/$MD5_HASH/external . && \
-    cp tensorflow-$TF_VERSION-cache.tar.gz /root/
+# currently this way of creating cache throws error.
+# RUN MD5_HASH=$(echo -n $PWD | md5sum | awk '{print $1}') && \
+#     mkdir -p /root/tf_tmp/$MD5_HASH && \
+#     cd /root/tf_tmp/$MD5_HASH && \
+#     tar -czvf tensorflow-$TF_VERSION-cache.tar.gz -C /root/tf_tmp/$MD5_HASH/external . && \
+#     cp tensorflow-$TF_VERSION-cache.tar.gz /root/
+
+# instead have to grab all the files
+RUN cd /root/ && \
+    tar -czvf tensorflow-$TF_VERSION-cache.tar.gz .cache 
+
 CMD ["bash"]

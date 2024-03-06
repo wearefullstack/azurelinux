@@ -8,7 +8,7 @@ Distribution:   Azure Linux
 Group:          Development/Languages/Python
 URL:            https://www.tensorflow.org/
 Source0:        https://github.com/tensorflow/tensorflow/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
-Source1:        %{name}-%{version}-cache.tar.gz
+Source1:        %{name}-%{version}-cache2.tar.gz
 BuildRequires:  bazel
 BuildRequires:  binutils
 BuildRequires:  build-essential
@@ -107,18 +107,14 @@ Python 3 version.
 
 
 %build
-MD5_HASH=$(echo -n $PWD | md5sum | awk '{print $1}')
-mkdir -p /root/tf_tmp/$MD5_HASH/external
-tar -xvf %{SOURCE1} -C /root/tf_tmp/$MD5_HASH/external
+# Dumping the whole cache
+tar -xf %{SOURCE1} -C /root/
 
 ln -s %{_bindir}/python3 %{_bindir}/python
 # Remove the .bazelversion file so that latest bazel version available will be used to build TensorFlow.
 rm .bazelversion
 
-bazel  clean
-bazel info 
-bazel --output_user_root=/root/tf_tmp  info
-bazel --batch  --output_user_root=/root/tf_tmp build  //tensorflow/tools/pip_package:build_pip_package
+bazel --batch   //tensorflow/tools/pip_package:build_pip_package
 
 
 ./bazel-bin/tensorflow/tools/pip_package/build_pip_package pyproject-wheeldir/
