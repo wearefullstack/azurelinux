@@ -114,8 +114,7 @@ ln -s %{_bindir}/python3 %{_bindir}/python
 # Remove the .bazelversion file so that latest bazel version available will be used to build TensorFlow.
 rm .bazelversion
 
-bazel --batch   //tensorflow/tools/pip_package:build_pip_package
-
+bazel --batch  build //tensorflow/tools/pip_package:build_pip_package
 
 ./bazel-bin/tensorflow/tools/pip_package/build_pip_package pyproject-wheeldir/
 # --------
