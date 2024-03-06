@@ -22,6 +22,7 @@ BuildRequires:  openssl-devel
 BuildRequires:  perl
 BuildRequires:  procps-ng
 BuildRequires:  python3-devel
+BuildRequires:  python3-nocaselist
 BuildRequires:  python3-pywbem
 BuildRequires:  python3-six
 BuildRequires:  sqlite-devel
