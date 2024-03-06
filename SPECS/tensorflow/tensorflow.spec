@@ -108,6 +108,7 @@ Python 3 version.
 
 %build
 MD5_HASH=$(echo -n $PWD | md5sum | awk '{print $1}')
+mkdir -p /root/TF_temp/$MD5_HASH/external
 tar -xvf %{SOURCE1} -C /root/TF_temp/$MD5_HASH/external
 
 ln -s %{_bindir}/python3 %{_bindir}/python
