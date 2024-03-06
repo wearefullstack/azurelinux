@@ -117,6 +117,7 @@ rm .bazelversion
 
 #remove any compiled code from the cache
 bazel --output_user_root=/root/tf_tmp clean
+bazel --output_user_root=/root/tf_tmp  info
 bazel --batch  --output_user_root=/root/tf_tmp build  //tensorflow/tools/pip_package:build_pip_package
 
 
