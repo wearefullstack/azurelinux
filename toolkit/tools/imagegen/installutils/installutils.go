@@ -660,6 +660,30 @@ func TdnfInstallWithProgress(packageName, installRoot string, currentPackagesIns
 	return
 }
 
+// TdnfUninstall uninstalls a package in the current environment
+func TdnfUninstall(packageName, installRoot string) (err error) {
+	timestamp.StartEvent("uninstalling"+packageName, nil)
+	defer timestamp.StopEvent(nil)
+	var (
+		releaseverCliArg string
+	)
+
+	releaseverCliArg, err = tdnf.GetReleaseverCliArg()
+	if err != nil {
+		return
+	}
+
+	// TDNF 3.x uses repositories from installchroot instead of host. Passing setopt for repo files directory to use local repo for installroot installation
+	err = shell.ExecuteLiveWithCallback(logger.Log.Warn, logger.Log.Warn, true, "tdnf", "-v", "remove", packageName,
+		"--installroot", installRoot, "--nogpgcheck", "--assumeyes", "--setopt", "reposdir=/etc/yum.repos.d/",
+		releaseverCliArg)
+	if err != nil {
+		logger.Log.Warnf("Failed to tdnf uninstall: %v. Package name: %v", err, packageName)
+	}
+
+	return
+}
+
 func configureSystemFiles(installChroot *safechroot.Chroot, hostname string, config configuration.SystemConfig,
 	mountList []string, mountPointMap, mountPointToFsTypeMap, mountPointToMountArgsMap, partIDToDevPathMap,
 	partIDToFsTypeMap map[string]string, encryptedRoot diskutils.EncryptedRootDevice,
@@ -1023,6 +1047,8 @@ func ConfigureDiskBootloader(bootType string, encryptionEnable bool, readOnlyVer
 
 	var rootDevice string
 
+	installRoot := filepath.Join(rootMountPoint, installChroot.RootDir())
+
 	// Add bootloader. Prefer a separate boot partition if one exists.
 	bootDevice, isBootPartitionSeparate := mountPointMap[bootMountPoint]
 	bootPrefix := ""
@@ -1098,6 +1124,11 @@ func ConfigureDiskBootloader(bootType string, encryptionEnable bool, readOnlyVer
 		err = CallGrubMkconfig(installChroot)
 		if err != nil {
 			err = fmt.Errorf("failed to generate grub.cfg via grub2-mkconfig: %s", err)
+			return
+		}
+		err = TdnfUninstall("grub2", installRoot)
+		if err != nil {
+			err = fmt.Errorf("failed to clean up grub2: %s", err)
 			return
 		}
 	}
