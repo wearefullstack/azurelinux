@@ -42,18 +42,13 @@ Python 3 version.
 
 
 %build
-tar -xf %{SOURCE1} -C /root/
+MD5_HASH=$(echo -n $PWD | md5sum | awk '{print $1}')
+mkdir -p /root/.cache/bazel/_bazel_$USER/$MD5_HASH/external
+tar -xvf %{SOURCE1} -C /root/.cache/bazel/_bazel_$USER/$MD5_HASH/external
 
 ln -s %{_bindir}/python3 %{_bindir}/python
 
 bazel --batch build  --verbose_explanations //keras/tools/pip_package:build_pip_package
-# ---------
-# steps to create the cache tar. network connection is required to create the cache.
-#----------------------------------
-# pushd /root
-# tar -czvf cacheroot.tar.gz .cache  #creating the cache using the /root/.cache directory
-# popd
-# mv /root/cacheroot.tar.gz /usr/
 
 ./bazel-bin/keras/tools/pip_package/build_pip_package pyproject-wheeldir/
 # --------

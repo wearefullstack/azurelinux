@@ -6,7 +6,7 @@ TensorBoard is a suite of web applications for inspecting and understanding your
 
 Summary:        TensorBoard is a suite of web applications for inspecting and understanding your TensorFlow runs and graphs
 Name:           python-%{pypi_name}
-Version:        2.11.0
+Version:        2.15.0
 Release:        3%{?dist}
 License:        ASL 2.0
 Vendor:         Microsoft Corporation
@@ -71,16 +71,7 @@ mkdir -p pyproject-wheeldir/ && cp tensorboard/data/server/pip_package/dist/*.wh
 #tensorboard built using bazel
 bazel --batch build //tensorboard/pip_package:build_pip_package
 #cache
-# ---------
-# steps to create the cache tar. network connection is required to create the cache.
-#----------------------------------
-# bazel clean
-# pushd /root
-# tar -czvf %{name}-%{version}-cache.tar.gz .cache  #creating the cache using the /root/.cache directory
-# popd
-# mv /root/%{name}-%{version}-cache.tar.gz /usr/
 
-#tensorboard package build script build_pip_package.sh doesn't assign RUNFILES variable successfully.
 sed -i 's/output="$1"/output="$1"\n \ RUNFILES="$(CDPATH="" cd -- "$0.runfiles" \&\& pwd)"/' bazel-bin/tensorboard/pip_package/build_pip_package
 bazel-bin/tensorboard/pip_package/build_pip_package .
 mv %{pypi_name}-%{version}-*.whl pyproject-wheeldir/
