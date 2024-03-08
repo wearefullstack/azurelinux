@@ -21,6 +21,7 @@ BuildRequires:  python3-packaging
 BuildRequires:  python3-pip
 BuildRequires:  python3-requests
 BuildRequires:  python3-wheel
+BuildRequires:  patchelf
 BuildRequires:  tar
 BuildRequires:  which
 ExclusiveArch:  x86_64
