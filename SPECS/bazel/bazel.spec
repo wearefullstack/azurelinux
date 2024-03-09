@@ -12,6 +12,7 @@ URL:            https://bazel.io/
 # do not use the github tar.gz use the ...-dist.zip instead
 Source0:        https://github.com/bazelbuild/%{name}/releases/download/%{version}/%{name}-%{version}-dist.zip
 Patch0:         fix-bazel-version-check.patch
+Patch1:         0001-JDK17.patch
 BuildRequires:  build-essential
 BuildRequires:  libstdc++
 BuildRequires:  libstdc++-devel
@@ -46,7 +47,7 @@ cp ./scripts/packages/bazel.sh %{buildroot}/%{_bindir}/bazel
 %attr(0755,root,root) %{_bindir}/bazel-real
 
 %changelog
-* Tue Mar 05 2024 Riken Maharjan <rmaharjan@microsoft.com> - 6.5.0
+* Tue Mar 05 2024 Riken Maharjan <rmaharjan@microsoft.com> - 6.5.0-1
 - Upgrade to 6.5.0
 
 * Fri Dec 09 2022 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.3.2-1
