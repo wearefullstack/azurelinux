@@ -62,6 +62,7 @@ Requires:       python3-typing-extensions
 Requires:       python3-werkzeug
 Requires:       python3-wrapt
 Requires:       python3-zipp
+Requires:       python3-ml-dtypes
 
 %description -n python3-tf-nightly
 TensorFlow is an open source machine learning framework for everyone.
