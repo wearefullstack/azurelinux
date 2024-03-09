@@ -125,7 +125,8 @@ bazel --batch build  //tensorflow/tools/pip_package:build_pip_package
 
 
 %install
-%{pyproject_install}
+python3 -m pip install --root /usr/src/azl/BUILDROOT/tensorflow-2.15.0-1.azl3.x86_64 --no-deps --disable-pip-version-check --progress-bar off --verbose --ignore-installed --no-warn-script-location --no-index --no-cache-dir --find-links /usr/src/azl/BUILD/tensorflow-2.15.0/pyproject-wheeldir
+
 
 
 %files -n python3-tensorflow
@@ -140,9 +141,6 @@ bazel --batch build  //tensorflow/tools/pip_package:build_pip_package
 %{_bindir}/toco
 %{_bindir}/toco_from_protos
 
-%files -n python3-tf-nightly
-%license LICENSE
-%{python3_sitelib}/*
 
 
 %changelog
