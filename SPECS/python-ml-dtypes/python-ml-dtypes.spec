@@ -10,6 +10,7 @@ URL:            https://pypi.python.org/pypi/ml-dtypes/
 Source0:        https://files.pythonhosted.org/packages/source/m/ml_dtypes/ml_dtypes-%{version}.tar.gz
 Source1:        ml_dtypes-%{version}-submodules.tar.gz
 BuildRequires:  python3-numpy
+BuildRequires:  python3-pybind11
 %if 0%{?with_check}
 BuildRequires:  python3-pip
 %endif
