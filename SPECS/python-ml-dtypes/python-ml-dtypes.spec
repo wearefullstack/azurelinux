@@ -8,7 +8,7 @@ Distribution:   Azure Linux
 Group:          Development/Languages/Python
 URL:            https://pypi.python.org/pypi/ml-dtypes/
 Source0:        https://files.pythonhosted.org/packages/source/m/ml_dtypes/ml_dtypes-%{version}.tar.gz
-Source1:        ml_dtypes-%{version}-submodule.tar.gz
+Source1:        ml_dtypes-%{version}-submodules.tar.gz
 BuildArch:      noarch
 %if 0%{?with_check}
 BuildRequires:  python3-pip
