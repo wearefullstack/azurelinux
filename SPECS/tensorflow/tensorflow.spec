@@ -1,6 +1,6 @@
 Summary:        TensorFlow is an open source machine learning framework for everyone.
 Name:           tensorflow
-Version:        2.15.0
+Version:        2.16.1
 Release:        1%{?dist}
 License:        ASL 2.0
 Vendor:         Microsoft Corporation
@@ -88,8 +88,7 @@ bazel --batch build  //tensorflow/tools/pip_package:build_pip_package
 
 
 %install
-python3 -m pip install --root /usr/src/azl/BUILDROOT/tensorflow-2.15.0-1.azl3.x86_64 --no-deps --disable-pip-version-check --progress-bar off --verbose --ignore-installed --no-warn-script-location --no-index --no-cache-dir --find-links /usr/src/azl/BUILD/tensorflow-2.15.0/pyproject-wheeldir
-
+%{pyproject_install}
 
 
 %files -n python3-tensorflow
@@ -107,8 +106,8 @@ python3 -m pip install --root /usr/src/azl/BUILDROOT/tensorflow-2.15.0-1.azl3.x8
 
 
 %changelog
-* Tue Mar 05 2024 Riken Maharjan <rmaharjan@microsoft> - 2.15.0-1
-- Update to 2.15.0
+* Tue Mar 05 2024 Riken Maharjan <rmaharjan@microsoft> - 2.16.1-1
+- Update to 2.16.1
 
 * Wed Oct 11 2023 Mitch Zhu <mitchzhu@microsoft> - 2.11.1-1
 - Update to 2.11.1 to fix CVEs

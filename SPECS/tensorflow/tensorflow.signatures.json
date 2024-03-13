@@ -1,6 +1,6 @@
 {
     "Signatures": {
-     "tensorflow-2.15.0.tar.gz": "9cec5acb0ecf2d47b16891f8bc5bc6fbfdffe1700bdadc0d9ebe27ea34f0c220",
-     "tensorflow-2.15.0-cache3.tar.gz":"c89302c34fc47fab4bbc66340687634744e9297477157b7c12ff1f85e4967d9c"
+     "tensorflow-2.16.1.tar.gz": "c729e56efc945c6df08efe5c9f5b8b89329c7c91b8f40ad2bb3e13900bd4876d",
+     "tensorflow-2.16.1-cache.tar.gz":"7cee74df51003aca28e4bcb3a01ec12d9e7276f7e794ad5feee4930c6817fb55"
     }
    }
