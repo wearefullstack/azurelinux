@@ -8,7 +8,7 @@ Distribution:   Azure Linux
 Group:          Development/Languages/Python
 URL:            https://www.tensorflow.org/
 Source0:        https://github.com/tensorflow/tensorflow/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
-Source1:        %{name}-%{version}-cache3.tar.gz
+Source1:        %{name}-%{version}-cache.tar.gz
 BuildRequires:  bazel
 BuildRequires:  binutils
 BuildRequires:  build-essential
