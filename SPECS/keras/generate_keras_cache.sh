@@ -2,7 +2,7 @@
 
 # output = tensorflow-$TF_VERSION-cache.tar.gz
 # TensorFlow version to use
-TF_VERSION="2.15.0"
+TF_VERSION="3.0.0"
 
 docker build --build-arg TF_VERSION=$TF_VERSION -t tensorflow_image .
 

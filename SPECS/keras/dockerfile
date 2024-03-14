@@ -6,7 +6,7 @@ WORKDIR /root/
 
 #bazel version must match with the .bazelversion
 RUN tdnf -y install which build-essential tar bazel python3-devel pyproject-rpm-macros python3-numpy python3-pip python3-packaging python3-wheel python3-requests libstdc++-devel wget ca-certificates 
-RUN pip3 install tensorflow==2.15.0
+RUN pip3 install tensorflow==2.16.1
 # Create Working Directory
 RUN wget https://github.com/keras-team/keras/archive/refs/tags/v$K_VERSION.tar.gz
 RUN mkdir -p /usr/src/azl/BUILD
