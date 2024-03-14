@@ -94,7 +94,6 @@ bazel --batch build  //tensorflow/tools/pip_package:build_pip_package
 %files -n python3-tensorflow
 %license LICENSE
 %{python3_sitelib}/*
-%{_bindir}/estimator_ckpt_converter
 %{_bindir}/import_pb_to_tensorboard
 %{_bindir}/saved_model_cli
 %{_bindir}/tensorboard
