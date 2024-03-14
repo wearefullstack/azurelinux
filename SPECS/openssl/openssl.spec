@@ -9,7 +9,7 @@
 Summary: Utilities from the general purpose cryptography library with TLS implementation
 Name: openssl
 Version: 3.1.4
-Release: 3%{?dist}
+Release: 5%{?dist}
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
 Source: https://www.openssl.org/source/openssl-%{version}.tar.gz
@@ -163,7 +163,6 @@ export HASHBANGPERL=/usr/bin/perl
     enable-camellia \
     no-capieng \
     enable-cast \
-    no-chacha \
     enable-cms \
     no-comp \
     enable-ct \
@@ -181,7 +180,6 @@ export HASHBANGPERL=/usr/bin/perl
     no-mdc2 \
     no-md2 \
     enable-md4 \
-    no-poly1305 \
     enable-rc2 \
     enable-rc4 \
     enable-rc5 \
@@ -359,6 +357,9 @@ install -m644 %{SOURCE9} \
 %ldconfig_scriptlets libs
 
 %changelog
+* Mon Mar 18 2024 Brian Fjeldstad <bfjelds@microsoft.com> - 3.1.4-5
+- Support required for python-cryptography
+
 * Tue Mar 12 2024 Tobias Brick <tobiasb@microsoft.com> - 3.1.4-3
 - Remove dependencies for the libs sub-package to realign with azure linux 2.0
 
