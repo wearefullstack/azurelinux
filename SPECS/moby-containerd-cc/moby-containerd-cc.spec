@@ -5,8 +5,8 @@
 
 Summary: Industry-standard container runtime for confidential containers
 Name: moby-%{upstream_name}
-Version: 1.7.7
-Release: 2%{?dist}
+Version: 1.8.1
+Release: 1%{?dist}
 License: ASL 2.0
 Group: Tools/Container
 URL: https://www.containerd.io
@@ -80,6 +80,9 @@ fi
 %config(noreplace) %{_sysconfdir}/containerd/config.toml
 
 %changelog
+* Fri Mar 15 2024 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 1.8.1-1
+- Auto-upgrade to 1.8.1
+
 * Wed Feb 21 2024 Henry Beberman <henry.beberman@microsoft.com> - 1.7.7-2
 - Backport upstream patch for no-inlining seccomp and apparmor functions to fix tests.
 
