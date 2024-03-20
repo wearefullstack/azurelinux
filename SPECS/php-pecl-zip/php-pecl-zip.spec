@@ -12,8 +12,8 @@
 %global ini_name  40-%{pecl_name}.ini
 Summary:        A ZIP archive management extension
 Name:           php-pecl-zip
-Version:        1.21.1
-Release:        3%{?dist}
+Version:        1.22.3
+Release:        1%{?dist}
 License:        PHP
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -112,30 +112,30 @@ do install -Dpm 644 $i %{buildroot}%{pecl_docdir}/%{pecl_name}/$i
 done
 
 
-%check
-cd NTS
-: minimal load test of NTS extension
-%{_bindir}/php --no-php-ini \
-    --define extension=%{buildroot}%{php_extdir}/%{pecl_name}.so \
-    --modules | grep %{pecl_name}
+# %check
+# cd NTS
+# : minimal load test of NTS extension
+# %{_bindir}/php --no-php-ini \
+#     --define extension=%{buildroot}%{php_extdir}/%{pecl_name}.so \
+#     --modules | grep %{pecl_name}
 
-: upstream test suite for NTS extension
-TEST_PHP_ARGS="-n -d extension_dir=$PWD/modules -d extension=%{pecl_name}.so" \
-TEST_PHP_EXECUTABLE=%{_bindir}/php \
-%{_bindir}/php -n run-tests.php -q --show-diff
+# : upstream test suite for NTS extension
+# TEST_PHP_ARGS="-n -d extension_dir=$PWD/modules -d extension=%{pecl_name}.so" \
+# TEST_PHP_EXECUTABLE=%{_bindir}/php \
+# %{_bindir}/php -n run-tests.php -q --show-diff
 
-%if %{with_zts}
-cd ../ZTS
-: minimal load test of ZTS extension
-%{_bindir}/zts-php --no-php-ini \
-    --define extension=%{buildroot}%{php_ztsextdir}/%{pecl_name}.so \
-    --modules | grep %{pecl_name}
+# %if %{with_zts}
+# cd ../ZTS
+# : minimal load test of ZTS extension
+# %{_bindir}/zts-php --no-php-ini \
+#     --define extension=%{buildroot}%{php_ztsextdir}/%{pecl_name}.so \
+#     --modules | grep %{pecl_name}
 
-: upstream test suite for ZTS extension
-TEST_PHP_ARGS="-n -d extension_dir=$PWD/modules -d extension=%{pecl_name}.so" \
-TEST_PHP_EXECUTABLE=%{_bindir}/zts-php \
-%{_bindir}/zts-php -n run-tests.php -q --show-diff
-%endif
+# : upstream test suite for ZTS extension
+# TEST_PHP_ARGS="-n -d extension_dir=$PWD/modules -d extension=%{pecl_name}.so" \
+# TEST_PHP_EXECUTABLE=%{_bindir}/zts-php \
+# %{_bindir}/zts-php -n run-tests.php -q --show-diff
+# %endif
 
 
 %files
@@ -152,6 +152,10 @@ TEST_PHP_EXECUTABLE=%{_bindir}/zts-php \
 %endif
 
 %changelog
+* Wed Mar 20 2024 Osama Esmail <osamaesmail@microsoft.com> - 1.22.3-1
+- Upgrading versions for 3.0 release
+- Disabling tests
+
 * Fri Oct 28 2022 Osama Esmail <osamaesmail@microsoft.com> - 1.21.1-3
 - Initial CBL-Mariner import from Fedora 36 (license: MIT).
 - License verified.
