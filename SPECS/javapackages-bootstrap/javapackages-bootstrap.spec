@@ -304,7 +304,7 @@ do
 
   # ignore the patch provided by upstream javapackages-bootstrap as guava version has changed
   # and no longer compatible
-  if [ "$patch_name" == "0001-Fix-compilation-error-with-ECJ.patch" ]
+  if [[ "$patch_name" == "0001-Fix-compilation-error-with-ECJ.patch" || "$patch_name" == "0002-Remove-use-of-sun.misc.Unsafe.patch" ]]
   then
       continue
   fi
