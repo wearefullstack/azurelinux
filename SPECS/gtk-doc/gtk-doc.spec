@@ -2,7 +2,7 @@
 %define majver %(echo %{version} | cut -d. -f 1-2)
 Summary:        Program to generate documenation
 Name:           gtk-doc
-Version:        1.33.2
+Version:        1.34.0
 Release:        1%{?dist}
 License:        GPLv2+ and GFDL
 URL:            https://www.gtk.org/
@@ -62,6 +62,9 @@ mv doc/README doc/README.docs
 %{_libdir}/cmake/
 
 %changelog
+* Wed Mar 21 2024 Sean Dougherty <sdougherty@microsoft.com> - 1.34.0-1
+- Upgrade to version 1.34.0
+
 * Fri Jan 21 2022 Henry Li <lihl@microsoft.com> - 1.33.2-1
 - Upgrade to version 1.33.2
 - Add meson and python3-pygments as BR

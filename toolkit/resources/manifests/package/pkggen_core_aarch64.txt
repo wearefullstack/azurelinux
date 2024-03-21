@@ -162,7 +162,7 @@ perl-threads-shared-1.68-505.azl3.aarch64.rpm
 perl-vars-1.05-505.azl3.noarch.rpm
 perl-5.38.2-505.azl3.aarch64.rpm
 texinfo-7.0.3-1.azl3.aarch64.rpm
-gtk-doc-1.33.2-1.azl3.noarch.rpm
+gtk-doc-1.34.0-1.azl3.noarch.rpm
 autoconf-2.72-1.azl3.noarch.rpm
 automake-1.16.5-1.azl3.noarch.rpm
 openssl-3.1.4-5.azl3.aarch64.rpm

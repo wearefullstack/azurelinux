@@ -9,14 +9,19 @@ Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
 URL:            https://wiki.gnome.org/Projects/dconf
 Source0:        https://download.gnome.org/sources/dconf/%{majmin}/%{name}-%{version}.tar.xz
+
 Patch1:         dconf-override.patch
+
 BuildRequires:  bash-completion
 BuildRequires:  dbus-devel
 BuildRequires:  gcc
 BuildRequires:  glib2-devel >= %{glib2_version}
 BuildRequires:  gtk-doc
 BuildRequires:  meson
+BuildRequires:  pkgconfig(systemd)
+BuildRequires:  systemd-rpm-macros
 BuildRequires:  vala
+
 Requires:       dbus
 Requires:       glib2 >= %{glib2_version}
 
