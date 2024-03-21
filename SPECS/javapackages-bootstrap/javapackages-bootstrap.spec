@@ -52,7 +52,7 @@ Source1023:     easymock.tar.xz
 Source1024:     felix-parent-pom.tar.xz
 Source1025:     felix-utils.tar.xz
 Source1026:     fusesource-pom.tar.xz
-Source1027:     guava.tar.xz
+Source1027:     guava-32.1.3.tar.xz
 Source1028:     guice.tar.xz
 Source1029:     hamcrest.tar.xz
 Source1030:     httpcomponents-client.tar.xz
@@ -165,7 +165,7 @@ Provides:       bundled(easymock) = 4.2
 Provides:       bundled(felix-parent) = 7
 Provides:       bundled(felix-utils) = 1.11.6
 Provides:       bundled(fusesource-pom) = 1.12
-Provides:       bundled(guava) = 30.1
+Provides:       bundled(guava) = 32.1.3
 Provides:       bundled(google-guice) = 4.2.3
 Provides:       bundled(hamcrest) = 2.2
 Provides:       bundled(httpcomponents-client) = 4.5.11
@@ -364,6 +364,9 @@ sed -i 's|/usr/lib/jvm/java-11-openjdk|%{java_home}|' %{buildroot}%{launchersPat
 %doc AUTHORS
 
 %changelog
+* Fri Aug 11 2023 Riken Maharjan <rmaharjan@microsoft.com> - 1.5.0-5
+- Update Guava to fix CVE-2023-2976
+
 * Fri Aug 11 2023 Saul Paredes <saulparedes@microsoft.com> - 1.5.0-4
 - Patch plexus-archiver to fix CVE-2023-37460
 
