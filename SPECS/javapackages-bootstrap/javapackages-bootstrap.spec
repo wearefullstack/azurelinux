@@ -301,7 +301,13 @@ for patch_path in patches/*/*
 do
   package_name="$(echo ${patch_path} | cut -f2 -d/)"
   patch_name="$(echo ${patch_path} | cut -f3 -d/)"
-  
+
+  # ignore the patch provided by upstream javapackages-bootstrap as guava version has changed
+  # and no longer compatible
+  if [ "$patch_name" == "0001-Fix-compilation-error-with-ECJ.patch" ]
+  then
+      continue
+  fi
   pushd "downstream/${package_name}"
   # not applying some patches provided by javapackages-bootstrap
   # some upstream patches become not applicable when upgrading any of the sources
