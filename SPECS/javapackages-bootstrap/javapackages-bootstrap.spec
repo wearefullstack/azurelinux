@@ -298,10 +298,10 @@ pushd "downstream/plexus-archiver"
 popd
 
 # adding missing regex scenario
-# upstream usages jurand to replace problematic annotation and imports
-# azl3.0 usages it too. Workaround for older javapackages-bootstrap in CBL-mariner 2.0
+# upstream uses jurand to replace problematic annotation and imports
+# azl3.0 uses it too. Workaround for older javapackages-bootstrap in CBL-mariner 2.0
 pushd "project"
-sed -i 's/(@GwtCompatible|@GwtIncompatible|@VisibleForTesting|@Immutable|@CompatibleWith|@ReflectionSupport|@GuardedBy|@DoNotCall)\(.*?\)/(@GwtCompatible|@GwtIncompatible|@VisibleForTesting|@Immutable|@CompatibleWith|@ReflectionSupport|@GuardedBy|@DoNotCall)\(.*?"\)/ guava.xml
+sed -i 's/(@GwtCompatible|@GwtIncompatible|@VisibleForTesting|@Immutable|@CompatibleWith|@ReflectionSupport|@GuardedBy|@DoNotCall)\(.*?\)/(@GwtCompatible|@GwtIncompatible|@VisibleForTesting|@Immutable|@CompatibleWith|@ReflectionSupport|@GuardedBy|@DoNotCall)\(.*?"\)/' guava.xml
 popd
 
 for patch_path in patches/*/*
