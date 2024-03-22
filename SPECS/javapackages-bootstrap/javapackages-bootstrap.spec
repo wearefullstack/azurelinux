@@ -301,11 +301,11 @@ popd
 # upstream uses jurand to replace problematic annotation and imports
 # azl3.0 uses it too. Workaround for older javapackages-bootstrap in CBL-mariner 2.0
 pushd "project"
-sed -E 's|@DoNotCall)\\(.\*?|@DoNotCall)\\(.\*?\\"|' guava.xml
+sed  's/@DoNotCall)\\(.*?\\)/@DoNotCall(.*)/' guava.xml
 popd
 
 pushd "project"
-sed -i -E 's|@DoNotCall)\\(.\*?|@DoNotCall)\\(.\*?\\"|' guava.xml
+sed -i  's/@DoNotCall)\\(.*?\\)/@DoNotCall(.*)/' guava.xml
 popd
 
 for patch_path in patches/*/*
