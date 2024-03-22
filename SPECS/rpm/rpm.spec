@@ -11,7 +11,7 @@ Source0:        http://ftp.rpm.org/releases/%{name}-%(echo %{version} | cut -d'.
 Patch0:         remove-docs-from-makefile.patch
 Patch1:         define-RPM_LD_FLAGS.patch
 Patch2:         fix_RPM_GNUC_DEPRECATED_headers.patch
-Patch3:         fix-sqlite-squash.patch
+Patch3:         fix-sqlite-squashing.patch
 BuildRequires:  autoconf
 BuildRequires:  automake
 BuildRequires:  awk
