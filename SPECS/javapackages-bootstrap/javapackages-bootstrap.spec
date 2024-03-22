@@ -302,7 +302,9 @@ popd
 # azl3.0 uses it too. Workaround for older javapackages-bootstrap in CBL-mariner 2.0
 pushd "project"
 sed -i 's/@DoNotCall)\\(.*?\\)/@DoNotCall)(.*)/' guava.xml
+sed  's|version=30.1|version=32.1.3|' guava.properties
 sed -i 's|version=30.1|version=32.1.3|' guava.properties
+sed 's|ref=v@.@|ref=v@.@.@|' guava.properties
 sed -i 's|ref=v@.@|ref=v@.@.@|' guava.properties
 popd
 
