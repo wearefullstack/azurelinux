@@ -52,7 +52,7 @@ Source1023:     easymock.tar.xz
 Source1024:     felix-parent-pom.tar.xz
 Source1025:     felix-utils.tar.xz
 Source1026:     fusesource-pom.tar.xz
-Source1027:     guava-32.1.3.tar.xz
+Source1027:     guava-32.1.3b.tar.xz
 Source1028:     guice.tar.xz
 Source1029:     hamcrest.tar.xz
 Source1030:     httpcomponents-client.tar.xz
