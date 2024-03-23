@@ -1,10 +1,10 @@
 # When upgrading Prometheus, run `./generate_source_tarball.sh --pkgVersion <version>`
 # The script will spit out custom tarballs for `prometheus` and `promu` (More details in the script)
-%global promu_version 0.13.0
+%global promu_version 0.14.0
 Summary:        Prometheus monitoring system and time series database
 Name:           prometheus
-Version:        2.37.0
-Release:        11%{?dist}
+Version:        2.45.4
+Release:        1%{?dist}
 License:        Apache-2.0
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -131,6 +131,9 @@ fi
 %doc README.md RELEASE.md documentation
 
 %changelog
+* Fri Mar 22 2024 Osama Esmail <osamaesmail@microsoft.com> - 2.45.4-1
+- Upgrading for 3.0
+
 * Mon Oct 16 2023 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 2.37.0-11
 - Bump release to rebuild with go 1.20.10
 
