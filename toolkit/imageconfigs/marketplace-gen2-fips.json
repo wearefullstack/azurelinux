@@ -75,6 +75,11 @@
                     "Path": "postinstallscripts/remove-tdnf-cache.sh"
                 }
             ],
+			"FinalizeImageScripts": [
+				{
+					"Path": "finalizeimgscripts/asb_script.sh"
+				}
+			],
             "KernelOptions": {
                 "default": "kernel"
             },
