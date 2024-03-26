@@ -29,7 +29,7 @@
 Summary:        Linux Kernel
 Name:           kernel
 Version:        6.6.14.1
-Release:        5%{?dist}
+Release:        6%{?dist}
 License:        GPLv2
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -404,6 +404,9 @@ echo "initrd of kernel %{uname_r} removed" >&2
 %{_sysconfdir}/bash_completion.d/bpftool
 
 %changelog
+* Tue Mar 26 2024 Cameron Baird <cameronbaird@microsoft.com> - 6.6.14.1-6
+- Bring arm config into alignment with x86 for xen, hv, virtio
+
 * Tue Mar 19 2024 Dan Streetman <ddstreet@microsoft.com> - 6.6.14.1-5
 - remove unnecessary 10_kernel.cfg grub config file
 
