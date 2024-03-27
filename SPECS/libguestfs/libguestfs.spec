@@ -24,8 +24,8 @@
 
 Summary:        Access and modify virtual machine disk images
 Name:           libguestfs
-Version:        1.44.0
-Release:        21%{?dist}
+Version:        1.52.0
+Release:        1%{?dist}
 License:        LGPLv2+
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -40,13 +40,6 @@ Source5:        guestfish.sh
 Source6:        yum.conf.in
 # Maintainer script which helps with handling patches.
 Source8:        copy-patches.sh
-# Build cache RPMS configuration for tdnf downloading
-# This is a copy of toolkit/resources/manifests/package/local.repo
-Source9:        tdnf-build-cache.repo
-# Upstream patches not present in 1.44.0
-Patch0:         libguestfs-ocaml413compat.patch
-Patch1:         libguestfs-config-rpm.patch
-Patch2:         libguestfs-file-5.40.patch
 
 BuildRequires:  %{_bindir}/ping
 BuildRequires:  %{_bindir}/pod2text
@@ -139,8 +132,8 @@ BuildRequires:  ocaml-ounit-devel
 BuildRequires:  openssh-clients
 BuildRequires:  parted
 BuildRequires:  pciutils
-BuildRequires:  pcre
-BuildRequires:  pcre-devel
+BuildRequires:  pcre2
+BuildRequires:  pcre2-devel
 BuildRequires:  perl-devel
 BuildRequires:  perl-generators
 BuildRequires:  perl-libintl-perl
@@ -250,7 +243,7 @@ Requires:       libselinux
 Requires:       libvirt-daemon-driver-qemu
 Requires:       libvirt-daemon-driver-secret
 Requires:       libvirt-daemon-kvm >= 5.3.0
-Requires:       pcre
+Requires:       pcre2%{?_isa}
 # For qemu direct and libvirt backends.
 Requires:       qemu-kvm-core
 # For building the appliance.
@@ -727,7 +720,7 @@ for %{name}.
 %endif
 
 %prep
-%autosetup -p1
+%autosetup
 
 %if 0%{patches_touch_autotools}
 autoreconf -i
@@ -747,17 +740,11 @@ fi
 mv README README.orig
 sed 's/@VERSION@/%{version}/g' < %{SOURCE4} > README
 
-# Re-enable upstream cache and local repos
-mkdir -pv %{_sysconfdir}/yum.repos.d
-cp %{SOURCE9} %{_sysconfdir}/yum.repos.d/allrepos.repo
-
 # Download appliance, since our chroot TDNF config does not have `keepcache=1`
 # Must keep in sync with BRs under "Build requirements for the appliance"
 # Download to
 mkdir -pv %{_var}/cache/tdnf
-tdnf install --downloadonly -y --disablerepo=* \
-  --enablerepo=local-repo \
-  --enablerepo=upstream-cache-repo \
+tdnf install --disablerepo=* \
   --enablerepo=toolchain-repo \
   --alldeps --downloaddir %{_var}/cache/tdnf \
     acl \
@@ -804,7 +791,7 @@ tdnf install --downloadonly -y --disablerepo=* \
     openssh-clients \
     parted \
     pciutils \
-    pcre \
+    pcre2 \
     policycoreutils \
     procps \
     psmisc \
@@ -832,7 +819,6 @@ tdnf install --downloadonly -y --disablerepo=* \
 %ifnarch aarch64
     zfs-fuse \
 %endif
-
 
 mkdir cachedir repo
 find %{_var}/cache/tdnf -type f -name '*.rpm' -print0 | \
@@ -1236,11 +1222,12 @@ rm ocaml/html/.gitignore
 %endif
 
 %changelog
-* Mon Mar 11 2024 Dan Streetman <ddstreet@microsoft.com> - 1.44.0-21
-- update to build dep latest glibc-static version
+* Wed Mar 27 2024 BettyLakes <bettylakes@microsoft.com> - 1.52.0-1
+- Update to 1.52.0
+- Move to pcre2
 
 * Tue Feb 27 2024 Dan Streetman <ddstreet@microsoft.com> - 1.44.0-20
-- updated glibc-static buildrequires release
+- Updated glibc-static buildrequires release
 
 * Tue Nov 07 2023 Andrew Phelps <anphel@microsoft.com> - 1.44.0-19
 - Bump release to rebuild against glibc 2.38-1
