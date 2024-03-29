@@ -744,9 +744,13 @@ sed 's/@VERSION@/%{version}/g' < %{SOURCE4} > README
 # Must keep in sync with BRs under "Build requirements for the appliance"
 # Download to
 mkdir -pv %{_var}/cache/tdnf
-tdnf install --disablerepo=* \
-  --enablerepo=toolchain-repo \
-  --alldeps --downloaddir %{_var}/cache/tdnf \
+tdnf repolist
+tdnf install --downloadonly -y \
+    --disablerepo=* \
+    --enablerepo=local-repo \
+    --enablerepo=toolchain-repo \
+    --enablerepo=upstream-cache-repo \
+    --alldeps --downloaddir %{_var}/cache/tdnf \
     acl \
     attr \
     augeas-libs \
