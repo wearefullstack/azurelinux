@@ -124,6 +124,7 @@ BuildRequires:  ntfs-3g-system-compression
 BuildRequires:  ntfsprogs
 # For language bindings.
 BuildRequires:  ocaml
+BuildRequires:  ocaml-augeas-devel
 BuildRequires:  ocaml-findlib-devel
 BuildRequires:  ocaml-gettext-devel
 BuildRequires:  ocaml-hivex-devel
