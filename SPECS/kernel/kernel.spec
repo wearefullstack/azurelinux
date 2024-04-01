@@ -426,7 +426,7 @@ ln -sf linux-%{uname_r}.cfg /boot/mariner.cfg
 %{_sysconfdir}/bash_completion.d/bpftool
 
 %changelog
-* Thu Mar 28 2024 Sriram Nambakam <snambakam@microsoft.com> - 5.15.153.1-2
+* Tue Apr 02 2024 Sriram Nambakam <snambakam@microsoft.com> - 5.15.153.1-2
 - Set transparent hugepages to madvise
 
 * Wed Mar 27 2024 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.153.1-1

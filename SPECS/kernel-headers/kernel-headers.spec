@@ -11,8 +11,13 @@
 
 Summary:        Linux API header files
 Name:           kernel-headers
+<<<<<<< HEAD
 Version:        5.15.153.1
 Release:        1%{?dist}
+=======
+Version:        5.15.148.2
+Release:        3%{?dist}
+>>>>>>> ac0cfd992 (Update kernel-headers version to keep in step)
 License:        GPLv2
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -73,6 +78,9 @@ done
 %endif
 
 %changelog
+* Tue Apr 02 2024 Sriram Nambakam <snambakam@microsoft.com> - 5.15.153.1-2
+- set transparent hugepages to madvise
+
 * Wed Mar 27 2024 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 5.15.153.1-1
 - Auto-upgrade to 5.15.153.1
 
