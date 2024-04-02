@@ -11,13 +11,8 @@
 
 Summary:        Linux API header files
 Name:           kernel-headers
-<<<<<<< HEAD
 Version:        5.15.153.1
-Release:        1%{?dist}
-=======
-Version:        5.15.148.2
-Release:        3%{?dist}
->>>>>>> ac0cfd992 (Update kernel-headers version to keep in step)
+Release:        2%{?dist}
 License:        GPLv2
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
