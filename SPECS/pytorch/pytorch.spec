@@ -2,7 +2,7 @@
 Summary:        Tensors and Dynamic neural networks in Python with strong GPU acceleration.
 Name:           pytorch
 Version:        2.0.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 License:        BSD-3-Clause
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -60,6 +60,10 @@ You can reuse your favorite Python packages such as NumPy, SciPy and Cython to e
 %build
 export USE_CUDA=0
 export BUILD_CAFFE2=0
+# Limit MAX_JOBS on aarch64 to prevent OOM during build
+%ifarch aarch64
+export MAX_JOBS=1
+%endif
 %py3_build
 
 %install
