@@ -63,7 +63,7 @@ export USE_CUDA=0
 export BUILD_CAFFE2=0
 # Limit MAX_JOBS on aarch64 to prevent OOM during build
 %ifarch aarch64
-export MAX_JOBS=1
+export MAX_JOBS=2
 %endif
 %py3_build
 
