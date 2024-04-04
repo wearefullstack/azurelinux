@@ -11,7 +11,7 @@
                 "packagelists/selinux-full.json"
             ],
             "KernelCommandLine": {
-                "SELinux": "permissive"
+                "SELinux": ""
             },
             "KernelOptions": {
                 "default": "kernel"
