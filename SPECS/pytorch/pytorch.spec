@@ -61,9 +61,10 @@ You can reuse your favorite Python packages such as NumPy, SciPy and Cython to e
 %build
 export USE_CUDA=0
 export BUILD_CAFFE2=0
+export MAX_JOBS=4
 # Limit MAX_JOBS on aarch64 to prevent OOM during build
 %ifarch aarch64
-export MAX_JOBS=2
+export MAX_JOBS=4
 %endif
 %py3_build
 
