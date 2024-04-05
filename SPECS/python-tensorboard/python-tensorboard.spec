@@ -6,8 +6,8 @@ TensorBoard is a suite of web applications for inspecting and understanding your
 
 Summary:        TensorBoard is a suite of web applications for inspecting and understanding your TensorFlow runs and graphs
 Name:           python-%{pypi_name}
-Version:        2.11.0
-Release:        3%{?dist}
+Version:        2.16.2
+Release:        1%{?dist}
 License:        ASL 2.0
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -15,16 +15,21 @@ URL:            https://github.com/tensorflow/tensorboard
 Source0:        https://github.com/tensorflow/tensorboard/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz
 Source1:        %{name}-%{version}-cache.tar.gz
 BuildRequires:  python3-setuptools
+BuildRequires:  which
 BuildRequires:  python3-pip
 BuildRequires:  python3-wheel
+BuildRequires:  python3-absl-py
+BuildRequires:  git
 BuildRequires:  python3-six
+BuildRequires:  python3-numpy
 BuildRequires:  bazel
-BuildRequires:  python3-tf-nightly
 BuildRequires:  gcc
 BuildRequires:  build-essential
-BuildRequires:  protobuf
+BuildRequires:  python3-protobuf
 BuildRequires:  zlib
 BuildRequires:  python3-virtualenv
+BuildRequires:  python3-werkzeug
+BuildRequires:  python3-six
 ExclusiveArch:  x86_64
 
 
@@ -41,7 +46,6 @@ Requires:   python3-numpy
 Requires:   python3-protobuf
 Requires:   python3-requests
 Requires:   python3-setuptools
-Requires:   python3-tensorflow-estimator
 Requires:   python3-werkzeug
 Requires:   python3-wheel
 
@@ -58,10 +62,11 @@ Summary:        %{summary}
 %autosetup -p1 -n tensorboard-%{version}
 
 %build
-tar -xf %{SOURCE1} -C /root/
+MD5_HASH=$(echo -n $PWD | md5sum | awk '{print $1}')
+mkdir -p /root/.cache/bazel/_bazel_$USER/$MD5_HASH/external
+tar -xvf %{SOURCE1} -C /root/.cache/bazel/_bazel_$USER/$MD5_HASH/external
 
-ln -s /usr/bin/python3 /usr/bin/python
-
+ln -s %{_bindir}/python3 %{_bindir}/python
 #tensorboard-data-server
 pushd tensorboard/data/server/pip_package
 python3 setup.py -q bdist_wheel
@@ -70,18 +75,6 @@ mkdir -p pyproject-wheeldir/ && cp tensorboard/data/server/pip_package/dist/*.wh
 
 #tensorboard built using bazel
 bazel --batch build //tensorboard/pip_package:build_pip_package
-#cache
-# ---------
-# steps to create the cache tar. network connection is required to create the cache.
-#----------------------------------
-# bazel clean
-# pushd /root
-# tar -czvf %{name}-%{version}-cache.tar.gz .cache  #creating the cache using the /root/.cache directory
-# popd
-# mv /root/%{name}-%{version}-cache.tar.gz /usr/
-
-#tensorboard package build script build_pip_package.sh doesn't assign RUNFILES variable successfully.
-sed -i 's/output="$1"/output="$1"\n \ RUNFILES="$(CDPATH="" cd -- "$0.runfiles" \&\& pwd)"/' bazel-bin/tensorboard/pip_package/build_pip_package
 bazel-bin/tensorboard/pip_package/build_pip_package .
 mv %{pypi_name}-%{version}-*.whl pyproject-wheeldir/
 
@@ -102,6 +95,9 @@ mv %{pypi_name}-%{version}-*.whl pyproject-wheeldir/
 %{python3_sitelib}/tensorboard_data_server*
 
 %changelog
+* Thu Apr 04 2024 Riken Maharjan <rmaharjan@microsoft.com> - 2.16.2-1
+- Upgrade tensorboard to 2.16.2.
+
 * Fri Feb 16 2024 Andrew Phelps <anphel@microsoft.com> - 2.11.0-3
 - Relax version requirements
 

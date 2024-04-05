@@ -1,7 +1,7 @@
 Summary:        TensorFlow is an open source machine learning framework for everyone.
 Name:           tensorflow
 Version:        2.16.1
-Release:        1%{?dist}
+Release:        3%{?dist}
 License:        ASL 2.0
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -51,6 +51,7 @@ Requires:       python3-six
 Requires:       python3-termcolor
 Requires:       python3-typing-extensions
 Requires:       python3-wrapt
+Requires:       python3-tensorboard
 
 %description -n python3-tensorflow
 Python 3 version.
@@ -91,6 +92,9 @@ bazel --batch build  //tensorflow/tools/pip_package:build_pip_package
 %{_bindir}/toco_from_protos
 
 %changelog
+* Thur Apr 04 2024 Riken Maharjan <rmaharjan@microsoft> - 2.16.1-3
+- Add tensorboard as runtime req.
+
 * Wed Mar 27 2024 Riken Maharjan <rmaharjan@microsoft> - 2.16.1-2
 - Remove Unnecessary requirements and add keras as runtime req
 
