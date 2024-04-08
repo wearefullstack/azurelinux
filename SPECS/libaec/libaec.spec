@@ -1,6 +1,6 @@
 Summary:        Adaptive Entropy Coding library
 Name:           libaec
-Version:        1.0.6
+Version:        1.1.3
 Release:        1%{?dist}
 License:        BSD-2-Clause
 Vendor:         Microsoft Corporation
@@ -66,7 +66,7 @@ make -C build test CTEST_OUTPUT_ON_FAILURE=1
 
 %changelog
 * Mon Jan 22 2024 Sindhu Karri <lakarri@microsoft.com> - 1.0.6-1
-- Version bump to 1.0.6
+- Version bump to 1.1.3
 - Updated the name of license file
 - Remove the static libraries and package the cmake files in the devel package
 
