@@ -1,6 +1,5 @@
 {
     "packages": [
-        "cloud-init",
-        "cloud-utils-growpart"
+        "cloud-init"
     ]
 }
