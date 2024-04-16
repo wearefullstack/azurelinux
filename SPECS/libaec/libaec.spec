@@ -55,9 +55,7 @@ make -C build test CTEST_OUTPUT_ON_FAILURE=1
 %files
 %doc README.md README.SZIP CHANGELOG.md
 %license LICENSE.txt doc/patent.txt
-%{_bindir}/aec
 %{_libdir}/lib*.so.*
-%{_mandir}/man1/aec.*
 
 %files devel
 %{_includedir}/*.h
@@ -67,8 +65,6 @@ make -C build test CTEST_OUTPUT_ON_FAILURE=1
 %changelog
 * Mon Jan 22 2024 Sindhu Karri <lakarri@microsoft.com> - 1.0.6-1
 - Version bump to 1.1.3
-- Updated the name of license file
-- Remove the static libraries and package the cmake files in the devel package
 
 * Tue Nov 01 2022 Riken Maharjan <rmaharjan@microsoft.com> - 1.0.4-5
 - Move to core
