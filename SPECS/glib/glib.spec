@@ -2,7 +2,7 @@
 Summary:        Low-level libraries useful for providing data structure handling for C.
 Name:           glib
 Version:        2.78.1
-Release:        3%{?dist}
+Release:        4%{?dist}
 License:        LGPLv2+
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -23,7 +23,7 @@ BuildRequires:  which
 BuildRequires:  python3-pygments
 Requires:       libffi
 Requires:       libselinux
-Requires:       pcre2-devel
+Requires:       pcre2
 Provides:       glib2 = %{version}-%{release}
 Provides:       glib2%{?_isa} = %{version}-%{release}
 Provides:       glib2-static = %{version}-%{release}
@@ -123,6 +123,9 @@ touch %{buildroot}%{_libdir}/gio/modules/giomodule.cache
 %doc %{_datadir}/gtk-doc/html/*
 
 %changelog
+* Thu Apr 18 2024 Andrew Phelps <anphel@microsoft.com> - 2.78.1-4
+- Change runtime requires to pcre2
+
 * Wed Apr 03 2024 Betty Lakes <bettylakes@microsoft.com> - 2.78.1-3
 - Move to pcre2
 
