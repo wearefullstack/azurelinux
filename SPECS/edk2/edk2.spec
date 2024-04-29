@@ -670,11 +670,13 @@ done
 %{_datadir}/qemu/firmware/40-edk2-ovmf-ia32-sb.json
 %{_datadir}/qemu/firmware/50-edk2-ovmf-ia32-nosb.json
 
+%if %{with experimental}
 %files experimental
 %common_files
 %doc README.experimental
 %dir %{_datadir}/%{name}/experimental
 %{_datadir}/%{name}/experimental/*.fd
+%{_datadir}/%{name}/experimental/*.pcr
 %endif
 
 %files ovmf-xen
