@@ -1,0 +1,89 @@
+{
+    "Disks": [
+        {
+            "PartitionTableType": "gpt",
+            "MaxSize": 5000,
+            "Artifacts": [
+                {
+                    "Name": "cblmariner-gen2",
+                    "Type": "vhdx"
+                }
+            ],
+            "Partitions": [
+                {
+                    "ID": "efi",
+                    "Flags": [
+                        "esp",
+                        "boot"
+                    ],
+                    "Start": 1,
+                    "End": 65,
+                    "FsType": "fat32"
+                },
+                {
+                    "ID": "boot",
+                    "Start": 65,
+                    "End": 565,
+                    "FsType": "ext4"
+                },
+                {
+                    "ID": "rootfs",
+                    "Name": "rootfs",
+                    "Start": 565,
+                    "End": 0,
+                    "FsType": "ext4"
+                }
+            ]
+        }
+    ],
+    "SystemConfigs": [
+        {
+            "Name": "Standard",
+            "BootType": "efi",
+            "PartitionSettings": [
+                {
+                    "ID": "efi",
+                    "MountPoint": "/boot/efi",
+                    "MountOptions" : "umask=0077"
+                },
+                {
+                    "ID": "boot",
+                    "MountPoint": "/boot"
+                },
+                {
+                    "ID": "rootfs",
+                    "MountPoint": "/"
+                }
+            ],
+            "PackageLists": [
+                "packagelists/azure-minified-packages.json"
+            ],
+            "AdditionalFiles": {
+                "additionalconfigs/cloud-init.cfg": "/etc/cloud/cloud.cfg",
+                "additionalconfigs/chrony.cfg": "/etc/chrony.conf",
+                "additionalconfigs/wait-for-ptp-hyperv.conf": "/etc/systemd/system/chronyd.service.d/wait-for-ptp-hyperv.conf",
+                "additionalconfigs/51-ptp-hyperv.rules": "/etc/udev/rules.d/51-ptp-hyperv.rules"
+            },
+            "PostInstallScripts": [
+                {
+                    "Path": "additionalconfigs/configure-systemd-networkd.sh"
+                }
+            ],
+            "KernelOptions": {
+                "default": "kernel"
+            },
+            "KernelCommandLine": {
+                "ExtraCommandLine": "console=tty0 console=ttyS0=9800 rd.shell=0 rd.emergency=reboot"
+            },
+            "Hostname": "azurelinux",
+            "Users": [
+                {
+                    "Name": "root",
+                    "Password": "$6$20m6y6nwlU1K$hKgyNYjVSKPJOTFaAzAf/fwACUV/dZ1NPy5cGNkhvRzKJiKDBKofuvDpdl81Jak4ep756DnZmVm7JfGRMO/n90",
+                    "PasswordHashed": true,
+                    "_comment": "The password is 'p@ssw0rd', this should be regenerated with 'openssl passwd -6 -salt <YOUR_SALT> <YOUR_PASSWORD>', or use the json key 'SSHPubKeyPaths' to use an SSH key for login"
+                }
+            ]
+        }
+    ]
+}
