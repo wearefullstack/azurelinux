@@ -61,9 +61,7 @@
         "systemd-resolved",
         "systemd-udev",
         "tar",
-        "tzdata",
         "util-linux",
-        "which",
         "initramfs"
     ]
 }
