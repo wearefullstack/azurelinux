@@ -27,8 +27,6 @@
         "grep",
         "gzip",
         "azurelinux-release",
-        "azurelinux-repos-ms-non-oss-preview",
-        "azurelinux-repos-preview",
         "ncurses-libs",
         "openssl",
         "readline",
