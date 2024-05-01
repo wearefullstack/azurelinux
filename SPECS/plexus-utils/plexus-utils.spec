@@ -1,3 +1,5 @@
+%bcond_without bootstrap
+
 Summary:        Plexus Common Utilities
 #
 # spec file for package plexus-utils
@@ -15,8 +17,8 @@ Summary:        Plexus Common Utilities
 # Please submit bugfixes or comments via https://bugs.opensuse.org/
 #
 Name:           plexus-utils
-Version:        3.3.0
-Release:        4%{?dist}
+Version:        4.0.1
+Release:        1%{?dist}
 License:        Apache-2.0
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -24,10 +26,15 @@ Group:          Development/Libraries/Java
 URL:            https://codehaus-plexus.github.io/plexus-utils/
 Source0:        https://github.com/codehaus-plexus/%{name}/archive/%{name}-%{version}.tar.gz
 Source1:        http://apache.org/licenses/LICENSE-2.0.txt
-BuildRequires:  javapackages-bootstrap
-BuildRequires:  fdupes
-BuildRequires:  javapackages-local-bootstrap
 BuildArch:      noarch
+BuildRequires:  fdupes
+
+%if %{with bootstrap}
+BuildRequires:  javapackages-bootstrap
+BuildRequires:  javapackages-local-bootstrap
+%else
+BuildRequires:  mvn(org.codehaus.plexus:plexus:pom:)
+%endif
 
 %description
 Plexus contains end-to-end developer tools for writing applications.
@@ -48,15 +55,11 @@ Javadoc for %{name}.
 
 cp %{SOURCE1} .
 
-%pom_remove_parent .
-%pom_xpath_inject "pom:project" "<groupId>org.codehaus.plexus</groupId>" .
-
-	
 %mvn_file : plexus/utils
 %mvn_alias : plexus:plexus-utils
  
 %build
-%mvn_build -f -- -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 -Dmaven.javadoc.source=17 -Dmaven.compiler.release=17
+%mvn_build -f
  
 %install
 %mvn_install
@@ -69,6 +72,9 @@ cp %{SOURCE1} .
 %{_javadocdir}/%{name}
 
 %changelog
+* Wed May 01 2024 Betty Lakes <bettylakes@microsoft.com> - 4.0.1-1
+- Upgrade to 4.0.1
+
 * Fri Feb 23 2024 Riken Maharjan <rmaharjan@microsoft.com> - 3.3.0-4
 - Rebuilt with msopenjdk-17 and maven
 - change source, target
