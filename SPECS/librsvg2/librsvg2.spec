@@ -1,3 +1,5 @@
+%bcond_without check
+
 # https://github.com/rust-lang/rust/issues/47714
 %undefine _strict_symbol_defs_build
 
@@ -5,15 +7,31 @@
 %global _configure_disable_silent_rules 1
 %global cairo_version 1.16.0
 
+# Use bundled deps as we don't ship the exact right versions for all the
+# required rust libraries
+%if 0%{?rhel}
+%global bundled_rust_deps 1
+%else
+%global bundled_rust_deps 0
+%endif
+
 Summary:        An SVG library based on cairo
 Name:           librsvg2
-Version:        2.50.3
-Release:        4%{?dist}
+Version:        2.58.0
+Release:        1%{?dist}
 License:        LGPLv2+
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
 URL:            https://wiki.gnome.org/Projects/LibRsvg
-Source0:        https://download.gnome.org/sources/librsvg/2.50/librsvg-%{version}.tar.xz
+Source0:        https://download.gnome.org/sources/librsvg/2.57/librsvg-%{version}.tar.xz
+# upstream dropped vendoring since 2.55.0 (GNOME/librsvg#718), to create:
+#   tar xf librsvg-%%{version}.tar.xz ; pushd librsvg-%%{version} ; \
+#   cargo vendor && tar Jcvf ../librsvg-2.57.3-vendor.tar.xz vendor/ ; popd
+Source1:        librsvg-%{version}-cargo.tar.xz
+# Patches to build with Fedora-packaged rust crates
+# Patch0:          0001-Fedora-Drop-dependencies-required-for-benchmarking.patch
+# Patch1:          upgrade-lopdf-0.32.patch
+BuildRequires:  %{_bindir}/rst2man
 BuildRequires:  cairo-devel >= %{cairo_version}
 BuildRequires:  cairo-gobject-devel >= %{cairo_version}
 BuildRequires:  chrpath
@@ -25,11 +43,16 @@ BuildRequires:  gobject-introspection-devel
 BuildRequires:  harfbuzz-devel >= 2.0.0
 BuildRequires:  make
 BuildRequires:  pkgconfig
+BuildRequires:  redhat-rpm-config
 BuildRequires:  rust
 BuildRequires:  vala
 BuildRequires:  vala-devel
 BuildRequires:  vala-tools
+BuildRequires:  pkgconfig(cairo) >= %{cairo_version}
+BuildRequires:  pkgconfig(cairo-gobject) >= %{cairo_version}
 BuildRequires:  pkgconfig(cairo-png) >= %{cairo_version}
+BuildRequires:  pkgconfig(fontconfig)
+BuildRequires:  pkgconfig(gdk-pixbuf-2.0)
 BuildRequires:  pkgconfig(gio-2.0)
 BuildRequires:  pkgconfig(gio-unix-2.0)
 BuildRequires:  pkgconfig(glib-2.0)
@@ -61,11 +84,27 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 This package provides extra utilities based on the librsvg library.
 
 %prep
-%autosetup -n librsvg-%{version} -p1 -Sgit
+%autosetup -n librsvg-%{version} -p1 %{?bundled_rust_deps:-a1}
+%if 0%{?bundled_rust_deps}
+# Use the bundled deps
+%cargo_prep -v vendor
+%else
+# No bundled deps
+rm -vrf vendor .cargo Cargo.lock
+sed -i Makefile.am -e 's/$(CARGO) --locked/$(CARGO)/'
+
+mkdir -p %{buildroot}/.cargo
+pushd %{buildroot}/.cargo
+tar -vxf %{SOURCE1} --no-same-owner
+popd
+%endif
 
 %build
+export CARGO_HOME=%{buildroot}/.cargo
+export CARGO_NET_OFFLINE=true
 %configure --disable-static  \
            --disable-gtk-doc \
+           --docdir=%{_pkgdocdir} \
            --enable-introspection \
            --enable-vala
 %make_build
@@ -111,6 +150,9 @@ rm -vrf %{buildroot}%{_docdir}
 %{_mandir}/man1/rsvg-convert.1*
 
 %changelog
+* Wed Apr 24 2024 Betty Lakes <bettylakes@microsoft.com> - 2.58.0-1
+- Upgrade to 2.58.0
+
 * Thu Sep 07 2023 Daniel McIlvaney <damcilva@microsoft.com> - 2.50.3-4
 - Bump package to rebuild with rust 1.72.0
 

@@ -1,5 +1,6 @@
 {
  "Signatures": {
-  "librsvg-2.50.3.tar.xz": "a4298a98e3a95fdd73c858c17d4dd018525fb09dbb13bbd668a0c2243989e958"
+  "librsvg-2.58.0-cargo.tar.xz": "5c8f199785177a7ae98ec99902d580d0b33f27e94a04d4c32d8f03b6e5a7def5",
+  "librsvg-2.58.0.tar.xz": "d7c444a926406b59790be0deae196e18ed26059da573fa1aa9ec9ca7658a559c"
  }
 }
