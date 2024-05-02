@@ -10,6 +10,8 @@ URL:            https://launchpad.net/apparmor
 Source0:        https://launchpad.net/apparmor/3.0/3.0.4/+download/%{name}-%{version}.tar.gz
 Patch1:         apparmor-service-start-fix.patch
 Patch2:         CVE-2023-50471.patch
+Patch3:         60ff122ef5862d04b39b150541459e7f5e35add8.patch
+Patch4:         7e4d5dabe7a9b754c601f214e65b544e67ba9f59.patch
 # CVE-2016-1585 has no upstream fix as of 2020/09/28
 Patch100:       CVE-2016-1585.nopatch
 BuildRequires:  apr
@@ -48,11 +50,9 @@ BuildRequires:  python3-xml
 BuildRequires:  swig
 BuildRequires:  systemd-rpm-macros
 BuildRequires:  which
-%if %{with_check}
 BuildRequires:  python3-pip
 BuildRequires:  python3-psutil
 BuildRequires:  python3-dbus
-%endif
 
 %description
 AppArmor is a file and network mandatory access control
