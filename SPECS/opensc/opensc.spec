@@ -85,6 +85,8 @@ CFLAGS="$CFLAGS -Wstrict-aliasing=2 -Wno-deprecated-declarations"
 
 %check
 make check
+# TOBIASB: TEMP: Dump test logs to output so we can see them on the build machine.
+find . -type f -name 'test-suite.log' -exec echo "dumping file {}" \; -exec echo "---" \; -exec cat {} \; -exec echo "---" \; -exec echo \;
 
 %install
 %make_install
