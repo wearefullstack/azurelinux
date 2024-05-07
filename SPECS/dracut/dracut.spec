@@ -4,7 +4,7 @@
 Summary:        dracut to create initramfs
 Name:           dracut
 Version:        059
-Release:        16%{?dist}
+Release:        17%{?dist}
 # The entire source code is GPLv2+
 # except install/* which is LGPLv2+
 License:        GPLv2+ AND LGPLv2+
@@ -18,7 +18,7 @@ Source1:        https://www.gnu.org/licenses/lgpl-2.1.txt
 Source3:        megaraid.conf
 Source4:        20overlayfs/module-setup.sh
 Source5:        20overlayfs/overlayfs-mount.sh
-Source6:        defaults.conf
+Source6:        virt-defaults.conf
 
 Patch:          fix-functions-Avoid-calling-grep-with-PCRE-P.patch
 # allow-liveos-overlay-no-user-confirmation-prompt.patch has been introduced by
@@ -94,6 +94,14 @@ Requires:       %{name} = %{version}-%{release}
 %description overlayfs
 This package contains dracut module needed to build an initramfs with OverlayFS support.
 
+%package virt-defaults
+Summary:        dracut configuration needed to build an initramfs with support for virtualization
+Requires:       %{name} = %{version}-%{release}
+
+%description virt-defaults
+This package contains dracut configuration needed to build 
+an initramfs with support for xen, Hyper-V, and qemu virtualization scenarios.
+
 %prep
 %autosetup -p1
 cp %{SOURCE1} .
@@ -132,7 +140,7 @@ install -m 0644 dracut.conf.d/fips.conf.example %{buildroot}%{_sysconfdir}/dracu
 > %{buildroot}%{_sysconfdir}/system-fips
 
 install -m 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/dracut.conf.d/50-megaraid.conf
-install -m 0644 %{SOURCE6} %{buildroot}%{_sysconfdir}/dracut.conf.d/00-defaults.conf
+install -m 0644 %{SOURCE6} %{buildroot}%{_sysconfdir}/dracut.conf.d/10-virt-defaults.conf
 
 mkdir -p %{buildroot}%{dracutlibdir}/modules.d/20overlayfs/
 install -p -m 0755 %{SOURCE4} %{buildroot}%{dracutlibdir}/modules.d/20overlayfs/
@@ -168,7 +176,6 @@ ln -srv %{buildroot}%{_bindir}/%{name} %{buildroot}%{_sbindir}/%{name}
 %{dracutlibdir}/skipcpio
 %{dracutlibdir}/%{name}-util
 %config(noreplace) %{_sysconfdir}/%{name}.conf
-%config %{_sysconfdir}/dracut.conf.d/00-defaults.conf
 %dir %{_sysconfdir}/%{name}.conf.d
 %dir %{dracutlibdir}/%{name}.conf.d
 %dir %{_var}/opt/%{name}/log
@@ -215,7 +222,14 @@ ln -srv %{buildroot}%{_bindir}/%{name} %{buildroot}%{_sbindir}/%{name}
 %dir %{_sharedstatedir}/%{name}
 %dir %{_sharedstatedir}/%{name}/overlay
 
+%files virt-defaults
+%defattr(-,root,root,0755)
+%{_sysconfdir}/dracut.conf.d/10-virt-defaults.conf
+
 %changelog
+* Wed May 07 2024 Cameron Baird <cameronbaird@microsoft.com> - 059-17
+- Move defaults.conf to dracut-virt-defaults subpackage
+
 * Wed Mar 27 2024 Cameron Baird <cameronbaird@microsoft.com> - 059-16
 - Remove x86-specific xen-acpi-processor driver from defaults
 
