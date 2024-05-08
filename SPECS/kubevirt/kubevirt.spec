@@ -19,7 +19,7 @@
 Summary:        Container native virtualization
 Name:           kubevirt
 Version:        0.59.0
-Release:        18%{?dist}
+Release:        19%{?dist}
 License:        ASL 2.0
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -38,6 +38,7 @@ Patch5:         Hp-volume-pod-should-respect-blockdevices.patch
 Patch6:         CVE-2022-41723.patch
 Patch7:         CVE-2024-24786.patch
 Patch8:         CVE-2023-45288.patch
+Patch9:         add-vmi-annotation-to-enable-qemu-tracing.patch
 %global debug_package %{nil}
 BuildRequires:  glibc-devel
 BuildRequires:  glibc-static >= 2.35-7%{?dist}
@@ -217,6 +218,9 @@ install -p -m 0644 cmd/virt-handler/nsswitch.conf %{buildroot}%{_datadir}/kube-v
 %{_bindir}/virt-tests
 
 %changelog
+* Wed May 08 2024 bfjelds@microsoft.com <bfjelds@microsoft.com> - 0.59.0-19
+- Enable qemu tracing through kubevirt annotations
+
 * Thu Apr 18 2024 chrisgun@microsoft.com <chrisgun@microsoft.com> - 0.59.0-18
 - Fix for CVE-2023-45288
 
