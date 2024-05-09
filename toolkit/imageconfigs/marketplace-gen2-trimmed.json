@@ -7,6 +7,10 @@
                 {
                     "Name": "cblmariner-gen2",
                     "Type": "vhdx"
+                },
+                {
+                    "Name": "cblmariner-gen2",
+                    "Type": "vhd"
                 }
             ],
             "Partitions": [
@@ -67,13 +71,16 @@
             "PostInstallScripts": [
                 {
                     "Path": "additionalconfigs/configure-systemd-networkd.sh"
+                },
+                {
+                    "Path": "additionalconfigs/trim.sh"
                 }
             ],
             "KernelOptions": {
                 "default": "kernel"
             },
             "KernelCommandLine": {
-                "ExtraCommandLine": "console=tty0 console=ttyS0=9800 rd.shell=0 rd.emergency=reboot"
+                "ExtraCommandLine": "console=tty0 console=ttyS0=9800 rd.shell=0 rd.emergency=reboot audit=0"
             },
             "Hostname": "azurelinux",
             "Users": [
