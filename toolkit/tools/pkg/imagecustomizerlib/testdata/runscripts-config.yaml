@@ -1,6 +1,0 @@
-scripts:
-  postCustomization:
-  - path: scripts/postcustomizationscript.sh
-
-  finalizeCustomization:
-  - path: scripts/finalizecustomizationscript.sh

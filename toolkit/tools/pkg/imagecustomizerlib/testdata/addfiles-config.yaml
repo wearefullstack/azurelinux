@@ -1,3 +1,0 @@
-os:
-  additionalFiles:
-    files/a.txt: /a.txt
