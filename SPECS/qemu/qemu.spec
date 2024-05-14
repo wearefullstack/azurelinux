@@ -1784,8 +1784,8 @@ popd
 # endif !tools_only
 %endif
 # Check trace stap
-%{buildroot}%{_bindir}/qemu-trace-stap list qemu-system-x86_64
-%{buildroot}%{_bindir}/qemu-trace-stap run qemu-system-x86_64 'migrat*'
+%{buildroot}%{_bindir}/qemu-trace-stap list %{buildroot}%{_bindir}/qemu-system-x86_64
+%{buildroot}%{_bindir}/qemu-trace-stap run %{buildroot}%{_bindir}/qemu-system-x86_64 'migrat*'
 
 
 %post -n qemu-guest-agent
