@@ -1382,7 +1382,7 @@ run_configure() {
         --with-suffix="%{name}" \
         --firmwarepath="%{firmwaredirs}" \
         --meson="%{__meson}" \
-        --enable-trace-backends=dtrace,simple \
+        --enable-trace-backends=dtrace,simple,log \
         --with-coroutine=ucontext \
         --with-git=git \
         --tls-priority=@QEMU,SYSTEM \
