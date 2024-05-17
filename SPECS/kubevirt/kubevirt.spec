@@ -29,16 +29,17 @@ Source0:        https://github.com/kubevirt/kubevirt/archive/refs/tags/v%{versio
 Source1:        disks-images-provider.yaml
 # Nexus team needs these to-be-upstreamed patches for the operator Edge to work
 # correctly.
-Patch0:         Cleanup-housekeeping-cgroup-on-vm-del.patch
-Patch1:         Allocate-2-cpu-for-the-emulator-thread.patch
-Patch2:         Hotplug_detach_grace_period.patch
-Patch3:         CVE-2023-44487.patch
-Patch4:         CVE-2024-21626.patch
-Patch5:         Hp-volume-pod-should-respect-blockdevices.patch
-Patch6:         CVE-2022-41723.patch
-Patch7:         CVE-2024-24786.patch
-Patch8:         CVE-2023-45288.patch
-Patch9:         add-vmi-annotation-to-enable-qemu-tracing.patch
+Patch00:        Cleanup-housekeeping-cgroup-on-vm-del.patch
+Patch01:        Allocate-2-cpu-for-the-emulator-thread.patch
+Patch02:        Hotplug_detach_grace_period.patch
+Patch03:        CVE-2023-44487.patch
+Patch04:        CVE-2024-21626.patch
+Patch05:        Hp-volume-pod-should-respect-blockdevices.patch
+Patch06:        CVE-2022-41723.patch
+Patch07:        CVE-2024-24786.patch
+Patch08:        CVE-2023-45288.patch
+Patch09:        add-vmi-annotation-to-enable-qemu-tracing.patch
+Patch10:        add-debug-logging.patch
 %global debug_package %{nil}
 BuildRequires:  glibc-devel
 BuildRequires:  glibc-static >= 2.35-7%{?dist}
