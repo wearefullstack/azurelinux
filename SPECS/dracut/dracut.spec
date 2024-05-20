@@ -212,11 +212,6 @@ ln -srv %{buildroot}%{_bindir}/%{name} %{buildroot}%{_sbindir}/%{name}
 %{dracutlibdir}/skipcpio
 %{dracutlibdir}/%{name}-util
 %config(noreplace) %{_sysconfdir}/%{name}.conf
-%config %{_sysconfdir}/dracut.conf.d/00-hostonly.conf
-%config %{_sysconfdir}/dracut.conf.d/00-hyperv.conf
-%config %{_sysconfdir}/dracut.conf.d/00-virtio.conf
-%config %{_sysconfdir}/dracut.conf.d/00-vrf.conf
-%config %{_sysconfdir}/dracut.conf.d/00-xen.conf
 %dir %{_sysconfdir}/%{name}.conf.d
 %dir %{dracutlibdir}/%{name}.conf.d
 %dir %{_var}/opt/%{name}/log
@@ -249,15 +244,15 @@ ln -srv %{buildroot}%{_bindir}/%{name} %{buildroot}%{_sbindir}/%{name}
 
 %files hostonly
 %defattr(-,root,root,0755)
-%{_sysconfdir}/dracut.conf.d/00-hostonly.conf
+%config %{_sysconfdir}/dracut.conf.d/00-hostonly.conf
 
 %files hyperv
 %defattr(-,root,root,0755)
-%{_sysconfdir}/dracut.conf.d/00-hyperv.conf
+%config %{_sysconfdir}/dracut.conf.d/00-hyperv.conf
 
 %files megaraid
 %defattr(-,root,root,0755)
-%{_sysconfdir}/dracut.conf.d/50-megaraid.conf
+%config %{_sysconfdir}/dracut.conf.d/50-megaraid.conf
 
 %files tools
 %defattr(-,root,root,0755)
@@ -268,15 +263,15 @@ ln -srv %{buildroot}%{_bindir}/%{name} %{buildroot}%{_sbindir}/%{name}
 
 %files virtio
 %defattr(-,root,root,0755)
-%{_sysconfdir}/dracut.conf.d/00-virtio.conf
+%config %{_sysconfdir}/dracut.conf.d/00-virtio.conf
 
 %files vrf
 %defattr(-,root,root,0755)
-%{_sysconfdir}/dracut.conf.d/00-vrf.conf
+%config %{_sysconfdir}/dracut.conf.d/00-vrf.conf
 
 %files xen
 %defattr(-,root,root,0755)
-%{_sysconfdir}/dracut.conf.d/00-xen.conf
+%config %{_sysconfdir}/dracut.conf.d/00-xen.conf
 
 %{_bindir}/%{name}-catimages
 %dir /boot/%{name}
