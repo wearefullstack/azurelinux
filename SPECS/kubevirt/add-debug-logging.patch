@@ -1,27 +1,28 @@
-From f349fd9ae507721206db7ed7b61587c4de77697b Mon Sep 17 00:00:00 2001
+From c93d398ae5bd67866d390c95b6b6d89346802182 Mon Sep 17 00:00:00 2001
 From: Brian Fjeldstad <bfjelds@microsoft.com>
 Date: Fri, 17 May 2024 18:03:48 +0000
 Subject: [PATCH 2/2] add debug logging
 
 ---
- pkg/virt-launcher/virtwrap/live-migration-target.go | 2 ++
- 1 file changed, 2 insertions(+)
+ pkg/virt-launcher/virtwrap/live-migration-target.go | 3 +++
+ 1 file changed, 3 insertions(+)
 
 diff --git a/pkg/virt-launcher/virtwrap/live-migration-target.go b/pkg/virt-launcher/virtwrap/live-migration-target.go
-index 69926dcc6..446ed64d8 100644
+index 69926dcc6..c7d0b3299 100644
 --- a/pkg/virt-launcher/virtwrap/live-migration-target.go
 +++ b/pkg/virt-launcher/virtwrap/live-migration-target.go
-@@ -75,11 +75,13 @@ func (l *LibvirtDomainManager) prepareMigrationTarget(
+@@ -75,11 +75,14 @@ func (l *LibvirtDomainManager) prepareMigrationTarget(
  	if err := converter.Convert_v1_VirtualMachineInstance_To_api_Domain(vmi, domain, c); err != nil {
  		return fmt.Errorf("conversion failed: %v", err)
  	}
-+	logger.V(3).Info("bfjelds migration target domain (pre start hook): %+v", domain)
++	logger.V(3).Infof("bfjelds migration target domain (pre start hook): %+v", domain)
  
  	dom, err := l.preStartHook(vmi, domain, true)
  	if err != nil {
  		return fmt.Errorf("pre-start pod-setup failed: %v", err)
  	}
-+	logger.V(3).Info("bfjelds migration target domain (post start hook): %+v", dom)
++	logger.V(3).Infof("bfjelds migration target domain (post start hook): %+v", dom)
++	logger.V(3).Infof("bfjelds migration target vmi: %+v", vmi)
  
  	l.metadataCache.UID.Set(vmi.UID)
  	l.metadataCache.GracePeriod.Set(
