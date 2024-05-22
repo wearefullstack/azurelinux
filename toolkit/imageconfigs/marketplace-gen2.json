@@ -75,9 +75,17 @@
                 "default": "kernel"
             },
             "KernelCommandLine": {
-                "ExtraCommandLine": "console=ttyS0"
+                "ExtraCommandLine": "console=ttyS0 rd.shell rd.debug log_buf_len=1M"
             },
-            "Hostname": "azurelinux"
+            "Hostname": "azurelinux",
+            "Users": [
+                {
+                    "Name": "root",
+                    "Password": "$6$20m6y6nwlU1K$hKgyNYjVSKPJOTFaAzAf/fwACUV/dZ1NPy5cGNkhvRzKJiKDBKofuvDpdl81Jak4ep756DnZmVm7JfGRMO/n90",
+                    "PasswordHashed": true,
+                    "_comment": "This password was generated with 'openssl passwd -6 -salt <YOUR_SALT> <YOUR_PASSWORD>'. You may also use the json key 'SSHPubKeyPaths' to use an SSH key for login"
+                }
+            ]
         }
     ]
 }
