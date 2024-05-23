@@ -1,7 +1,7 @@
 Summary:        MySQL.
 Name:           mysql
 Version:        8.0.36
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        GPLv2 with exceptions AND LGPLv2 AND BSD
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -14,6 +14,7 @@ BuildRequires:  libtirpc-devel
 BuildRequires:  openssl-devel
 BuildRequires:  rpcsvc-proto-devel
 BuildRequires:  zlib-devel
+BuildRequires:  systemd
 
 %description
 MySQL is a free, widely used SQL engine. It can be used as a fast database as well as a rock-solid DBMS using a modular engine architecture.
@@ -40,6 +41,7 @@ cmake . \
       -DCMAKE_C_FLAGS=-fPIC \
       -DCMAKE_CXX_FLAGS=-fPIC \
       -DWITH_EMBEDDED_SERVER=OFF \
+      -DWITH_SYSTEMD=ON \
       -DFORCE_INSOURCE_BUILD=1
 
 make %{?_smp_mflags}
@@ -59,6 +61,8 @@ make test
 %{_libdir}/mysqlrouter/*.so*
 %{_libdir}/mysqlrouter/private/*.so*
 %{_libdir}/private/*.so*
+%{_libdir}/systemd/systemd/mysql*
+%{_libdir}/tmpfiles.d/mysql*
 %{_bindir}/*
 %{_mandir}/man1/*
 %{_mandir}/man8/*
@@ -83,6 +87,9 @@ make test
 %{_libdir}/pkgconfig/mysqlclient.pc
 
 %changelog
+* Thu May 23 2024 Betty Lakes <bettylakes@microsoft.com> - 8.0.36-2
+- Add systemd dependency
+
 * Thu Feb 22 2024 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 8.0.36-1
 - Auto-upgrade to 8.0.36
 
