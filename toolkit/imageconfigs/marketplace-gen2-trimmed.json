@@ -34,7 +34,13 @@
                     "ID": "rootfs",
                     "Name": "rootfs",
                     "Start": 565,
-                    "End": 0,
+                    "End": 4800,
+                    "FsType": "ext4"
+                },
+                {
+                    "ID": "data",
+                    "Name": "data",
+                    "Start": 4800,
                     "FsType": "ext4"
                 }
             ]
@@ -57,6 +63,10 @@
                 {
                     "ID": "rootfs",
                     "MountPoint": "/"
+                },
+                {
+                    "ID": "data",
+                    "MountPoint": "/data"
                 }
             ],
             "PackageLists": [
@@ -66,7 +76,8 @@
                 "additionalconfigs/cloud-init.cfg": "/etc/cloud/cloud.cfg",
                 "additionalconfigs/chrony.cfg": "/etc/chrony.conf",
                 "additionalconfigs/wait-for-ptp-hyperv.conf": "/etc/systemd/system/chronyd.service.d/wait-for-ptp-hyperv.conf",
-                "additionalconfigs/51-ptp-hyperv.rules": "/etc/udev/rules.d/51-ptp-hyperv.rules"
+                "additionalconfigs/51-ptp-hyperv.rules": "/etc/udev/rules.d/51-ptp-hyperv.rules",
+                "additionalconfigs/test.repo": "/etc/yum.repos.d/test.repo"
             },
             "PostInstallScripts": [
                 {
