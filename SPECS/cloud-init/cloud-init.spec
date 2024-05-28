@@ -1,7 +1,7 @@
 Summary:        Cloud instance init scripts
 Name:           cloud-init
 Version:        23.4.3
-Release:        2%{?dist}
+Release:        3%{?dist}
 License:        GPLv3
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -11,6 +11,7 @@ Source0:        https://github.com/canonical/%{name}/archive/refs/tags/%{version
 Source1:        10-azure-kvp.cfg
 Patch0:         0001-Add-new-distro-azurelinux-for-Microsoft-Azure-Linux.patch
 Patch1:         Add-Network-Interface-Renaming-Support-for-CAPM3-Met.patch
+Patch2:         support-unknown-121.patch
 %define cl_services cloud-config.service cloud-config.target cloud-final.service cloud-init.service cloud-init.target cloud-init-local.service
 BuildRequires:  automake
 BuildRequires:  dbus
@@ -144,6 +145,9 @@ make check %{?_smp_mflags}
 %config(noreplace) %{_sysconfdir}/cloud/cloud.cfg.d/10-azure-kvp.cfg
 
 %changelog
+* Tue May 28 2024 Aadhar Agarwal <aadagarwal@microsoft.com> - 23.4.3-3
+- Backport upstream patch to support configuring static routes for dhclient's unknown-121 option
+
 * Thu May 9 2024 Sharath Srikanth Chellappa <sharathsr@microsoft.com> - 23.4.3-2
 - Add patch to add network interface renaming support for CAPM3 Met.
 
