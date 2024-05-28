@@ -40,6 +40,7 @@ Patch07:        CVE-2024-24786.patch
 Patch08:        CVE-2023-45288.patch
 Patch09:        add-vmi-annotation-to-enable-qemu-tracing.patch
 Patch10:        add-debug-logging.patch
+Patch11:        make-virt-launcher-privileged-iff-trace-is-requested.patch 
 %global debug_package %{nil}
 BuildRequires:  glibc-devel
 BuildRequires:  glibc-static >= 2.35-7%{?dist}

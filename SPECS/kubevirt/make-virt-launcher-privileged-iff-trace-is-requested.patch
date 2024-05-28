@@ -1,0 +1,30 @@
+From 74119aba7ff2f179181e0906395dc0bea03065b5 Mon Sep 17 00:00:00 2001
+From: Brian Fjeldstad <bfjelds@microsoft.com>
+Date: Tue, 28 May 2024 20:24:10 +0000
+Subject: [PATCH 3/3] make virt-launcher privileged iff trace is requested
+
+---
+ pkg/virt-controller/services/template.go | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/pkg/virt-controller/services/template.go b/pkg/virt-controller/services/template.go
+index e23c9a0b0..be155ad9a 100644
+--- a/pkg/virt-controller/services/template.go
++++ b/pkg/virt-controller/services/template.go
+@@ -294,6 +294,13 @@ func computePodSecurityContext(vmi *v1.VirtualMachineInstance, seccomp *k8sv1.Se
+ 		rootUser := int64(util.RootUser)
+ 		psc.RunAsUser = &rootUser
+ 	}
++
++	// Make pod privileged iff trace is annotated
++	traceeventsdata, _ := vmi.Annotations[v1.TraceEventsAnnotation]
++	if traceeventsdata != "" {
++		psc.Privileged = pointer.Bool(true)
++	}
++
+ 	psc.SeccompProfile = seccomp
+ 
+ 	return psc
+-- 
+2.34.1
+
