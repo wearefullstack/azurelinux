@@ -119,7 +119,7 @@ echo "KERNEL_MODULE_VER: ${KERNEL_MODULE_VER}"
 
 pushd %{_builddir}/%{name}-%{version}/src/tarfs
 make KDIR=/usr/src/linux-headers-${KERNEL_VER}
-make KDIR=/usr/src/linux-headers-${KERNEL_VER} install
+make KDIR=/usr/src/linux-headers-${KERNEL_VER} KVER=${KERNEL_MODULE_VER} install
 
 echo "here1"
 
