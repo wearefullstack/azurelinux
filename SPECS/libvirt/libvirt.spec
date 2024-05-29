@@ -9,7 +9,7 @@
 Summary:        Virtualization API library that supports KVM, QEMU, Xen, ESX etc
 Name:           libvirt
 Version:        7.10.0
-Release:        10%{?dist}
+Release:        11%{?dist}
 License:        LGPLv2+
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -733,6 +733,14 @@ if ! getent passwd qemu >/dev/null; then
 fi
 exit 0
 
+%post daemon-driver-qemu
+%systemd_post virtqemud.socket virtqemud-ro.socket virtqemud-admin.socket
+%systemd_post virtqemud.service
+
+%preun daemon-driver-qemu
+%systemd_preun virtqemud.service
+%systemd_preun virtqemud.socket virtqemud-ro.socket virtqemud-admin.socket
+
 %files
 
 %files admin
@@ -1059,6 +1067,9 @@ exit 0
 %{_libdir}/libnss_libvirt_guest.so.2
 
 %changelog
+* Wed May 29 2024 Sumedh Sharma <sumsharma@microsoft.com> - 7.10.0-11
+- test
+
 * Wed May 22 2024 Juan Camposeco <juanarturoc@microsoft.com> - 7.10.0-10
 - Patch to address CVE-2024-4418
 
