@@ -9,8 +9,10 @@ mkdir -p /data/overlays/var/work
 mkdir -p /data/overlays/root/upper
 mkdir -p /data/overlays/root/work
 
-# Ensure data partition is mounted in initrd along with overlay
+# Make rootfs mount as read-only
 sed -i "s/\/ ext4 defaults/\/ ext4 defaults,ro/" /etc/fstab
+
+# Ensure data partition is mounted in initrd along with overlay
 sed -i "s/data ext4 defaults/data ext4 defaults,x-initrd.mount/" /etc/fstab
 echo "overlay /etc overlay x-initrd.mount,x-systemd.requires-mounts-for=/sysroot/data,lowerdir=/sysroot/etc,upperdir=/sysroot/data/overlays/etc/upper,workdir=/sysroot/data/overlays/etc/work 0 0" >> /etc/fstab
 echo "overlay /home overlay x-initrd.mount,x-systemd.requires-mounts-for=/sysroot/data,lowerdir=/sysroot/home,upperdir=/sysroot/data/overlays/home/upper,workdir=/sysroot/data/overlays/home/work 0 0" >> /etc/fstab
@@ -22,7 +24,9 @@ echo "overlay /root overlay x-initrd.mount,x-systemd.requires-mounts-for=/sysroo
 sed -i "s/rd.shell=0 rd.emergency=reboot/rd.shell=1 rd.break=pre-pivot/" /boot/grub2/grub.cfg
 
 # Ensure overlay driver is available in initrd
-echo "add_drivers+=\" overlay \"" >> /etc/dracut.conf.d/01-overlay.conf
+echo "add_drivers+=\" overlay \"" >> /etc/dracut.conf.d/01-coal.conf
+# Enable systemd-repart in the initrd
+echo "add_dracutmodules+=\" systemd-repart \"" >> /etc/dracut.conf.d/01-coal.conf
 
 # Regenerate initrd
 dracut --force --regenerate-all --include /usr/lib/locale /usr/lib/locale

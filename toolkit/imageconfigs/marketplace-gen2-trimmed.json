@@ -2,7 +2,7 @@
     "Disks": [
         {
             "PartitionTableType": "gpt",
-            "MaxSize": 5000,
+            "MaxSize": 6000,
             "Artifacts": [
                 {
                     "Name": "cblmariner-gen2",
@@ -41,6 +41,7 @@
                     "ID": "data",
                     "Name": "data",
                     "Start": 4800,
+                    "End": 5000,
                     "FsType": "ext4"
                 }
             ]
