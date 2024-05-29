@@ -442,7 +442,8 @@ func PopulateInstallRoot(installChroot *safechroot.Chroot, packagesToInstall []s
 	defer timestamp.StopEvent(nil)
 
 	const (
-		filesystemPkg = "filesystem"
+		filesystemPkg  = "filesystem"
+		shadowUtilsPkg = "shadow-utils"
 	)
 
 	ReportAction("Initializing RPM Database")
@@ -492,6 +493,14 @@ func PopulateInstallRoot(installChroot *safechroot.Chroot, packagesToInstall []s
 	if err != nil {
 		return
 	}
+	if len(config.Users) > 0 || len(config.Groups) > 0 {
+		shadowUtilsInstalled := 0
+		shadowUtilsInstalled, err = TdnfInstallWithProgress(shadowUtilsPkg, installRoot, packagesInstalled, totalPackages, true)
+		if err != nil {
+			return
+		}
+		packagesInstalled += shadowUtilsInstalled
+	}
 
 	hostname := config.Hostname
 	if !config.IsRootFS() && mountPointToFsTypeMap[rootMountPoint] != overlay {
@@ -500,6 +509,18 @@ func PopulateInstallRoot(installChroot *safechroot.Chroot, packagesToInstall []s
 		if err != nil {
 			return
 		}
+	}
+
+	// Add groups
+	err = addGroups(installChroot, config.Groups)
+	if err != nil {
+		return
+	}
+
+	// Add users
+	err = addUsers(installChroot, config.Users)
+	if err != nil {
+		return
 	}
 
 	// Install packages one-by-one to avoid exhausting memory
@@ -527,18 +548,6 @@ func PopulateInstallRoot(installChroot *safechroot.Chroot, packagesToInstall []s
 		if err != nil {
 			return
 		}
-
-		// Add groups
-		err = addGroups(installChroot, config.Groups)
-		if err != nil {
-			return
-		}
-	}
-
-	// Add users
-	err = addUsers(installChroot, config.Users)
-	if err != nil {
-		return
 	}
 
 	// Add machine-id
