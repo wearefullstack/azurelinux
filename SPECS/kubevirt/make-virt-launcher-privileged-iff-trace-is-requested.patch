@@ -1,30 +1,60 @@
-From 74119aba7ff2f179181e0906395dc0bea03065b5 Mon Sep 17 00:00:00 2001
+From 398f37e7cf9128862866b04bdea7c692406c76c5 Mon Sep 17 00:00:00 2001
 From: Brian Fjeldstad <bfjelds@microsoft.com>
 Date: Tue, 28 May 2024 20:24:10 +0000
 Subject: [PATCH 3/3] make virt-launcher privileged iff trace is requested
 
 ---
- pkg/virt-controller/services/template.go | 7 +++++++
- 1 file changed, 7 insertions(+)
+ pkg/virt-controller/services/template.go     | 12 ++++++++++++
+ staging/src/kubevirt.io/api/core/v1/types.go |  6 +++++-
+ 2 files changed, 17 insertions(+), 1 deletion(-)
 
 diff --git a/pkg/virt-controller/services/template.go b/pkg/virt-controller/services/template.go
-index e23c9a0b0..be155ad9a 100644
+index e23c9a0b0..afc29f084 100644
 --- a/pkg/virt-controller/services/template.go
 +++ b/pkg/virt-controller/services/template.go
-@@ -294,6 +294,13 @@ func computePodSecurityContext(vmi *v1.VirtualMachineInstance, seccomp *k8sv1.Se
+@@ -294,6 +294,7 @@ func computePodSecurityContext(vmi *v1.VirtualMachineInstance, seccomp *k8sv1.Se
  		rootUser := int64(util.RootUser)
  		psc.RunAsUser = &rootUser
  	}
 +
-+	// Make pod privileged iff trace is annotated
-+	traceeventsdata, _ := vmi.Annotations[v1.TraceEventsAnnotation]
-+	if traceeventsdata != "" {
-+		psc.Privileged = pointer.Bool(true)
-+	}
-+
  	psc.SeccompProfile = seccomp
  
  	return psc
+@@ -455,6 +456,17 @@ func (t *templateService) renderLaunchManifest(vmi *v1.VirtualMachineInstance, i
+ 				sidecarContainerName(i), vmi, sidecarResources(vmi), requestedHookSidecar, userId).Render(requestedHookSidecar.Command))
+ 	}
+ 
++	// Make containers privileged iff trace is annotated
++	virtLauncherPrivileged, _ := vmi.Annotations[v1.VirtLauncherPrivilegedAnnotation]
++	if virtLauncherPrivileged == "true" {
++		for container := range containers {
++			if container.SecurityContext == nil {
++				container.SecurityContext = &k8sv1.SecurityContext{}
++			}
++			container.SecurityContext.Privileged = pointer.Bool(true)
++		}
++	}
++
+ 	podAnnotations, err := generatePodAnnotations(vmi)
+ 	if err != nil {
+ 		return nil, err
+diff --git a/staging/src/kubevirt.io/api/core/v1/types.go b/staging/src/kubevirt.io/api/core/v1/types.go
+index 6ea9d540e..dd353ea4b 100644
+--- a/staging/src/kubevirt.io/api/core/v1/types.go
++++ b/staging/src/kubevirt.io/api/core/v1/types.go
+@@ -823,7 +823,11 @@ const (
+ 	PlacePCIDevicesOnRootComplex string = "kubevirt.io/placePCIDevicesOnRootComplex"
+ 	// This annotation is used to inject tracing
+ 	// Used on VirtualMachineInstance.
+-	TraceEventsAnnotation        string = "kubevirt.io/trace-events"
++	TraceEventsAnnotation                    string = "kubevirt.io/trace-events"
++	// This annotation is used to make virt-launcher privileged so systemtap can work
++	// Used on VirtualMachineInstance.
++	VirtLauncherPrivilegedAnnotation         string = "kubevirt.io/virtLauncherPrivileged"
++
+ 
+ 	// This label represents supported cpu features on the node
+ 	CPUFeatureLabel = "cpu-feature.node.kubevirt.io/"
 -- 
 2.34.1
 
