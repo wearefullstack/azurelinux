@@ -92,7 +92,7 @@
                 "default": "kernel"
             },
             "KernelCommandLine": {
-                "ExtraCommandLine": "console=tty0 console=ttyS0=9800 rd.shell=0 rd.emergency=reboot audit=0"
+                "ExtraCommandLine": "console=tty0 console=ttyS0=115200 rd.shell=1 audit=0"
             },
             "Hostname": "azurelinux",
             "Users": [

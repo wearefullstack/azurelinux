@@ -63,6 +63,7 @@
         "systemd-udev",
         "tar",
         "util-linux",
+        "squashfs-tools",
         "initramfs"
     ]
 }
