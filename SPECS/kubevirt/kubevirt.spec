@@ -220,10 +220,10 @@ install -p -m 0644 cmd/virt-handler/nsswitch.conf %{buildroot}%{_datadir}/kube-v
 %{_bindir}/virt-tests
 
 %changelog
-* Wed May 08 2024 bfjelds@microsoft.com <bfjelds@microsoft.com> - 0.59.0-19
+* Wed May 22 2024 bfjelds@microsoft.com <bfjelds@microsoft.com> - 0.59.0-19
 - Enable qemu tracing through kubevirt annotations
 
-* Tue May 18 2024 chrisgun@microsoft.com <chrisgun@microsoft.com> - 0.59.0-18
+* Tue May 21 2024 chrisgun@microsoft.com <chrisgun@microsoft.com> - 0.59.0-18
 - Fix for CVE-2023-45288
 
 * Fri May 17 2024 Rohit Rawat <rohitrawat@microsoft.com> - 0.59.0-17
