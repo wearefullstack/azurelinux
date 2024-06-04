@@ -126,7 +126,9 @@ developing applications that use %{name}.
 %autosetup -n firefox-%{version}/js/src -N
 
 pushd ../..
+cat $(find . -name onyx_if.c)
 %autopatch -p1
+cat $(find . -name onyx_if.c)
 
 # Purge the bundled six library incompatible with Python 3.12
 rm third_party/python/six/six.py
