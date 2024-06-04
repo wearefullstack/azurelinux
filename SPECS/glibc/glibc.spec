@@ -10,7 +10,7 @@
 Summary:        Main C library
 Name:           glibc
 Version:        2.38
-Release:        5%{?dist}
+Release:        6%{?dist}
 License:        BSD AND GPLv2+ AND Inner-Net AND ISC AND LGPLv2+ AND MIT
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -36,6 +36,7 @@ BuildRequires:  gettext
 BuildRequires:  kernel-headers
 BuildRequires:  texinfo
 Requires:       filesystem
+Requires:       libxcrypt
 Provides:       %{name}-common = %{version}-%{release}
 Provides:       /sbin/ldconfig
 Provides:       nss_db = %{version}-%{release}
@@ -348,6 +349,9 @@ grep "^FAIL: nptl/tst-eintr1" tests.sum >/dev/null && n=$((n+1)) ||:
 %exclude %{_libdir}/locale/C.utf8
 
 %changelog
+* Tue Jun 04 2024 Chris Co <chrco@microsoft.com> - 2.38-6
+- Add requires on libxcrypt package to supply libcrypt.so
+
 * Wed May 22 2024 Suresh Babu Chalamalasetty <schalam@microsoft.com> - 2.38-5
 - Generate and provide glibc all locales in a sub-package
 
