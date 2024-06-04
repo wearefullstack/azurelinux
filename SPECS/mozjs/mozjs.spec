@@ -125,6 +125,7 @@ pushd ../..
 # The embedded libvpx v1.11.0 contains a CVE, but we are not using this
 # embedded code.  Remove the code to assure it is not used.
 rm -rf ./media/libvpx
+find . -name libvpx
 
 # Purge the bundled six library incompatible with Python 3.12
 rm third_party/python/six/six.py
