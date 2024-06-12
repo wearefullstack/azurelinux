@@ -113,6 +113,7 @@ This package provides the CRI-O container runtime configuration for kubeadm
 %prep
 %setup -q
 %autopatch -p1
+rm -rf vendor
 tar -xf %{SOURCE1} --no-same-owner
 
 %build
