@@ -53,7 +53,7 @@ cp %{SOURCE1} ./LICENSE.txt
 export CLASSPATH=$(build-classpath xalan-j2)
 ant \
     -Dbuild.compiler=modern \
-    -Dant.build.javac.source=1.6 -Dant.build.javac.target=1.6 \
+    -Dant.build.javac.source=1.7 -Dant.build.javac.target=1.7 \
     jar
 
 %install

@@ -79,8 +79,8 @@ find . -name "*.jar" | xargs -t rm
 export CLASSPATH=
 export OPT_JAR_LIST="junit ant/ant-junit"
 # performance tests sometimes failed on build farm, so lets disable them to avoid unpredictable build fails
-#ant -Dant.build.javac.source=1.6 -Dant.build.javac.target=1.6 -Dbuild.sysclasspath=first jar test javadoc
-ant -Dant.build.javac.source=1.6 -Dant.build.javac.target=1.6 -Dbuild.sysclasspath=first jar javadoc
+#ant -Dant.build.javac.source=1.7 -Dant.build.javac.target=1.7 -Dbuild.sysclasspath=first jar test javadoc
+ant -Dant.build.javac.source=1.7 -Dant.build.javac.target=1.7 -Dbuild.sysclasspath=first jar javadoc
 
 %install
 # jars

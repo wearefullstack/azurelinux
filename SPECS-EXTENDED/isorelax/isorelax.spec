@@ -70,7 +70,7 @@ export CLASSPATH=$(build-classpath \
 xerces-j2 \
 xml-apis \
 )
-ant -Dant.build.javac.source=1.6 -Dant.build.javac.target=1.6 \
+ant -Dant.build.javac.source=1.7 -Dant.build.javac.target=1.7 \
     -Dbuild.sysclasspath=only release
 
 %install

@@ -58,7 +58,7 @@ find . -type f -name "*.jar" | xargs -t rm
 export OPT_JAR_LIST=:
 export CLASSPATH=
 mkdir lib
-ant -Djakarta-site2.dir=. -Dant.build.javac.source=1.6 -Dant.build.javac.target=1.6  jar
+ant -Djakarta-site2.dir=. -Dant.build.javac.source=1.7 -Dant.build.javac.target=1.7  jar
 
 %install
 # jars

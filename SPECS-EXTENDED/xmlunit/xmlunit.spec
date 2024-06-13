@@ -81,7 +81,7 @@ EOF
 
 export CLASSPATH=
 export OPT_JAR_LIST="junit ant/ant-junit jaxp_transform_impl ant/ant-trax xalan-j2-serializer"
-ant -Djavac.source=1.6 -Djavac.target=1.6 -Dbuild.compiler=modern -Dhaltonfailure=yes jar javadocs
+ant -Djavac.source=1.7 -Djavac.target=1.7 -Dbuild.compiler=modern -Dhaltonfailure=yes jar javadocs
 
 %install
 mkdir -p %{buildroot}%{_javadir}

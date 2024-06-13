@@ -103,7 +103,7 @@ rm src/common/org/xmldb/common/xml/queries/xt/XPathQueryFactoryImpl.java
 export CLASSPATH=$(build-classpath junit xalan-j2)
 export OPT_JAR_LIST=:
 ant \
-    -Dant.build.javac.source=1.6 -Dant.build.javac.target=1.6 \
+    -Dant.build.javac.source=1.7 -Dant.build.javac.target=1.7 \
     -Djarname=%{name} -Dsdk.jarname=%{name}-sdk \
     dist
 

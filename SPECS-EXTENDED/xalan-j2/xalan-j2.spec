@@ -165,7 +165,7 @@ ln -sf $(build-classpath stylebook) stylebook-1.0-b3_xalan-2.jar
 popd
 ant \
   -Dservlet-api.jar=$(build-classpath servletapi5) \
-  -Dcompiler.source=1.6 -Dcompiler.target=1.6 \
+  -Dcompiler.source=1.7 -Dcompiler.target=1.7 \
   -Djava.awt.headless=true \
   -Dapi.j2se=%{_javadocdir}/java \
   -Dbuild.xalan-interpretive.jar=build/xalan-interpretive.jar \

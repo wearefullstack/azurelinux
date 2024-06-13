@@ -106,7 +106,7 @@ popd
 
 # Build everything
 export ANT_OPTS="-Xmx256m -Djava.awt.headless=true -Dbuild.sysclasspath=first -Ddisconnected=true"
-ant -Djavac.source=1.6 -Djavac.target=1.6 \
+ant -Djavac.source=1.7 -Djavac.target=1.7 \
     -Dbuild.compiler=modern \
     clean jars javadocs
 

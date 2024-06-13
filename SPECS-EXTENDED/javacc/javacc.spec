@@ -84,7 +84,7 @@ find ./examples -type f -exec sed -i 's/\r//' {} \;
 
 %build
 %{ant} \
-  -Dant.build.javac.source=1.6 -Dant.build.javac.target=1.6 \
+  -Dant.build.javac.source=1.7 -Dant.build.javac.target=1.7 \
   jar javadoc
 
 %install

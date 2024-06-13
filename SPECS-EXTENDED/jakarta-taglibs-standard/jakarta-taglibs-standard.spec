@@ -74,7 +74,7 @@ EOBP
 
 %build
 ant \
-  -Dant.build.javac.source=1.6 -Dant.build.javac.target=1.6 \
+  -Dant.build.javac.source=1.7 -Dant.build.javac.target=1.7 \
   -Dfinal.name=%{short_name} \
   -Dj2se.javadoc=%{_javadocdir}/java \
   -f standard/build.xml \

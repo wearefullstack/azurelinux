@@ -61,7 +61,7 @@ cp %{SOURCE3} ./LICENSE.txt
 export CLASSPATH=
 export OPT_JAR_LIST=:
 %{ant} \
-  -Dant.build.javac.source=1.6 -Dant.build.javac.target=1.6 \
+  -Dant.build.javac.source=1.7 -Dant.build.javac.target=1.7 \
   -Dbuild.sysclasspath=only jar javadoc
 
 # Inject OSGi manifest required by Eclipse.
