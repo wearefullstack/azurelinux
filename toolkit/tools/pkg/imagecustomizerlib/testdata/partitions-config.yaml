@@ -48,3 +48,9 @@ os:
 
   kernelCommandLine:
     extraCommandLine: console=tty0 console=ttyS0
+
+  users:
+  - name: root
+    password:
+      type: plain-text
+      value: hello
