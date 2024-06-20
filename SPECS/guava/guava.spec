@@ -27,7 +27,7 @@ Source0:        https://github.com/google/guava/archive/v%{version}.tar.gz#/%{na
 Source1:        %{name}-build.tar.xz
 Patch0:         %{name}-%{version}-java8compat.patch
 Patch1:         CVE-2020-8908.patch
-Patch2:         0002-include-ElementTypesAreNonnullByDefault.java.patch
+Patch2:         0003-include-J2ktIncompatible.java.patch
 BuildRequires:  ant
 BuildRequires:  fdupes
 BuildRequires:  javapackages-local-bootstrap
