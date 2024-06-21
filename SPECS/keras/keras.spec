@@ -3,7 +3,7 @@
 Summary:        Keras is a high-level neural networks API.
 Name:           keras
 Version:        3.1.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        ASL 2.0
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -46,7 +46,7 @@ Python 3 version.
 %{py3_build}
 
 %install
-%{py3_install}
+python3 pip_build.py --install
 
 
 %files -n python3-keras
@@ -55,6 +55,9 @@ Python 3 version.
 
 
 %changelog
+* Fri Jun 21 2024 Riken Maharjan <rmaharjan@microsoft.com> - 3.1.1-2
+- Change Installation to use a different script
+
 * Fri Mar 29 2024 Riken Maharjan <rmaharjan@microsoft.com> - 3.1.1-1
 - update keras to 3.1.1
 
