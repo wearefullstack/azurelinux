@@ -1,19 +1,32 @@
+%global pkgname mysql
+
+# Include files for systemd
+%global daemon_name       mysqld
+%global daemon_no_prefix  mysqld
+
 Summary:        MySQL.
 Name:           mysql
 Version:        8.0.36
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        GPLv2 with exceptions AND LGPLv2 AND BSD
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
 Group:          Applications/Databases
 URL:            https://www.mysql.com
 Source0:        https://dev.mysql.com/get/Downloads/MySQL-8.0/%{name}-boost-%{version}.tar.gz
+Source1:        mysql.service
+Source2:        mysql@.service
+Source3:        mysql.tmpfiles.d
 Patch0:         CVE-2012-5627.nopatch
 BuildRequires:  cmake
 BuildRequires:  libtirpc-devel
 BuildRequires:  openssl-devel
 BuildRequires:  rpcsvc-proto-devel
 BuildRequires:  zlib-devel
+BuildRequires:  systemd
+Requires:       systemd
+# Make sure it's there when scriptlets run, too
+%{?systemd_requires: %systemd_requires}
 
 %description
 MySQL is a free, widely used SQL engine. It can be used as a fast database as well as a rock-solid DBMS using a modular engine architecture.
@@ -28,6 +41,8 @@ Development headers for developing applications linking to maridb
 %prep
 %autosetup -p1
 
+cp %{SOURCE1} %{SOURCE2} %{SOURCE3} scripts
+
 %build
 cmake . \
       -DCMAKE_INSTALL_PREFIX=%{_prefix}   \
@@ -40,12 +55,21 @@ cmake . \
       -DCMAKE_C_FLAGS=-fPIC \
       -DCMAKE_CXX_FLAGS=-fPIC \
       -DWITH_EMBEDDED_SERVER=OFF \
+      -DWITH_SYSTEMD=1 \
+      -DSYSTEMD_SERVICE_NAME="%{daemon_name}" \
+      -DSYSTEMD_PID_DIR="%{pidfiledir}" \
       -DFORCE_INSOURCE_BUILD=1
 
 make %{?_smp_mflags}
 
 %install
 make DESTDIR=%{buildroot} install
+
+# install systemd unit files and scripts for handling server startup
+install -D -p -m 644 scripts/mysql.service %{buildroot}%{_unitdir}/%{daemon_name}.service
+install -D -p -m 644 scripts/mysql@.service %{buildroot}%{_unitdir}/%{daemon_name}@.service
+install -D -p -m 0644 scripts/mysql.tmpfiles.d %{buildroot}%{_tmpfilesdir}/%{daemon_name}.conf
+rm -r %{buildroot}%{_tmpfilesdir}/%{daemon_name}.conf
 
 %check
 make test
@@ -64,6 +88,9 @@ make test
 %{_mandir}/man8/*
 %{_datadir}/support-files/*
 %{_prefix}/mysqlrouter-log-rotate
+%{_libdir}/systemd/system/*
+%{_prefix}/%{_libdir}/systemd/system/*.service
+%{_prefix}/%{_libdir}/tmpfiles.d/*.conf
 %exclude %{_prefix}/mysql-test
 %exclude %{_prefix}/docs
 %exclude %{_datadir}
@@ -83,6 +110,9 @@ make test
 %{_libdir}/pkgconfig/mysqlclient.pc
 
 %changelog
+* Thu Jun 20 2024 Betty Lakes <bettylakes@microsoft.com> - 8.0.36-2
+- Add systemd dependency
+
 * Thu Feb 22 2024 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 8.0.36-1
 - Auto-upgrade to 8.0.36
 
