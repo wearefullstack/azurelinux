@@ -22,6 +22,7 @@ BuildRequires:  python3-wheel
 BuildRequires:  python3-namex
 BuildRequires:  python3-pytorch
 BuildRequires:  python3-absl-py
+BuildRequires:  python3-tensorflow
 BuildRequires:  python3-optree
 BuildRequires:  tar
 BuildRequires:  which
