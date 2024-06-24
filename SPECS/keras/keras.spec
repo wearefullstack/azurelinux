@@ -2,7 +2,7 @@
 %global debug_package %{nil}
 Summary:        Keras is a high-level neural networks API.
 Name:           keras
-Version:        3.1.1
+Version:        3.3.3
 Release:        2%{?dist}
 License:        ASL 2.0
 Vendor:         Microsoft Corporation
@@ -19,10 +19,8 @@ BuildRequires:  python3-packaging
 BuildRequires:  python3-pip
 BuildRequires:  python3-requests
 BuildRequires:  python3-wheel
-BuildRequires:  python3-namex
 BuildRequires:  python3-pytorch
 BuildRequires:  python3-absl-py
-BuildRequires:  python3-tensorflow
 BuildRequires:  python3-optree
 BuildRequires:  tar
 BuildRequires:  which
@@ -60,8 +58,8 @@ python3 pip_build.py --install
 
 
 %changelog
-* Fri Jun 21 2024 Riken Maharjan <rmaharjan@microsoft.com> - 3.1.1-2
-- Change Installation to use a different script
+* Mon Jun 24 2024 Riken Maharjan <rmaharjan@microsoft.com> - 3.3.3-1
+- Update keras to 3.3.3 to fix GC issue
 
 * Fri Mar 29 2024 Riken Maharjan <rmaharjan@microsoft.com> - 3.1.1-1
 - update keras to 3.1.1
