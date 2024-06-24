@@ -21,6 +21,7 @@ BuildRequires:  python3-requests
 BuildRequires:  python3-wheel
 BuildRequires:  python3-namex
 BuildRequires:  python3-pytorch
+BuildRequires:  python3-absl-py
 BuildRequires:  tar
 BuildRequires:  which
 ExclusiveArch:  x86_64
