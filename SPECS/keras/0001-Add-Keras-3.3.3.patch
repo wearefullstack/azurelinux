@@ -1,0 +1,13 @@
+diff -urN keras-3.3.3/pip_build.py keras-3.3.3/pip_build.py
+--- keras-3.3.3/pip_build.py	2024-04-26 16:19:54.000000000 -0700
++++ keras-3.3.3/pip_build.py	2024-06-25 15:10:50.687736400 -0700
+@@ -86,7 +86,8 @@
+         move_tf_keras_directory()
+         print(os.getcwd())
+ 
+-        from keras.src.version import __version__  # noqa: E402
++        #from keras.src.version import __version__  # noqa: E402
++        __version__ = "3.3.3"
+ 
+         export_version_string(__version__, is_nightly, rc_index)
+         return build_and_save_output(root_path, __version__)

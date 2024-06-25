@@ -10,6 +10,7 @@ Distribution:   Azure Linux
 Group:          Development/Languages/Python
 URL:            https://keras.io/
 Source0:        https://github.com/keras-team/keras/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
+Patch00:        0001-Add-Keras-3.3.3.patch
 BuildRequires:  git
 BuildRequires:  libstdc++-devel
 BuildRequires:  pyproject-rpm-macros
