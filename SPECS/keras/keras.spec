@@ -50,6 +50,7 @@ Python 3 version.
 %{py3_build}
 
 %install
+%{py3_build}
 python3 pip_build.py --install
 
 
