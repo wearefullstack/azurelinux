@@ -5,7 +5,7 @@
 Summary:        Signed Linux Kernel for HCI
 Name:           kernel-hci-signed-%{buildarch}
 Version:        5.15.158.2
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        GPLv2
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -149,6 +149,9 @@ ln -sf linux-%{uname_r}.cfg /boot/mariner.cfg
 %exclude /module_info.ld
 
 %changelog
+* Wed Jun 26 2024 Pawel Winogrodzki <pawelwi@microsoft.com> - 5.15.158.2-2
+- Bump kernel.
+
 * Fri Jun 07 2024 Rachel Menge <rachelmenge@microsoft.com> - 5.15.158.2-1
 - Revert to 5.15.158.2
 
