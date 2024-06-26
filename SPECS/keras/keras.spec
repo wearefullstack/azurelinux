@@ -3,7 +3,7 @@
 Summary:        Keras is a high-level neural networks API.
 Name:           keras
 Version:        3.3.3
-Release:        2%{?dist}
+Release:        1%{?dist}
 License:        ASL 2.0
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -51,7 +51,7 @@ Python 3 version.
 
 %install
 # this extra script modifies api that enables tensorflow to communicate with keras
-python3 pip_build.py 
+python3 pip_build.py --install
 %{pyproject_install}
 
 
