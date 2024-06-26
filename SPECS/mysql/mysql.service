@@ -51,7 +51,7 @@ Restart=on-failure
 RestartPreventExitStatus=1
  
 # Sets open_files_limit
-LimitNOFILE = 10000
+LimitNOFILE=10000
  
 # Set enviroment variable MYSQLD_PARENT_PID. This is required for SQL restart command.
 Environment=MYSQLD_PARENT_PID=1
