@@ -51,7 +51,7 @@ Python 3 version.
 
 %install
 # this extra script modifies api that enables tensorflow to communicate with keras
-python3 pip_build.py --install
+#python3 pip_build.py --install
 %{pyproject_install}
 
 
