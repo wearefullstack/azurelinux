@@ -38,7 +38,7 @@
 Summary:        Command-line package manager
 Name:           dnf5
 Version:        %{project_version_major}.%{project_version_minor}.%{project_version_patch}
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        GPL-2.0-or-later
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -169,6 +169,7 @@ BuildRequires:  rubygem-test-unit
 # required for python3-libdnf5 and python3-libdnf5-cli
 BuildRequires:  python3-devel
 %endif
+Requires:       selinux-policy
 
 %description
 DNF5 is a command-line package manager that automates the process of installing,
@@ -674,6 +675,9 @@ done
 
 
 %changelog
+* Fri Jun 28 2024 Sam Meluch <sammeluch@microsoft.com> - 5.1.11-2
+- Add runtime requires for selinux-policy
+
 * Wed Jan 31 2024 Sam Meluch <sammeluch@microsoft.com> - 5.1.11-1
 - Update to version 5.1.11
 - Merge spec from upstream dnf5 repo

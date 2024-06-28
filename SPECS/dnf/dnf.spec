@@ -3,7 +3,7 @@
 Summary:        Python 3 version of the DNF package manager.
 Name:           dnf
 Version:        4.19.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        GPLv2+ OR GPL
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -17,6 +17,7 @@ BuildRequires:  python3-sphinx
 BuildRequires:  systemd
 Requires:       python3
 Requires:       python3-%{name}
+Requires:       selinux-policy
 BuildArch:      noarch
 
 %description
@@ -151,6 +152,9 @@ popd
 %{python3_sitelib}/%{name}/automatic
 
 %changelog
+* Fri Jun 28 2024 Sam Meluch <sammeluch@microsoft.com> - 4.19.0-2
+- add runtime requires for selinux-policy
+
 * Mon Feb 26 2024 Sam Meluch <sammeluch@microsoft.com> - 4.19.0-1
 - Upgrade to version 4.19.0 for Azure Linux 3.0
 
