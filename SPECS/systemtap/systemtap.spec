@@ -16,6 +16,8 @@ Distribution:   Azure Linux
 Group:          Development/System
 URL:            https://sourceware.org/systemtap/
 Source0:        https://sourceware.org/systemtap/ftp/releases/%{name}-%{version}.tar.gz
+BuildRequires:  automake
+BuildRequires:  autoconf
 BuildRequires:  elfutils-devel
 BuildRequires:  elfutils-libelf-devel
 BuildRequires:  glibc-devel
@@ -111,6 +113,7 @@ sed -i "s#"kernel"#"linux"#g" stap-prep
 sed -i "s#"devel"#"dev"#g" stap-prep
 
 %build
+autoreconf -v --install --force
 %configure \
 %if 0%{?with_crash}
 	--enable-crash \
