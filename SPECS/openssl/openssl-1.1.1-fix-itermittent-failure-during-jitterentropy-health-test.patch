@@ -1,0 +1,603 @@
+From 420b76d48a9bc3624c797d2883aef613f30ed4ad Mon Sep 17 00:00:00 2001
+From: Tobias Brick <tobiasb@microsoft.com>
+Date: Sat, 29 Jun 2024 20:42:51 +0000
+Subject: [PATCH] fix itermittent failure during jitterentropy health test
+
+---
+ crypto/fips/build.info           |   2 +-
+ crypto/fips/jitterentropy-base.c | 217 +++++++++++++------------------
+ crypto/fips/jitterentropy-gcd.c  | 164 +++++++++++++++++++++++
+ crypto/fips/jitterentropy-gcd.h  |  38 ++++++
+ include/crypto/jitterentropy.h   |   3 +
+ 5 files changed, 299 insertions(+), 125 deletions(-)
+ create mode 100644 crypto/fips/jitterentropy-gcd.c
+ create mode 100644 crypto/fips/jitterentropy-gcd.h
+
+diff --git a/crypto/fips/build.info b/crypto/fips/build.info
+index a690d04..e033cd1 100644
+--- a/crypto/fips/build.info
++++ b/crypto/fips/build.info
+@@ -5,7 +5,7 @@ SOURCE[../../libcrypto]=\
+         fips_post.c fips_drbg_ctr.c fips_drbg_hash.c fips_drbg_hmac.c \
+         fips_drbg_lib.c fips_drbg_rand.c fips_drbg_selftest.c fips_rand_lib.c \
+         fips_cmac_selftest.c fips_ecdh_selftest.c fips_ecdsa_selftest.c \
+-        fips_dh_selftest.c fips_kdf_selftest.c fips_ers.c jitterentropy-base.c
++        fips_dh_selftest.c fips_kdf_selftest.c fips_ers.c jitterentropy-base.c jitterentropy-gcd.c
+ 
+ PROGRAMS_NO_INST=\
+           fips_standalone_hmac
+diff --git a/crypto/fips/jitterentropy-base.c b/crypto/fips/jitterentropy-base.c
+index 9fb5b96..df19c27 100644
+--- a/crypto/fips/jitterentropy-base.c
++++ b/crypto/fips/jitterentropy-base.c
+@@ -50,6 +50,7 @@
+  */
+ 
+ #include "crypto/jitterentropy.h"
++#include "jitterentropy-gcd.h"
+ 
+ #define MAJVERSION 3 /* API / ABI incompatible changes, functional changes that
+ 		      * require consumer to be updated (as long as this number
+@@ -1034,7 +1035,8 @@ static unsigned int jent_measure_jitter(struct rand_data *ec,
+ 	 * invocation to measure the timing variations
+ 	 */
+ 	jent_get_nstime_internal(ec, &time);
+-	current_delta = jent_delta(ec->prev_time, time);
++	current_delta = jent_delta(ec->prev_time, time) /
++						ec->jent_common_timer_gcd;
+ 	ec->prev_time = time;
+ 
+ 	/* Check whether we have a stuck measurement. */
+@@ -1170,9 +1172,9 @@ err:
+  * Initialization logic
+  ***************************************************************************/
+ 
+-JENT_PRIVATE_STATIC
+-struct rand_data *jent_entropy_collector_alloc(unsigned int osr,
+-					       unsigned int flags)
++static struct rand_data
++*jent_entropy_collector_alloc_internal(unsigned int osr,
++				       unsigned int flags)
+ {
+ 	struct rand_data *entropy_collector;
+ 
+@@ -1218,18 +1220,22 @@ struct rand_data *jent_entropy_collector_alloc(unsigned int osr,
+ 	if (jent_fips_enabled() || (flags & JENT_FORCE_FIPS))
+ 		entropy_collector->fips_enabled = 1;
+ 
++	/* Was jent_entropy_init run (establishing the common GCD)? */
++	if (jent_gcd_get(&entropy_collector->jent_common_timer_gcd)) {
++		/*
++		 * It was not. This should probably be an error, but this
++		 * behavior breaks the test code. Set the gcd to a value that
++		 * won't hurt anything.
++		 */
++		entropy_collector->jent_common_timer_gcd = 1;
++	}
++
+ 	/* Use timer-less noise source */
+ 	if (!(flags & JENT_DISABLE_INTERNAL_TIMER)) {
+ 		if (jent_notime_enable(entropy_collector, flags))
+ 			goto err;
+ 	}
+ 
+-	/* fill the data pad with non-zero values */
+-	if (jent_notime_settick(entropy_collector))
+-		goto err;
+-	jent_random_data(entropy_collector);
+-	jent_notime_unsettick(entropy_collector);
+-
+ 	return entropy_collector;
+ 
+ err:
+@@ -1239,6 +1245,27 @@ err:
+ 	return NULL;
+ }
+ 
++JENT_PRIVATE_STATIC
++struct rand_data *jent_entropy_collector_alloc(unsigned int osr,
++					       unsigned int flags)
++{
++	struct rand_data *ec = jent_entropy_collector_alloc_internal(osr,
++								     flags);
++
++	if (!ec)
++		return ec;
++
++	/* fill the data pad with non-zero values */
++	if (jent_notime_settick(ec)) {
++		jent_entropy_collector_free(ec);
++		return NULL;
++	}
++	jent_random_data(ec);
++	jent_notime_unsettick(ec);
++
++	return ec;
++}
++
+ JENT_PRIVATE_STATIC
+ void jent_entropy_collector_free(struct rand_data *entropy_collector)
+ {
+@@ -1253,38 +1280,43 @@ void jent_entropy_collector_free(struct rand_data *entropy_collector)
+ 
+ static int jent_time_entropy_init(unsigned int enable_notime)
+ {
+-	int i;
+-	uint64_t delta_sum = 0;
+-	uint64_t old_delta = 0;
+-	unsigned int nonstuck = 0;
+-	int time_backwards = 0;
+-	int count_mod = 0;
+-	int count_stuck = 0;
+-	int ret = 0;
+-	struct rand_data ec;
++	struct rand_data *ec;
++	uint64_t i;
++	int time_backwards = 0, count_stuck = 0, ret = 0;
+ 
+-	memset(&ec, 0, sizeof(ec));
++#ifdef JENT_CONF_ENABLE_INTERNAL_TIMER
++	if (enable_notime)
++		jent_force_internal_timer = 1;
++#endif
++
++	if (jent_gcd_init(JENT_POWERUP_TESTLOOPCOUNT))
++		return EMEM;
+ 
+-	if (enable_notime) {
+-		ec.enable_notime = 1;
+-		jent_notime_settick(&ec);
++	/*
++	 * If the start-up health tests (including the APT and RCT) are not
++	 * run, then the entropy source is not 90B compliant. We could test if
++	 * fips_enabled should be set using the jent_fips_enabled() function,
++	 * but this can be overridden using the JENT_FORCE_FIPS flag, which
++	 * isn't passed in yet. It is better to run the tests on the small
++	 * amount of data that we have, which should not fail unless things
++	 * are really bad.
++	 */
++	ec = jent_entropy_collector_alloc_internal(0, JENT_FORCE_FIPS |
++				(enable_notime ? JENT_FORCE_INTERNAL_TIMER :
++						 JENT_DISABLE_INTERNAL_TIMER));
++	if (!ec) {
++		ret = EMEM;
++		goto out;
+ 	}
+ 
+-	/* Required for RCT */
+-	ec.osr = 1;
+-	if (jent_fips_enabled())
+-		ec.fips_enabled = 1;
++	if (jent_notime_settick(ec)) {
++		ret = EMEM;
++		goto out;
++	}
+ 
+ 	/* We could perform statistical tests here, but the problem is
+ 	 * that we only have a few loop counts to do testing. These
+-	 * loop counts may show some slight skew and we produce
+-	 * false positives.
+-	 *
+-	 * Moreover, only old systems show potentially problematic
+-	 * jitter entropy that could potentially be caught here. But
+-	 * the RNG is intended for hardware that is available or widely
+-	 * used, but not old systems that are long out of favor. Thus,
+-	 * no statistical tests.
++	 * loop counts may show some slight skew leading to false positives.
+ 	 */
+ 
+ 	/*
+@@ -1293,40 +1325,32 @@ static int jent_time_entropy_init(unsigned int enable_notime)
+ 	 * following sanity checks verify that we have a high-resolution
+ 	 * timer.
+ 	 */
+-
+ #define CLEARCACHE 100
+ 	for (i = 0; (JENT_POWERUP_TESTLOOPCOUNT + CLEARCACHE) > i; i++) {
+-		uint64_t time = 0;
+-		uint64_t time2 = 0;
+-		uint64_t delta = 0;
+-		unsigned int lowdelta = 0;
++		uint64_t start_time = 0, end_time = 0, delta = 0;
+ 		unsigned int stuck;
+ 
+ 		/* Invoke core entropy collection logic */
+-		jent_get_nstime_internal(&ec, &time);
+-		ec.prev_time = time;
+-		jent_memaccess(&ec, 0);
+-		jent_hash_time(&ec, time, 0, 0);
+-		jent_get_nstime_internal(&ec, &time2);
++		jent_get_nstime_internal(ec, &start_time);
++		stuck = jent_measure_jitter(ec, 0, &delta);
++		jent_get_nstime_internal(ec, &end_time);
+ 
+ 		/* test whether timer works */
+-		if (!time || !time2) {
++		if (!start_time || !end_time) {
+ 			ret = ENOTIME;
+ 			goto out;
+ 		}
+-		delta = jent_delta(time, time2);
++
+ 		/*
+ 		 * test whether timer is fine grained enough to provide
+ 		 * delta even when called shortly after each other -- this
+ 		 * implies that we also have a high resolution timer
+ 		 */
+-		if (!delta) {
++		if (!delta || (end_time == start_time)) {
+ 			ret = ECOARSETIME;
+ 			goto out;
+ 		}
+ 
+-		stuck = jent_stuck(&ec, delta);
+-
+ 		/*
+ 		 * up to here we did not modify any variable that will be
+ 		 * evaluated later, but we already performed some work. Thus we
+@@ -1339,87 +1363,31 @@ static int jent_time_entropy_init(unsigned int enable_notime)
+ 
+ 		if (stuck)
+ 			count_stuck++;
+-		else {
+-			nonstuck++;
+-
+-			/*
+-			 * Ensure that the APT succeeded.
+-			 *
+-			 * With the check below that count_stuck must be less
+-			 * than 10% of the overall generated raw entropy values
+-			 * it is guaranteed that the APT is invoked at
+-			 * floor((JENT_POWERUP_TESTLOOPCOUNT * 0.9) / 64) == 14
+-			 * times.
+-			 */
+-			if ((nonstuck % JENT_APT_WINDOW_SIZE) == 0) {
+-				jent_apt_reset(&ec,
+-					       delta & JENT_APT_WORD_MASK);
+-				if (jent_health_failure(&ec)) {
+-					ret = EHEALTH;
+-					goto out;
+-				}
+-			}
+-		}
+-
+-		/* Validate RCT */
+-		if (jent_rct_failure(&ec)) {
+-			ret = ERCT;
+-			goto out;
+-		}
+ 
+ 		/* test whether we have an increasing timer */
+-		if (!(time2 > time))
++		if (!(end_time > start_time))
+ 			time_backwards++;
+ 
+-		/* use 32 bit value to ensure compilation on 32 bit arches */
+-		lowdelta = (unsigned int)(time2 - time);
+-		if (!(lowdelta % 100))
+-			count_mod++;
+-
+-		/*
+-		 * ensure that we have a varying delta timer which is necessary
+-		 * for the calculation of entropy -- perform this check
+-		 * only after the first loop is executed as we need to prime
+-		 * the old_data value
+-		 */
+-		if (delta > old_delta)
+-			delta_sum += (delta - old_delta);
+-		else
+-			delta_sum += (old_delta - delta);
+-		old_delta = delta;
++		/* Watch for common adjacent GCD values */
++		jent_gcd_add_value(delta, i - CLEARCACHE);
+ 	}
+ 
+-	/*
+-	 * we allow up to three times the time running backwards.
+-	 * CLOCK_REALTIME is affected by adjtime and NTP operations. Thus,
+-	 * if such an operation just happens to interfere with our test, it
+-	 * should not fail. The value of 3 should cover the NTP case being
+-	 * performed during our test run.
+-	 */
+-	if (time_backwards > 3) {
+-		ret = ENOMONOTONIC;
++	/* First, did we encounter a health test failure? */
++	/* Validate RCT */
++	if (jent_rct_failure(ec)) {
++		ret = ERCT;
+ 		goto out;
+ 	}
+ 
+-	/*
+-	 * Variations of deltas of time must on average be larger
+-	 * than 1 to ensure the entropy estimation
+-	 * implied with 1 is preserved
+-	 */
+-	if ((delta_sum) <= JENT_POWERUP_TESTLOOPCOUNT) {
+-		ret = EMINVARVAR;
++	/* Ensure that the other health tests succeeded. */
++	if (jent_health_failure(ec)) {
++		ret = EHEALTH;
+ 		goto out;
+ 	}
+ 
+-	/*
+-	 * Ensure that we have variations in the time stamp below 10 for at
+-	 * least 10% of all checks -- on some platforms, the counter increments
+-	 * in multiples of 100, but not always
+-	 */
+-	if (JENT_STUCK_INIT_THRES(JENT_POWERUP_TESTLOOPCOUNT) < count_mod) {
+-		ret = ECOARSETIME;
++	ret = jent_gcd_analyze(JENT_POWERUP_TESTLOOPCOUNT);
++	if (ret)
+ 		goto out;
+-	}
+ 
+ 	/*
+ 	 * If we have more than 90% stuck results, then this Jitter RNG is
+@@ -1429,8 +1397,12 @@ static int jent_time_entropy_init(unsigned int enable_notime)
+ 		ret = ESTUCK;
+ 
+ out:
+-	if (enable_notime)
+-		jent_notime_unsettick(&ec);
++	jent_gcd_fini(JENT_POWERUP_TESTLOOPCOUNT);
++
++	if (enable_notime && ec)
++		jent_notime_unsettick(ec);
++
++	jent_entropy_collector_free(ec);
+ 
+ 	return ret;
+ }
+@@ -1447,11 +1419,8 @@ int jent_entropy_init(void)
+ 
+ #ifdef JENT_CONF_ENABLE_INTERNAL_TIMER
+ 	jent_force_internal_timer = 0;
+-	if (ret) {
++	if (ret)
+ 		ret = jent_time_entropy_init(1);
+-		if (!ret)
+-			jent_force_internal_timer = 1;
+-	}
+ #endif /* JENT_CONF_ENABLE_INTERNAL_TIMER */
+ 
+ 	return ret;
+diff --git a/crypto/fips/jitterentropy-gcd.c b/crypto/fips/jitterentropy-gcd.c
+new file mode 100644
+index 0000000..84b55c9
+--- /dev/null
++++ b/crypto/fips/jitterentropy-gcd.c
+@@ -0,0 +1,164 @@
++/*
++ * Copyright (C) 2021, Joshua E. Hill <josh@keypair.us>
++ * Copyright (C) 2021, Stephan Mueller <smueller@chronox.de>
++ *
++ * License: see LICENSE file in root directory
++ *
++ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
++ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE, ALL OF
++ * WHICH ARE HEREBY DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
++ * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
++ * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
++ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
++ * USE OF THIS SOFTWARE, EVEN IF NOT ADVISED OF THE POSSIBILITY OF SUCH
++ * DAMAGE.
++ */
++
++#include "crypto/jitterentropy.h"
++#include "jitterentropy-gcd.h"
++
++/* The common divisor for all timestamp deltas */
++static uint64_t jent_common_timer_gcd = 0;
++
++static uint64_t *delta_history = NULL;
++
++static inline int jent_gcd_tested(void)
++{
++	return (jent_common_timer_gcd != 0);
++}
++
++/* A straight forward implementation of the Euclidean algorithm for GCD. */
++static inline uint64_t jent_gcd64(uint64_t a, uint64_t b)
++{
++	/* Make a greater a than or equal b. */
++	if (a < b) {
++		uint64_t c = a;
++		a = b;
++		b = c;
++	}
++
++	/* Now perform the standard inner-loop for this algorithm.*/
++	while (b != 0) {
++		uint64_t r;
++
++		r = a % b;
++
++		a = b;
++		b = r;
++	}
++
++	return a;
++}
++
++void jent_gcd_add_value(uint64_t delta, uint64_t idx)
++{
++	/* Watch for common adjacent GCD values */
++	if (delta_history)
++		delta_history[idx] = delta;
++}
++
++int jent_gcd_analyze(size_t nelem)
++{
++	uint64_t running_gcd = 0, delta_sum = 0;
++	size_t i, count_mod;
++	int ret = 0;
++
++	if (!delta_history)
++		return 0;
++
++	/* First initialize the analysis state. */
++	if (delta_history[0] % 100 == 0)
++		count_mod = 1;
++	else
++		count_mod = 0;
++
++	/* How many distinct gcd values were found? */
++	for (i = 0; i < nelem; i++) {
++		if (delta_history[i] % 100 == 0)
++			count_mod++;
++
++		/*
++		 * ensure that we have a varying delta timer which is necessary
++		 * for the calculation of entropy -- perform this check
++		 * only after the first loop is executed as we need to prime
++		 * the old_data value
++		 */
++		if (delta_history[i] >= delta_history[i - 1])
++			delta_sum +=  delta_history[i] - delta_history[i - 1];
++		else
++			delta_sum +=  delta_history[i - 1] - delta_history[i];
++
++		/*
++		 * This calculates the gcd of all the delta values. that is
++		 * gcd(delta_1, delta_2, ..., delta_nelem)
++
++		 * Some timers increment by a fixed (non-1) amount each step.
++		 * This code checks for such increments, and allows the library
++		 * to output the number of such changes have occurred.
++		 */
++		running_gcd = jent_gcd64(delta_history[i], running_gcd);
++	}
++
++	/*
++	 * Variations of deltas of time must on average be larger than 1 to
++	 * ensure the entropy estimation implied with 1 is preserved.
++	 */
++	if (delta_sum <= nelem - 1) {
++		ret = EMINVARVAR;
++		goto out;
++	}
++
++	/*
++	 * Ensure that we have variations in the time stamp below 100 for at
++	 * least 10% of all checks -- on some platforms, the counter increments
++	 * in multiples of 100, but not always
++	 */
++	if ((JENT_STUCK_INIT_THRES(nelem) < count_mod) ||
++	    (running_gcd >= 100)) {
++		ret = ECOARSETIME;
++		goto out;
++	}
++
++	/*  Adjust all deltas by the observed (small) common factor. */
++	jent_common_timer_gcd = running_gcd;
++
++out:
++	return ret;
++}
++
++int jent_gcd_init(size_t nelem)
++{
++	/* If the GCD was initialized once, we do not do it again */
++	if (jent_gcd_tested())
++		return 0;
++
++	if (delta_history)
++		return 1;
++
++	delta_history = jent_zalloc(nelem * sizeof(uint64_t));
++	if (!delta_history)
++		return 1;
++
++	return 0;
++}
++
++void jent_gcd_fini(size_t nelem)
++{
++	if (delta_history)
++		jent_zfree(delta_history,
++			   (unsigned int)(nelem * sizeof(uint64_t)));
++	delta_history = NULL;
++}
++
++int jent_gcd_get(uint64_t *value)
++{
++	if (!jent_gcd_tested())
++		return 1;
++
++	*value = jent_common_timer_gcd;
++	return 0;
++}
+diff --git a/crypto/fips/jitterentropy-gcd.h b/crypto/fips/jitterentropy-gcd.h
+new file mode 100644
+index 0000000..35d3caa
+--- /dev/null
++++ b/crypto/fips/jitterentropy-gcd.h
+@@ -0,0 +1,38 @@
++/*
++ * Copyright (C) 2021, Stephan Mueller <smueller@chronox.de>
++ *
++ * License: see LICENSE file in root directory
++ *
++ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
++ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE, ALL OF
++ * WHICH ARE HEREBY DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
++ * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
++ * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
++ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
++ * USE OF THIS SOFTWARE, EVEN IF NOT ADVISED OF THE POSSIBILITY OF SUCH
++ * DAMAGE.
++ */
++
++#ifndef JITTERENTROPY_GCD_H
++#define JITTERENTROPY_GCD_H
++
++#ifdef __cplusplus
++extern "C"
++{
++#endif
++
++void jent_gcd_add_value(uint64_t delta, uint64_t idx);
++int jent_gcd_analyze(size_t nelem);
++int jent_gcd_init(size_t nelem);
++void jent_gcd_fini(size_t nelem);
++int jent_gcd_get(uint64_t *value);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif /* JITTERENTROPY_GCD_H */
+diff --git a/include/crypto/jitterentropy.h b/include/crypto/jitterentropy.h
+index 078d750..f85a1dd 100644
+--- a/include/crypto/jitterentropy.h
++++ b/include/crypto/jitterentropy.h
+@@ -139,6 +139,8 @@ struct rand_data
+ 	pthread_attr_t notime_pthread_attr;	/* pthreads library */
+ 	pthread_t notime_thread_id;		/* pthreads thread ID */
+ #endif /* JENT_CONF_ENABLE_INTERNAL_TIMER */
++
++	uint64_t jent_common_timer_gcd;	/* Common divisor for all time deltas */
+ };
+ 
+ /* Flags that can be used to initialize the RNG */
+@@ -214,6 +216,7 @@ unsigned int jent_version(void);
+ #define EHEALTH		9 /* Health test failed during initialization */
+ #define ERCT		10 /* RCT failed during initialization */
+ #define EHASH		11 /* Hash self test failed */
++#define EMEM		12 /* Can't allocate memory for initialization */
+ 
+ /* -- BEGIN statistical test functions only complied with CONFIG_CRYPTO_CPU_JITTERENTROPY_STAT -- */
+ 
+-- 
+2.39.4
+
