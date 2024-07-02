@@ -44,6 +44,7 @@ Patch316:       CVE-2023-48795-0006-upstream-Remove-leftover-line.patch
 Patch317:       CVE-2023-48795-0007-upstream-Refactor-creation-of-KEX-proposal.patch
 Patch318:       CVE-2023-48795-0008-upstream-Limit-number-of-entries-in-SSH2_MSG_EXT_INF.patch
 Patch319:       CVE-2023-48795-0009-upstream-implement-strict-key-exchange-in-ssh-and-ss.patch
+Patch320:       CVE-2024-6387.patch
 BuildRequires:  audit-devel
 BuildRequires:  autoconf
 BuildRequires:  e2fsprogs-devel
@@ -128,6 +129,7 @@ popd
 %patch317 -p1 -b .cve-2023-48795-0007
 %patch318 -p1 -b .cve-2023-48795-0008
 %patch319 -p1 -b .cve-2023-48795-0009
+%patch320 -p1 -b .cve-2024-6387
 
 %build
 export CFLAGS="$CFLAGS -fpic"
