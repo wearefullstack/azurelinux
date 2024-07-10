@@ -22,7 +22,7 @@ BuildRequires:  ocaml-sexplib0-devel >= 0.16
 
 %if %{with_check}
 BuildRequires:  ocaml-num-devel
-BuildRequires:  ocaml-ppx-jane-devel
+#BuildRequires:  ocaml-ppx-jane-devel
 BuildRequires:  ocaml-sexplib-devel
 BuildRequires:  ocaml-stdio-devel
 BuildRequires:  ocaml-uutf-devel

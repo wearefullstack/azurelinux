@@ -31,7 +31,7 @@ Summary:        Core utilities for Python packages
 Requires:       python3
 Requires:       python3-pyparsing
 Requires:       python3-six
-
+Provides:       python3dist(packaging) = %{version}-%{release}
 
 %description -n python3-packaging
 Core utilities for Python packages

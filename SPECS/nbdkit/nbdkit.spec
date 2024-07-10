@@ -120,7 +120,8 @@ BuildRequires:  %{_bindir}/qemu-io
 BuildRequires:  %{_bindir}/qemu-nbd
 BuildRequires:  /sbin/sfdisk
 BuildRequires:  %{_bindir}/socat
-BuildRequires:  /sbin/ss
+#BuildRequires:  /sbin/ss
+BuildRequries:  iproute
 BuildRequires:  %{_bindir}/stat
 %endif
 

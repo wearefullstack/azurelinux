@@ -16,7 +16,7 @@ BuildRequires:  ocaml-dune >= 2.0.0
 BuildRequires:  ocaml-re-devel >= 1.8.0
 
 %if %{with_check}
-BuildRequires:  ocaml-ppx-jane-devel
+#BuildRequires:  ocaml-ppx-jane-devel
 %endif
 
 %description

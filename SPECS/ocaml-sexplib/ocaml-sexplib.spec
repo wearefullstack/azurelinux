@@ -24,11 +24,11 @@ BuildRequires:  vim-rpm-macros
 
 %if %{with_check}
 BuildRequires:  ocaml-base-devel
-BuildRequires:  ocaml-base-quickcheck-devel
-BuildRequires:  ocaml-core-kernel-devel
-BuildRequires:  ocaml-expect-test-helpers-core-devel
-BuildRequires:  ocaml-ppx-jane-devel
-BuildRequires:  ocaml-sexp-grammar-validation-devel
+#BuildRequires:  ocaml-base-quickcheck-devel
+#BuildRequires:  ocaml-core-kernel-devel
+#BuildRequires:  ocaml-expect-test-helpers-core-devel
+#BuildRequires:  ocaml-ppx-jane-devel
+#BuildRequires:  ocaml-sexp-grammar-validation-devel
 %endif
 
 %description
