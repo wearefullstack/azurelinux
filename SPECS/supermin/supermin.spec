@@ -21,7 +21,7 @@
 Summary:        Tool for creating supermin appliances
 Name:           supermin
 Version:        5.2.1
-Release:        10%{?dist}
+Release:        1000%{?dist}
 License:        GPLv2+
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -129,6 +129,9 @@ make check || {
 %{_rpmconfigdir}/supermin-find-requires
 
 %changelog
+* Fri Jul 12 2024 Chris Co <chrco@microsoft.com> - 5.2.1-1000
+- Bump spec
+
 * Mon May 06 2024 Rachel Menge <rachelmenge@microsoft.com> - 5.2.1-10
 - Bump release to rebuild against glibc 2.35-7
 
