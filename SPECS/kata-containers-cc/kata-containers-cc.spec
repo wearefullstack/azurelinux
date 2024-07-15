@@ -14,7 +14,7 @@
 
 Name:         kata-containers-cc
 Version:      3.2.0.azl2
-Release:      4%{?dist}
+Release:      5%{?dist}
 Summary:      Kata Confidential Containers package developed for Confidential Containers on AKS
 License:      ASL 2.0
 Vendor:       Microsoft Corporation
@@ -212,7 +212,6 @@ popd
 
 # tardev-snapshotter
 pushd %{_builddir}/%{name}-%{version}/src/tardev-snapshotter/
-sed -i -e 's/containerd.service/kubelet.service/g' tardev-snapshotter.service
 install -m 0644 -D -t %{buildroot}%{_unitdir} tardev-snapshotter.service
 install -D -m 0755 target/release/tardev-snapshotter  %{buildroot}/usr/bin/tardev-snapshotter
 popd
@@ -293,6 +292,9 @@ fi
 %exclude %{osbuilder}/tools/osbuilder/rootfs-builder/ubuntu
 
 %changelog
+* Fri Jul 12 2024 Mitch Zhu <mitchzhu@microsoft.com> - 3.2.0.azl2-5
+- Remove outdated sed command that modifies tardev-snapshotter.service
+
 * Fri Jul 12 2024 Manuel Huber <mahuber@microsoft.com> - 3.2.0.azl2-4
 - Adapt make install target parameters to cope with upstream
   fork Makefile changes
