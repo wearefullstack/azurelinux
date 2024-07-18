@@ -7,6 +7,9 @@
 # Set this to 1 to see which tests fail, but 0 on production ready build
 %global ignore_testsuite_result 0
 
+# Set exec folder
+%global libexecdir /usr/libexec/ 
+
 Summary:        MySQL.
 Name:           mysql
 Version:        8.0.36
@@ -20,6 +23,12 @@ Source0:        https://dev.mysql.com/get/Downloads/MySQL-8.0/%{name}-boost-%{ve
 Source1:        mysql.service
 Source2:        mysql@.service
 Source3:        mysql.tmpfiles.d
+Source10:       my.cnf
+Source11:       server.cnf
+Source12:       mysql-prepare-db-dir.sh
+Source13:       mysql-check-socket.sh
+Source14:       mysql-scripts-common.sh
+Source15:       mysql-wait-stop.sh
 # Skipped tests lists
 Source50:       rh-skipped-tests-list-base.list
 Source51:       rh-skipped-tests-list-arm.list
@@ -48,6 +57,18 @@ Requires:       %{name} = %{version}-%{release}
 
 %description devel
 Development headers for developing applications linking to maridb
+	
+%package server
+Summary:          The MySQL server and related files
+Requires:         mariadb-connector-c-config
+Requires:         systemd
+Requires:         %{_sysconfdir}/my.cnf
+ 
+%description      server
+MySQL is a multi-user, multi-threaded SQL database server. MySQL is a
+client/server implementation consisting of a server daemon (mysqld)
+and many different client programs and libraries. This package contains
+the MySQL server and some accompanying files and directories.
 
 %prep
 %autosetup -p1
@@ -71,8 +92,7 @@ cat %{SOURCE52} | tee -a mysql-test/%{skiplist}
 cat %{SOURCE53} | tee -a mysql-test/%{skiplist}
 %endif
 
-cp %{SOURCE1} %{SOURCE2} %{SOURCE3} scripts
-
+cp %{SOURCE1} %{SOURCE2} %{SOURCE3} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} scripts
 %build
 cmake . \
       -DCMAKE_INSTALL_PREFIX=%{_prefix}   \
@@ -90,6 +110,9 @@ cmake . \
       -DSYSTEMD_PID_DIR="%{pidfiledir}" \
       -DFORCE_INSOURCE_BUILD=1 \
       -DINSTALL_MYSQLTESTDIR=share/mysql-test \
+      -DSYSCONFDIR="%{_sysconfdir}" \
+      -DSYSCONF2DIR="%{_sysconfdir}/my.cnf" \
+      -DINSTALL_LIBEXECDIR=libexec \
       -DWITH_UNIT_TESTS=0
 
 # Note: disabling building of unittests to workaround #1989847
@@ -99,11 +122,21 @@ make %{?_smp_mflags}
 %install
 make DESTDIR=%{buildroot} install
 
+# install -D -p -m 0644 scripts/my.cnf %{buildroot}%{_sysconfdir}/my.cnf
+
 # install systemd unit files and scripts for handling server startup
 install -D -p -m 644 scripts/mysql.service %{buildroot}%{_unitdir}/%{daemon_name}.service
 install -D -p -m 644 scripts/mysql@.service %{buildroot}%{_unitdir}/%{daemon_name}@.service
 install -D -p -m 0644 scripts/mysql.tmpfiles.d %{buildroot}%{_tmpfilesdir}/%{daemon_name}.conf
 rm -r %{buildroot}%{_tmpfilesdir}/%{daemon_name}.conf
+
+
+# helper scripts for service starting
+install -D -p -m 755 scripts/mysql-prepare-db-dir.sh %{buildroot}%{_libexecdir}/mysql-prepare-db-dir.sh
+install -p -m 755 scripts/mysql-wait-stop.sh %{buildroot}%{_libexecdir}/mysql-wait-stop.sh
+install -p -m 755 scripts/mysql-check-socket.sh %{buildroot}%{_libexecdir}/mysql-check-socket.sh
+install -p -m 644 scripts/mysql-scripts-common.sh %{buildroot}%{_libexecdir}/mysql-scripts-common.sh
+install -D -p -m 0644 scripts/server.cnf %{buildroot}%{_sysconfdir}/my.cnf.d/%{pkgname}-server.cnf
 
 # Install the list of skipped tests to be available for user runs
 install -p -m 0644 %{_vpath_srcdir}/mysql-test/%{skiplist} %{buildroot}%{_datadir}/mysql-test
@@ -154,6 +187,25 @@ export MTR_BUILD_THREAD=$(( $(date +%s) % 2200 ))
  
 popd
 
+	
+%pre server
+/usr/sbin/groupadd -g 27 -o -r mysql >/dev/null 2>&1 || :
+/usr/sbin/useradd -M -N -g mysql -o -r -d %{dbdatadir} -s /sbin/nologin \
+  -c "MySQL Server" -u 27 mysql >/dev/null 2>&1 || :
+ 
+%post server
+%systemd_post %{daemon_name}.service
+if [ ! -e "%{logfile}" -a ! -h "%{logfile}" ] ; then
+    install /dev/null -m0640 -omysql -gmysql "%{logfile}"
+fi
+ 
+%preun server
+%systemd_preun %{daemon_name}.service
+ 
+%postun server
+%systemd_postun_with_restart %{daemon_name}.service
+
+
 %files
 %defattr(-,root,root)
 %license LICENSE router/LICENSE.router
@@ -188,9 +240,33 @@ popd
 %{_includedir}/*
 %{_libdir}/pkgconfig/mysqlclient.pc
 
+%files server
+%{_bindir}/ibd2sdi
+%{_bindir}/myisamchk
+%{_bindir}/myisam_ftdump
+%{_bindir}/myisamlog
+%{_bindir}/myisampack
+%{_bindir}/my_print_defaults
+%{_bindir}/mysql_migrate_keyring
+%{_bindir}/mysql_secure_installation
+%{_bindir}/mysql_ssl_rsa_setup
+%{_bindir}/mysql_tzinfo_to_sql
+%{_bindir}/mysql_upgrade
+%{_bindir}/mysqld_pre_systemd
+%{_bindir}/mysqldumpslow
+%{_bindir}/innochecksum
+%{_bindir}/perror
+%config(noreplace) %{_sysconfdir}/my.cnf.d/%{pkgname}-server.cnf
+
+%{libexecdir}/mysql-prepare-db-dir.sh
+%{libexecdir}/mysql-wait-stop.sh
+%{libexecdir}/mysql-check-socket.sh
+%{libexecdir}/mysql-scripts-common.sh
+
 %changelog
 * Thu Jun 20 2024 Betty Lakes <bettylakes@microsoft.com> - 8.0.36-2
 - Add systemd dependency and unit test workaround
+- Add mysql-server package
 
 * Thu Feb 22 2024 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 8.0.36-1
 - Auto-upgrade to 8.0.36

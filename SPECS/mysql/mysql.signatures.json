@@ -1,12 +1,18 @@
 {
  "Signatures": {
+  "my.cnf": "eecbaed16fd78023ea7f3ba136ae529c57abe3e084ccde6443f08ed57787064f",
   "mysql-boost-8.0.36.tar.gz": "429c5f69f3722e31807e74119d157a023277af210bfee513443cae60ebd2a86d",
+  "mysql-check-socket.sh": "49bc76f76892f1b9f6da76c50aa48cd0a61ad6314c102fd74ea6024c2e66ad5d",
+  "mysql-prepare-db-dir.sh": "43ab7d7dd4ab577ff44d02a84ec6502412fcf7d130ded5e5172e98dcea5ad85a",
+  "mysql-scripts-common.sh": "9aad1cf7f1901d8d87b520b90440fe0da82964a1bbd496764df42a4ee494be2b",
+  "mysql-wait-stop.sh": "d01a5d34adb81d7b9d63cad0a5671d964809325e4c44e3248cc8a61d4d4bc333",
   "mysql.service": "013a5498c9a75d48743b024df1abfcd803b6545f27ea0b3cd4913c771d10a0a0",
   "mysql.tmpfiles.d": "c02041727f34f163fd926a55b4406fe463230b814b670e6e6573eb7da04c0a92",
   "mysql@.service": "2a7027181bf6ff5c82511774ae56045c1c03ec9721167762723ab2b7da821390",
   "rh-skipped-tests-list-arm.list": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "rh-skipped-tests-list-base.list": "62dde905cf99e174f83e4655ba82528a81b70f512ebd30724a36667c845a2171",
   "rh-skipped-tests-list-ppc.list": "bbfcc05ed5c64790ccc4350b20ba56609ca020f583568c6c61e47e8085b3ff07",
-  "rh-skipped-tests-list-s390.list": "5ebe4da685034a358bf7c475ab0d664340a74c21d3b3be2d8ab8dd016af72070"
+  "rh-skipped-tests-list-s390.list": "5ebe4da685034a358bf7c475ab0d664340a74c21d3b3be2d8ab8dd016af72070",
+  "server.cnf": "01995435a120225dc13dfd0a7084ffb97ff65cfadad635a3726e72435b93a190"
  }
 }
