@@ -96,6 +96,10 @@ var defaultChrootEnv = []string{
 	"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
 }
 
+func DefaultEnv() []string {
+	return append([]string(nil), defaultChrootEnv...)
+}
+
 const (
 	unmountTypeLazy   = true
 	unmountTypeNormal = !unmountTypeLazy

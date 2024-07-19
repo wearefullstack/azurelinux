@@ -187,6 +187,8 @@ func callTdnf(tnfArgs []string, tdnfMessagePrefix string, imageChroot *safechroo
 			StdoutCallback(stdoutCallback).
 			LogLevel(shell.LogDisabledLevel, logrus.DebugLevel).
 			ErrorStderrLines(1).
+			// tdnf (and gpg) are fairly sensitive to the USER and HOME directories making sen
+			EnvironmentVariables(safechroot.DefaultEnv()).
 			Execute()
 	})
 }
