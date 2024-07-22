@@ -37,7 +37,6 @@ Source53:       rh-skipped-tests-list-ppc.list
 Patch0:         CVE-2012-5627.nopatch
 BuildRequires:  cmake
 BuildRequires:  libtirpc-devel
-BuildRequires:  openssl-devel
 BuildRequires:  rpcsvc-proto-devel
 BuildRequires:  zlib-devel
 BuildRequires:  systemd
@@ -45,8 +44,6 @@ BuildRequires:  perl-interpreter
 BuildRequires:  perl-generators
 BuildRequires:  perl(Test::More)
 Requires:       systemd
-# Make sure it's there when scriptlets run, too
-%{?systemd_requires: %systemd_requires}
 
 %description
 MySQL is a free, widely used SQL engine. It can be used as a fast database as well as a rock-solid DBMS using a modular engine architecture.
@@ -60,8 +57,6 @@ Development headers for developing applications linking to maridb
 	
 %package server
 Summary:          The MySQL server and related files
-Requires:         mariadb-connector-c-config
-Requires:         systemd
 Requires:         %{_sysconfdir}/my.cnf
  
 %description      server
