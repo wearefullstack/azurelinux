@@ -1,7 +1,7 @@
 Summary:        Internationalized Domain Names in Applications (IDNA).
 Name:           python-idna
 Version:        3.6
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        BSD-like
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -9,6 +9,7 @@ Group:          Development/Languages/Python
 URL:            https://github.com/kjd/idna
 #Source0:       https://github.com/kjd/idna/archive/refs/tags/v%{version}.tar.gz
 Source0:        idna-%{version}.tar.gz
+Patch0:         CVE-2024-3651.patch
 BuildArch:      noarch
 
 %description
@@ -33,7 +34,7 @@ This library also provides support for Unicode Technical Standard 46, Unicode ID
 This acts as a suitable replacement for the “encodings.idna” module that comes with the Python standard library, but only supports the old, deprecated IDNA specification (RFC 3490).
 
 %prep
-%autosetup -n idna-%{version}
+%autosetup -n idna-%{version} -p1
 # Remove bundled egg-info
 rm -rf idna.egg-info
 
@@ -57,6 +58,9 @@ pip3 install iniconfig
 %doc README.rst
 
 %changelog
+* Tue Jul 22 2024 Adit Jha <aditjha@microsoft.com> - 3.6-2
+- Patch CVE-2024-3651
+
 * Mon Feb 26 2024 Osama Esmail <osamaesmail@microsoft.com> - 3.6-1
 - Auto-upgrade to 3.6 - Azure Linux 3.0 - package upgrades
 - Replacing a lot of macros with %%pyproject...
