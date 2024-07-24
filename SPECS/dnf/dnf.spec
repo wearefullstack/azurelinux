@@ -3,7 +3,7 @@
 Summary:        Python 3 version of the DNF package manager.
 Name:           dnf
 Version:        4.19.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        GPLv2+ OR GPL
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
