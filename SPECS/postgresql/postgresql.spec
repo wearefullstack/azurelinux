@@ -36,7 +36,9 @@ Requires:       readline
 Requires:       tzdata
 Requires:       zlib
 Requires:       openssl-libs
-Requires:       shadow-utils
+Requires(pre):  shadow-utils
+Requires(post): shadow-utils
+Requires(postun): shadow-utils
 %description
 PostgreSQL is an object-relational database management system.
 
