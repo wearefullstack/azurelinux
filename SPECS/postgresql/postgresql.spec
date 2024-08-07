@@ -1,7 +1,7 @@
 Summary:        PostgreSQL database engine
 Name:           postgresql
 Version:        16.3
-Release:        2%{?dist}
+Release:        3%{?dist}
 License:        PostgreSQL
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -35,7 +35,8 @@ Requires:       openssl
 Requires:       readline
 Requires:       tzdata
 Requires:       zlib
-Requires:	openssl-libs
+Requires:       openssl-libs
+Requires:       shadow-utils
 %description
 PostgreSQL is an object-relational database management system.
 
