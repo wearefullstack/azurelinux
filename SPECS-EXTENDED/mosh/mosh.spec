@@ -10,8 +10,6 @@ Group:		Applications/Internet
 URL:		https://mosh.org/
 Source0:	https://github.com/downloads/keithw/mosh/mosh-%{version}.tar.gz
 
-BuildRequires:  ccache
-BuildRequires:  gcc 
 BuildRequires:  perl-diagnostics
 BuildRequires:	protobuf-compiler
 BuildRequires:	protobuf-devel
