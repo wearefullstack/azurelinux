@@ -56,7 +56,7 @@
 Summary:        Contains the GNU compiler collection
 Name:           gcc
 Version:        11.2.0
-Release:        8%{?dist}
+Release:        9%{?dist}
 License:        GPLv2+
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -239,6 +239,16 @@ number of packages.
 %prep
 %autosetup -p1
 
+gcc -print-multi-os-directory
+
+# Follow linuxfromscratch recommendation to change the default directory for 64-bit libraries to "lib"
+%ifarch x86_64
+sed -e '/m64=/s/lib64/lib/' -i.orig gcc/config/i386/t-linux64
+%endif
+%ifarch aarch64
+sed -e '/mabi.lp64=/s/lib64/lib/' -i.orig gcc/config/aarch64/t-aarch64-linux
+%endif
+
 function prep_target () {
     local target=$1
     local condition=$2
@@ -357,11 +367,11 @@ install -vdm 755 %{buildroot}/%{_libdir}
 ln -sv %{_bindir}/cpp %{buildroot}/%{_libdir}
 ln -sv gcc %{buildroot}%{_bindir}/cc
 install -vdm 755 %{buildroot}%{_datarootdir}/gdb/auto-load%{_libdir}
-mv -v %{buildroot}%{_lib64dir}/*gdb.py %{buildroot}%{_datarootdir}/gdb/auto-load%{_libdir}
-chmod 755 %{buildroot}/%{_lib64dir}/libgcc_s.so.1
+mv -v %{buildroot}%{_libdir}/*gdb.py %{buildroot}%{_datarootdir}/gdb/auto-load%{_libdir}
+chmod 755 %{buildroot}/%{_libdir}/libgcc_s.so.1
 
 # Install libbacktrace-static components
-cp %{_host}/libbacktrace/.libs/libbacktrace.a %{buildroot}%{_lib64dir}
+cp %{_host}/libbacktrace/.libs/libbacktrace.a %{buildroot}%{_libdir}
 cp ../libbacktrace/backtrace.h %{buildroot}%{_includedir}
 
 %find_lang %{name} --all-name
@@ -427,7 +437,7 @@ $tests_ok
 %exclude %{_bindir}/*g++
 %{_bindir}/*
 # Libraries
-%{_lib64dir}/*
+%{_libdir}/lib*
 %exclude %{_libexecdir}/gcc/%{_arch}-%{_host_vendor}-linux-gnu/%{version}/f951
 %exclude %{_libexecdir}/gcc/%{_arch}-%{_host_vendor}-linux-gnu/%{version}/cc1plus
 %{_libdir}/gcc/*
@@ -444,12 +454,6 @@ $tests_ok
 %{_mandir}/man7/*.gz
 %{_datadir}/gdb/*
 
-%exclude %{_lib64dir}/libbacktrace*
-%exclude %{_lib64dir}/libgcc*
-%exclude %{_lib64dir}/libgomp*
-%exclude %{_lib64dir}/libstdc++*
-%exclude %{_lib64dir}/libsupc++*
-
 %do_exclude aarch64-linux-gnu %{build_cross}
 
 %files -n gfortran
@@ -461,19 +465,19 @@ $tests_ok
 %files -n libbacktrace-static
 %defattr(-,root,root)
 %{_includedir}/backtrace.h
-%{_lib64dir}/libbacktrace.a
+%{_libdir}/libbacktrace.a
 
 %files -n libgcc
 %defattr(-,root,root)
-%{_lib64dir}/libgcc_s.so.*
+%{_libdir}/libgcc_s.so.*
 
 %files -n libgcc-atomic
 %defattr(-,root,root)
-%{_lib64dir}/libatomic.so*
+%{_libdir}/libatomic.so*
 
 %files -n libgcc-devel
 %defattr(-,root,root)
-%{_lib64dir}/libgcc_s.so
+%{_libdir}/libgcc_s.so
 %{_libdir}/libcc1.*
 
 %files c++
@@ -486,31 +490,31 @@ $tests_ok
 
 %files -n libstdc++
 %defattr(-,root,root)
-%{_lib64dir}/libstdc++.so.*
+%{_libdir}/libstdc++.so.*
 %dir %{_datarootdir}/gcc-%{version}/python/libstdcxx
 %{_datarootdir}/gcc-%{version}/python/libstdcxx/*
 
 %files -n libstdc++-devel
 %defattr(-,root,root)
-%{_lib64dir}/libstdc++.so
-%{_lib64dir}/libstdc++.la
-%{_lib64dir}/libstdc++.a
-%{_lib64dir}/libstdc++fs.a
-%{_lib64dir}/libsupc++.a
-%{_lib64dir}/libsupc++.la
+%{_libdir}/libstdc++.so
+%{_libdir}/libstdc++.la
+%{_libdir}/libstdc++.a
+%{_libdir}/libstdc++fs.a
+%{_libdir}/libsupc++.a
+%{_libdir}/libsupc++.la
 
 %{_includedir}/c++/*
 
 %files -n libgomp
 %defattr(-,root,root)
-%{_lib64dir}/libgomp*.so.*
+%{_libdir}/libgomp*.so.*
 
 %files -n libgomp-devel
 %defattr(-,root,root)
-%{_lib64dir}/libgomp.a
-%{_lib64dir}/libgomp.la
-%{_lib64dir}/libgomp.so
-%{_lib64dir}/libgomp.spec
+%{_libdir}/libgomp.a
+%{_libdir}/libgomp.la
+%{_libdir}/libgomp.so
+%{_libdir}/libgomp.spec
 
 %if %{build_cross}
 %files -n cross-gcc-common
