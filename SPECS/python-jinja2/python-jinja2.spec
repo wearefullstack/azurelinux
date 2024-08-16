@@ -1,7 +1,7 @@
 Summary:        A fast and easy to use template engine written in pure Python
 Name:           python-jinja2
 Version:        3.1.2
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        BSD
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -43,7 +43,8 @@ sed -i 's/\r$//' LICENSE.rst # Fix wrong EOL encoding
 %py3_install
 
 %check
-pip3 install tox
+# our python3-packaging version is 23.2, tox 4.15.0 upgrades to requiring 24. Restrict tox version to allow tests to run
+pip3 install tox<4.15.0
 tox -e py%{python3_version_nodots}
 
 %files -n python3-jinja2
@@ -53,6 +54,9 @@ tox -e py%{python3_version_nodots}
 %{python3_sitelib}/Jinja2-%{version}-py%{python3_version}.egg-info
 
 %changelog
+* Fri Aug 16 2024 Sam Meluch <sammeluch@microsoft.com> - 3.1.2-2
+- Restrict tox version to fix the package test
+
 * Mon Nov 27 2023 Andrew Phelps <anphel@microsoft.com> - 3.1.2-1
 - Upgrade to version 3.1.2
 
