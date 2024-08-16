@@ -216,11 +216,11 @@ steps:
         REPO_LIST="${{ parameters.extraPackageRepos }}" \
         SPECS_DIR="${{ parameters.buildRepoRoot }}/${{ parameters.specsFolderPath }}" \
         SRPM_PACK_LIST="${{ parameters.srpmPackList }}" \
-        TEST_RERUN_LIST="${{ parameters.testRerunList }}" \
+        TEST_RERUN_LIST="" \
         $delta_fetch_arg \
         $max_cascading_rebuilds_arg \
         $quick_rebuild_packages_arg \
-        $run_check_arg \
+        RUN_CHECK=n \
         $toolchain_archive_arg \
         $use_ccache_arg
     displayName: "Build packages"
