@@ -44,7 +44,7 @@ sed -i 's/\r$//' LICENSE.rst # Fix wrong EOL encoding
 
 %check
 # our python3-packaging version is 23.2, tox 4.15.0 upgrades to requiring 24. Restrict tox version to allow tests to run
-pip3 install tox<4.15.0
+pip3 install 'tox<4.15.0'
 tox -e py%{python3_version_nodots}
 
 %files -n python3-jinja2
