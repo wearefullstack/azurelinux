@@ -1,13 +1,14 @@
 Summary:        Read and write Changes files
 Name:           perl-CPAN-Changes
 Version:        0.500002
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        GPL+ OR Artistic
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
 URL:            https://metacpan.org/release/CPAN-Changes
 Source0:        https://cpan.metacpan.org/modules/by-module/CPAN/CPAN-Changes-%{version}.tar.gz#/%{name}-%{version}.tar.gz
 BuildArch:      noarch
+AutoReq:        no
 
 # Module Build
 BuildRequires:  coreutils
