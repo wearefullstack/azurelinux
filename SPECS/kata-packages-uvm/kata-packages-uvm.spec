@@ -1,7 +1,7 @@
 Summary:        Metapackage for Kata UVM components
 Name:           kata-packages-uvm
 Version:        1.0.0
-Release:        4%{?dist}
+Release:        5%{?dist}
 License:        MIT
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -47,11 +47,9 @@ Requires:       device-mapper
 %description    coco
 
 %package        build
-Summary:        Metapackage to install the set of packages for building a Kata UVM.
+Summary:        Metapackage to install the set of packages for building a Kata UVM (common).
 Requires:       acpica-tools
 Requires:       clang
-Requires:       kata-containers-tools
-Requires:       kata-containers-cc-tools
 Requires:       kernel-uvm
 # Uncomment and remove duplicates once msigvm is available
 #Requires:       msigvm
@@ -72,6 +70,18 @@ Requires:       python3-tomli
 Requires:       veritysetup 
 
 %description    build
+
+%package        build-tools
+Summary:        Metapackage to install the set of packages for building a Kata UVM (vanilla).
+Requires:       kata-containers-tools
+
+%description    build-tools
+
+%package        build-tools-cc
+Summary:        Metapackage to install the set of packages for building a Kata UVM (CC).
+Requires:       kata-containers-tools-cc
+
+%description    build-tools-cc
 
 %package        coco-sign
 Summary:        Metapackage to install the set of packages for building the signing tool for Kata confidential containers UVM.
@@ -95,6 +105,9 @@ Requires:       golang
 %files coco-sign
 
 %changelog
+* Tue Aug 20 2024 Saul Paredes <saulparedes@microsoft.com> - 1.0.0-5
+- Split kata-containers-tools and kata-containers-tools-cc into their own subpackages
+
 * Fri May 03 2024 Saul Paredes <saulparedes@microsoft.com> - 1.0.0-4
 - Remove opa
 
