@@ -10,7 +10,7 @@
 Summary:        Main C library
 Name:           glibc
 Version:        2.38
-Release:        10%{?dist}
+Release:        11%{?dist}
 License:        BSD AND GPLv2+ AND Inner-Net AND ISC AND LGPLv2+ AND MIT
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -34,6 +34,7 @@ Patch6:         CVE-2023-4911.patch
 Patch7:         CVE-2023-5156.patch
 Patch8:         CVE-2023-6246.patch
 Patch9:         CVE-2023-6779.patch
+Patch10:        CVE-2023-6780.patch
 
 BuildRequires:  bison
 BuildRequires:  gawk
@@ -353,6 +354,9 @@ grep "^FAIL: nptl/tst-eintr1" tests.sum >/dev/null && n=$((n+1)) ||:
 %exclude %{_libdir}/locale/C.utf8
 
 %changelog
+* Wed Aug 21 2024 Chris Co <chrco@microsoft.com> - 2.38-11
+- rebuilt
+
 * Wed Aug 21 2024 Chris Co <chrco@microsoft.com> - 2.38-10
 - rebuilt
 
