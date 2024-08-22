@@ -5,7 +5,7 @@
 Summary:        dnf/yum equivalent using C libs
 Name:           tdnf
 Version:        3.5.2
-Release:        4%{?dist}
+Release:        5%{?dist}
 License:        LGPLv2.1 AND GPLv2
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -32,6 +32,10 @@ Patch5:         tdnf-GetRepoMD-fix.patch
 Patch6:	        tdnf-dotarch.patch
 Patch7:         tdnf-installonlypkgs.patch
 Patch8:         tdnf-add-installonlypkgs-config.patch
+
+# Patch in vitual snapshot
+Patch9:	        virtual-repo-snapshot.patch
+
 #Cmake requires binutils
 BuildRequires:  binutils
 BuildRequires:  cmake
@@ -239,6 +243,9 @@ fi
 /%{_lib}/systemd/system/tdnf*
 
 %changelog
+* Thu Aug 22 2024 Sam Meluch <sammeluch@microsoft.com> - 3.5.2-5
+- Add tdnf virtual repo snapshots
+
 * Tue Dec 12 2023 Sam Meluch <sammeluch@microsoft.com> - 3.5.2-4
 - backport patch for installonlypkg functionality
 - add config for installonlypkgs
