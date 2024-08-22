@@ -1,7 +1,9 @@
+%global __strip /bin/true
+%global debug_package %{nil}
 Summary:        A core cryptographic library written by Microsoft
 Name:           SymCrypt
 Version:        103.4.2
-Release:        4%{?dist}
+Release:        5%{?dist}
 License:        MIT
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -77,6 +79,9 @@ chmod 755 %{buildroot}%{_libdir}/libsymcrypt.so.%{version}
 %{_includedir}/*
 
 %changelog
+* Thu Aug 22 2024 Chris Co <chrco@microsoft.com> - 103.4.2-5
+- rebuilt
+
 * Thu Aug 22 2024 Chris Co <chrco@microsoft.com> - 103.4.2-4
 - rebuilt
 
