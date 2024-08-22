@@ -2,7 +2,7 @@
 Summary:        A core cryptographic library written by Microsoft
 Name:           SymCrypt
 Version:        103.4.2
-Release:        1%{?dist}
+Release:        3%{?dist}
 License:        MIT
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -78,7 +78,13 @@ chmod 755 %{buildroot}%{_libdir}/libsymcrypt.so.%{version}
 %{_includedir}/*
 
 %changelog
-* Wed Jun 25 2024 Maxwell Moyer-McKee <mamckee@microsoft.com> - 103.4.2-1
+* Thu Aug 22 2024 Chris Co <chrco@microsoft.com> - 103.4.2-3
+- rebuilt
+
+* Thu Aug 22 2024 Chris Co <chrco@microsoft.com> - 103.4.2-2
+- rebuilt
+
+* Tue Jun 25 2024 Maxwell Moyer-McKee <mamckee@microsoft.com> - 103.4.2-1
 - Update SymCrypt to v103.4.2 for FIPS certification
 
 * Thu Apr 25 2024 Maxwell Moyer-McKee <mamckee@microsoft.com> - 103.4.1-2
