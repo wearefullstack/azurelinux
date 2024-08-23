@@ -30,7 +30,7 @@ storage:
 os:
   resetBootLoaderType: hard-reset
 
-  packages:
-    install:
+  packageOperations:
+  - install:
       # Install a large-ish package.
     - gcc

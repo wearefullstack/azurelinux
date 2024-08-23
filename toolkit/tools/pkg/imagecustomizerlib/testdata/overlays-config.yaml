@@ -39,8 +39,8 @@ storage:
 os:
   resetBootLoaderType: hard-reset
 
-  packages:
-    install:
+  packageOperations:
+  - install:
     - dracut-overlayfs
     - openssh-server
     - vim

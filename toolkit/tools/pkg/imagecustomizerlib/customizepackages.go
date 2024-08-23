@@ -30,9 +30,9 @@ func addRemoveAndUpdatePackages(buildDir string, baseConfigPath string, config *
 ) error {
 	var err error
 
-	// Note: The 'validatePackageLists' function read the PackageLists files and merged them into the inline package lists.
-	needRpmsSources := len(config.Packages.Install) > 0 || len(config.Packages.Update) > 0 ||
-		config.Packages.UpdateExistingPackages
+	// Note: The 'validatePackageLists' function read the PackageLists files and merged them into the inline package
+	// lists.
+	needRpmsSources := needsRpmSources(config)
 
 	var mounts *rpmSourcesMounts
 	if needRpmsSources {
@@ -50,28 +50,36 @@ func addRemoveAndUpdatePackages(buildDir string, baseConfigPath string, config *
 		}
 	}
 
-	err = removePackages(config.Packages.Remove, imageChroot)
-	if err != nil {
-		return err
-	}
-
-	if config.Packages.UpdateExistingPackages {
-		err = updateAllPackages(imageChroot)
-		if err != nil {
-			return err
+	for _, packageOperation := range config.PackageOperations {
+		if len(packageOperation.Remove) > 0 {
+			err = removePackages(packageOperation.Remove, imageChroot)
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	logger.Log.Infof("Installing packages: %v", config.Packages.Install)
-	err = installOrUpdatePackages("install", config.Packages.Install, imageChroot)
-	if err != nil {
-		return err
-	}
+		if packageOperation.UpdateAll {
+			err = updateAllPackages(imageChroot)
+			if err != nil {
+				return err
+			}
+		}
 
-	logger.Log.Infof("Updating packages: %v", config.Packages.Update)
-	err = installOrUpdatePackages("update", config.Packages.Update, imageChroot)
-	if err != nil {
-		return err
+		if len(packageOperation.Install) > 0 {
+			logger.Log.Infof("Installing packages: %v", packageOperation.Install)
+			err = installOrUpdatePackages("install", packageOperation.Install, imageChroot)
+			if err != nil {
+				return err
+			}
+		}
+
+		if len(packageOperation.Update) > 0 {
+			logger.Log.Infof("Updating packages: %v", packageOperation.Update)
+			err = installOrUpdatePackages("update", packageOperation.Update, imageChroot)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	// Unmount RPM sources.
@@ -83,6 +91,16 @@ func addRemoveAndUpdatePackages(buildDir string, baseConfigPath string, config *
 	}
 
 	return nil
+}
+
+func needsRpmSources(config *imagecustomizerapi.OS) bool {
+	for _, packageOperation := range config.PackageOperations {
+		if packageOperation.UpdateAll || len(packageOperation.Install) > 0 || len(packageOperation.Update) > 0 {
+			return true
+		}
+	}
+
+	return false
 }
 
 func refreshTdnfMetadata(imageChroot *safechroot.Chroot) error {
@@ -129,26 +147,20 @@ func removePackages(allPackagesToRemove []string, imageChroot *safechroot.Chroot
 
 	tdnfRemoveArgs := []string{
 		"-v", "remove", "--assumeyes", "--disablerepo", "*",
-		// Placeholder for package name.
-		"",
 	}
 
-	// Remove packages.
-	// Do this one at a time, to avoid running out of memory.
-	for _, packageName := range allPackagesToRemove {
-		tdnfRemoveArgs[len(tdnfRemoveArgs)-1] = packageName
+	tdnfRemoveArgs = append(tdnfRemoveArgs, allPackagesToRemove...)
 
-		err := callTdnf(tdnfRemoveArgs, tdnfRemovePrefix, imageChroot)
-		if err != nil {
-			return fmt.Errorf("failed to remove package (%s):\n%w", packageName, err)
-		}
+	err := callTdnf(tdnfRemoveArgs, tdnfRemovePrefix, imageChroot)
+	if err != nil {
+		return fmt.Errorf("failed to remove packages (%v):\n%w", allPackagesToRemove, err)
 	}
 
 	return nil
 }
 
 func updateAllPackages(imageChroot *safechroot.Chroot) error {
-	logger.Log.Infof("Updating base image packages")
+	logger.Log.Infof("Updating all packages")
 
 	tdnfUpdateArgs := []string{
 		"-v", "update", "--nogpgcheck", "--assumeyes", "--cacheonly",
@@ -157,32 +169,26 @@ func updateAllPackages(imageChroot *safechroot.Chroot) error {
 
 	err := callTdnf(tdnfUpdateArgs, tdnfInstallPrefix, imageChroot)
 	if err != nil {
-		return fmt.Errorf("failed to update packages:\n%w", err)
+		return fmt.Errorf("failed to update all packages:\n%w", err)
 	}
 
 	return nil
 }
 
-func installOrUpdatePackages(action string, allPackagesToAdd []string, imageChroot *safechroot.Chroot) error {
+func installOrUpdatePackages(action string, packages []string, imageChroot *safechroot.Chroot) error {
 	// Create tdnf command args.
 	// Note: When using `--repofromdir`, tdnf will not use any default repos and will only use the last
 	// `--repofromdir` specified.
-	tdnfInstallArgs := []string{
+	tdnfArgs := []string{
 		"-v", action, "--nogpgcheck", "--assumeyes", "--cacheonly",
 		"--setopt", fmt.Sprintf("reposdir=%s", rpmsMountParentDirInChroot),
-		// Placeholder for package name.
-		"",
 	}
 
-	// Install packages.
-	// Do this one at a time, to avoid running out of memory.
-	for _, packageName := range allPackagesToAdd {
-		tdnfInstallArgs[len(tdnfInstallArgs)-1] = packageName
+	tdnfArgs = append(tdnfArgs, packages...)
 
-		err := callTdnf(tdnfInstallArgs, tdnfInstallPrefix, imageChroot)
-		if err != nil {
-			return fmt.Errorf("failed to %s package (%s):\n%w", action, packageName, err)
-		}
+	err := callTdnf(tdnfArgs, tdnfInstallPrefix, imageChroot)
+	if err != nil {
+		return fmt.Errorf("failed to %s packages (%v):\n%w", action, packages, err)
 	}
 
 	return nil

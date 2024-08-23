@@ -208,9 +208,11 @@ func TestCustomizeImageLiveCdIsoNoShimEfi(t *testing.T) {
 
 	config := &imagecustomizerapi.Config{
 		OS: &imagecustomizerapi.OS{
-			Packages: imagecustomizerapi.Packages{
-				Remove: []string{
-					"shim",
+			PackageOperations: []imagecustomizerapi.PackageOperation{
+				{
+					Remove: []string{
+						"shim",
+					},
 				},
 			},
 		},
@@ -230,9 +232,11 @@ func TestCustomizeImageLiveCdIsoNoGrubEfi(t *testing.T) {
 
 	config := &imagecustomizerapi.Config{
 		OS: &imagecustomizerapi.OS{
-			Packages: imagecustomizerapi.Packages{
-				Remove: []string{
-					"grub2-efi-binary",
+			PackageOperations: []imagecustomizerapi.PackageOperation{
+				{
+					Remove: []string{
+						"grub2-efi-binary",
+					},
 				},
 			},
 		},

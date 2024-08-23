@@ -1,6 +1,6 @@
 os:
-  packages:
-    install:
+  packageOperations:
+  - install:
     - squashfs-tools
     - tar
     - device-mapper

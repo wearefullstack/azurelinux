@@ -14,7 +14,7 @@ import (
 type OS struct {
 	ResetBootLoaderType ResetBootLoaderType `yaml:"resetBootLoaderType"`
 	Hostname            string              `yaml:"hostname"`
-	Packages            Packages            `yaml:"packages"`
+	PackageOperations   []PackageOperation  `yaml:"packageOperations"`
 	SELinux             SELinux             `yaml:"selinux"`
 	KernelCommandLine   KernelCommandLine   `yaml:"kernelCommandLine"`
 	AdditionalFiles     AdditionalFilesMap  `yaml:"additionalFiles"`
@@ -36,6 +36,13 @@ func (s *OS) IsValid() error {
 	if s.Hostname != "" {
 		if !govalidator.IsDNSName(s.Hostname) || strings.Contains(s.Hostname, "_") {
 			return fmt.Errorf("invalid hostname (%s)", s.Hostname)
+		}
+	}
+
+	for i, packageOp := range s.PackageOperations {
+		err := packageOp.IsValid()
+		if err != nil {
+			return fmt.Errorf("invalid packageOperations item at index %d:\n%w", i, err)
 		}
 	}
 

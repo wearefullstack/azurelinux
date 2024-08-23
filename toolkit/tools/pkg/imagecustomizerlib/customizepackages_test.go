@@ -36,8 +36,10 @@ func TestCustomizeImagePackagesAddOfflineDir(t *testing.T) {
 	// Install jq package.
 	config := imagecustomizerapi.Config{
 		OS: &imagecustomizerapi.OS{
-			Packages: imagecustomizerapi.Packages{
-				Install: []string{"jq"},
+			PackageOperations: []imagecustomizerapi.PackageOperation{
+				{
+					Install: []string{"jq"},
+				},
 			},
 		},
 	}
@@ -79,8 +81,10 @@ func TestCustomizeImagePackagesAddOfflineDir(t *testing.T) {
 	// Install jq package.
 	config = imagecustomizerapi.Config{
 		OS: &imagecustomizerapi.OS{
-			Packages: imagecustomizerapi.Packages{
-				InstallLists: []string{"lists/golang.yaml"},
+			PackageOperations: []imagecustomizerapi.PackageOperation{
+				{
+					InstallLists: []string{"lists/golang.yaml"},
+				},
 			},
 		},
 	}

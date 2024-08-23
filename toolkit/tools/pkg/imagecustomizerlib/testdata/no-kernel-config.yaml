@@ -1,4 +1,4 @@
 os:
-  packages:
-    remove:
+  packageOperations:
+  - remove:
     - kernel

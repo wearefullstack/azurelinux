@@ -6,8 +6,8 @@ iso:
     extraCommandLine: rd.info
 
 os:
-  packages:
-    install:
+  packageOperations:
+  - install:
     - squashfs-tools
     - tar
     - device-mapper

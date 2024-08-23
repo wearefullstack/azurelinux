@@ -40,8 +40,8 @@ os:
   selinux:
     mode: enforcing
 
-  packages:
-    install:
+  packageOperations:
+  - install:
     - selinux-policy
     - selinux-policy-modules
     - setools-console

@@ -1,6 +1,6 @@
 os:
-  packages:
-    install:
+  packageOperations:
+  - install:
     - python3
 
 scripts:

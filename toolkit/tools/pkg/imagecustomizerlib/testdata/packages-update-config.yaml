@@ -1,15 +1,14 @@
 os:
-  packages:
-    updateExistingPackages: true
+  packageOperations:
+  - updateAll: true
 
-    remove:
+  - remove:
     - which
 
-    install:
+  - install:
     - jq
-
     installLists:
     - lists/golang.yaml
 
-    update:
+  - update:
     - jq

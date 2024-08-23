@@ -28,9 +28,9 @@ storage:
 os:
   resetBootLoaderType: hard-reset
 
-  packages:
-    remove:
+  packageOperations:
+  - remove:
     - kernel
 
-    install:
+  - install:
     - kernel-mshv

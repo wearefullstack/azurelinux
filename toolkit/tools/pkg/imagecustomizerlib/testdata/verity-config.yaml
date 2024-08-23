@@ -59,8 +59,8 @@ os:
   kernelCommandLine:
     extraCommandLine: "rd.info"
 
-  packages:
-    install:
+  packageOperations:
+  - install:
     - openssh-server
     - veritysetup
     - vim

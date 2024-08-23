@@ -175,7 +175,7 @@ func CustomizeImageWithConfigFile(buildDir string, configFile string, imageFile 
 	var config imagecustomizerapi.Config
 	err = imagecustomizerapi.UnmarshalYamlFile(configFile, &config)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse config file (%s):\n%w", configFile, err)
 	}
 
 	baseConfigPath, _ := filepath.Split(configFile)
@@ -606,44 +606,46 @@ func validateScript(baseConfigPath string, script *imagecustomizerapi.Script) er
 func validatePackageLists(baseConfigPath string, config *imagecustomizerapi.OS, rpmsSources []string,
 	useBaseImageRpmRepos bool,
 ) error {
-
 	if config == nil {
 		return nil
 	}
 
-	allPackagesRemove, err := collectPackagesList(baseConfigPath, config.Packages.RemoveLists, config.Packages.Remove)
-	if err != nil {
-		return err
-	}
+	needRpmsSources := false
+	for i := range config.PackageOperations {
+		packageOperation := &config.PackageOperations[i]
 
-	allPackagesInstall, err := collectPackagesList(baseConfigPath, config.Packages.InstallLists, config.Packages.Install)
-	if err != nil {
-		return err
-	}
+		allPackagesRemove, err := collectPackagesList(baseConfigPath, packageOperation.RemoveLists, packageOperation.Remove)
+		if err != nil {
+			return err
+		}
 
-	allPackagesUpdate, err := collectPackagesList(baseConfigPath, config.Packages.UpdateLists, config.Packages.Update)
-	if err != nil {
-		return err
+		allPackagesInstall, err := collectPackagesList(baseConfigPath, packageOperation.InstallLists, packageOperation.Install)
+		if err != nil {
+			return err
+		}
+
+		allPackagesUpdate, err := collectPackagesList(baseConfigPath, packageOperation.UpdateLists, packageOperation.Update)
+		if err != nil {
+			return err
+		}
+
+		needRpmsSources = needRpmsSources || len(allPackagesInstall) > 0 || len(allPackagesUpdate) > 0 ||
+			packageOperation.UpdateAll
+
+		packageOperation.Remove = allPackagesRemove
+		packageOperation.Install = allPackagesInstall
+		packageOperation.Update = allPackagesUpdate
+
+		packageOperation.RemoveLists = nil
+		packageOperation.InstallLists = nil
+		packageOperation.UpdateLists = nil
 	}
 
 	hasRpmSources := len(rpmsSources) > 0 || useBaseImageRpmRepos
 
-	if !hasRpmSources {
-		needRpmsSources := len(allPackagesInstall) > 0 || len(allPackagesUpdate) > 0 ||
-			config.Packages.UpdateExistingPackages
-
-		if needRpmsSources {
-			return fmt.Errorf("have packages to install or update but no RPM sources were specified")
-		}
+	if needRpmsSources && !hasRpmSources {
+		return fmt.Errorf("have packages to install or update but no RPM sources were specified")
 	}
-
-	config.Packages.Remove = allPackagesRemove
-	config.Packages.Install = allPackagesInstall
-	config.Packages.Update = allPackagesUpdate
-
-	config.Packages.RemoveLists = nil
-	config.Packages.InstallLists = nil
-	config.Packages.UpdateLists = nil
 
 	return nil
 }
