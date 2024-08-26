@@ -506,6 +506,7 @@
                 "iio-sensor-proxy",
                 "ilmbase",
                 "im-chooser",
+                "ima-evm-utils",
                 "imaptest",
                 "imsettings",
                 "indent",

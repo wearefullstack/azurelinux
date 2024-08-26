@@ -7160,6 +7160,16 @@
       "component": {
         "type": "other",
         "other": {
+          "name": "ima-evm-utils",
+          "version": "1.6",
+          "downloadUrl": "https://github.com/linux-integrity/ima-evm-utils/archive/refs/tags/v1.6.tar.gz"
+        }
+      }
+    },
+    {
+      "component": {
+        "type": "other",
+        "other": {
           "name": "imaptest",
           "version": "20210511",
           "downloadUrl": "https://dovecot.org/nightly/imaptest/imaptest-20210511.tar.gz"

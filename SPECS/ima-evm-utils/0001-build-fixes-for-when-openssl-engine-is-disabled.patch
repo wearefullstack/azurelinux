@@ -1,0 +1,49 @@
+From 57c2de595967affdabf8c477f81470d3c2ec04f2 Mon Sep 17 00:00:00 2001
+From: Peter Robinson <pbrobinson@gmail.com>
+Date: Thu, 4 Jul 2024 13:47:45 +0100
+Subject: [PATCH] build fixes for when openssl engine is disabled
+
+Add and fix checks for building with the option for
+disabling the openssl engine option. In cases now
+it's possible that engine.h now actually may not be
+present as distros may split out the engine support
+into other devel packages. This fixes the builds.
+
+Signed-off-by: Peter Robinson <pbrobinson@gmail.com>
+---
+ src/imaevm.h    | 4 ++--
+ src/libimaevm.c | 2 ++
+ 2 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/src/imaevm.h b/src/imaevm.h
+index e646b18..a5fd591 100644
+--- a/src/imaevm.h
++++ b/src/imaevm.h
+@@ -27,8 +27,8 @@
+ #include <openssl/rsa.h>
+ #include <openssl/opensslconf.h>
+ 
+-#if !defined(OPENSSL_NO_ENGINE) && !defined(OPENSSL_NO_DYNAMIC_ENGINE)
+-# include <openssl/engine.h>
++#if CONFIG_IMA_EVM_ENGINE
++#include <openssl/engine.h>
+ #else
+ struct engine_st;
+ typedef struct engine_st ENGINE; /* unused when no engine support */
+diff --git a/src/libimaevm.c b/src/libimaevm.c
+index 6321f10..9c8e286 100644
+--- a/src/libimaevm.c
++++ b/src/libimaevm.c
+@@ -37,7 +37,9 @@
+ #include <openssl/x509.h>
+ #include <openssl/x509v3.h>
+ #include <openssl/err.h>
++#if CONFIG_IMA_EVM_ENGINE
+ #include <openssl/engine.h>
++#endif
+ 
+ #if CONFIG_IMA_EVM_PROVIDER
+ #include <openssl/provider.h>
+-- 
+2.45.2
+
