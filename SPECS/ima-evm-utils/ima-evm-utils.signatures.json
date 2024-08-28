@@ -1,0 +1,11 @@
+{
+ "Signatures": {
+  "dracut-98-integrity.conf": "7811eda949de4b450c8327444ce8f4fe191890b1605e055299aff7bb90192331",
+  "ima-add-sigs.sh": "1c75643e324ab616a65922abcb77b1d9f430b0c33bf4eda647269cd9115840d1",
+  "ima-evm-utils-1.6.tar.gz": "de29bdde8cf3f0fe123d813d23168157d904fea765b1003bd2209fae5d76de75",
+  "ima-setup.sh": "cd5be22c1929915c25e57fb2988e8ace305f5b96574c739a8bff504cd0f88ef5",
+  "policy-01-appraise-exectuables-and-lib-signatures": "77c34d552ce530ca6d9601ef2871a5c99b67c783f4cca667a72c648df46edb33",
+  "policy-02-keylime-remote-attestation": "73543c1626c3be94a320d7feae4c58170c388a2ed649c8161d7190f41217aa22",
+  "policy_list": "4ae31ab734d759196f26c33b401fe3a1a998663350ba20815b8e5e76920ff907"
+ }
+}
