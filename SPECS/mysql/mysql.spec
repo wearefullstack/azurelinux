@@ -16,6 +16,7 @@ BuildRequires:  rpcsvc-proto-devel
 BuildRequires:  zlib-devel
 BuildRequires:  libedit-devel
 BuildRequires:  libevent-devel
+BuildRequires:  lz4-devel
 
 %description
 MySQL is a free, widely used SQL engine. It can be used as a fast database as well as a rock-solid DBMS using a modular engine architecture.
