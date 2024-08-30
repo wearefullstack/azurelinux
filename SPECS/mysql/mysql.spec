@@ -46,6 +46,7 @@ cmake . \
       -DCMAKE_CXX_FLAGS=-fPIC \
       -DWITH_EMBEDDED_SERVER=OFF \
       -DFORCE_INSOURCE_BUILD=1 \
+      -DWITH_FIDO=bundled \
       -DWITH_SYSTEM_LIBS=1
 
 make %{?_smp_mflags}
