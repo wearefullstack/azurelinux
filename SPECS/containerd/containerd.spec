@@ -1,23 +1,20 @@
 %global debug_package %{nil}
-%define commit_hash 7c3aca7a610df76212171d200ca3811ff6096eb8
+%define commit_hash fa5bf66fdff44846dc475c022bf6b47197febffd
+%define upstream_rc 2.0.0-rc.4
 
 Summary: Industry-standard container runtime
 Name: containerd
-Version: 1.7.13
-Release: 3%{?dist}
+Version: 2.0.0.rc.4
+Release: 1%{?dist}
 License: ASL 2.0
 Group: Tools/Container
 URL: https://www.containerd.io
 Vendor: Microsoft Corporation
 Distribution: Azure Linux
 
-Source0: https://github.com/containerd/containerd/archive/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
+Source0: https://github.com/containerd/containerd/archive/v%{upstream_rc}.tar.gz#/%{name}-%{version}.tar.gz
 Source1: containerd.service
 Source2: containerd.toml
-Patch0:  Makefile.patch
-Patch1:  fix_tests_for_golang1.21.patch
-Patch2:	 CVE-2023-44487.patch
-Patch3:  CVE-2023-47108.patch
 
 %{?systemd_requires}
 
@@ -87,6 +84,10 @@ fi
 %dir /opt/containerd/lib
 
 %changelog
+* Wed Sep 11 2024 Nan Liu <liunan@microsoft.com> - 2.0.0.rc.4-1
+- Bump version to 2.0.0-rc.4
+- Remove unused patches
+
 * Wed Jun 26 2024 Nicolas Guibourge <nicolasg@microsoft.com> - 1.7.13-3
 - Address CVE-2023-44487 and CVE-2023-47108
 
