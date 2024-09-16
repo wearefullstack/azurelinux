@@ -26,6 +26,8 @@ and responses.
 
 %prep
 %setup -q -n %{gem_name}-%{version}
+sed -i '/spec.cert_chain/d' %{gem_name}.gemspec
+sed -i '/spec.signing_key/d' %{gem_name}.gemspec 
 
 %build
 gem build %{gem_name}
