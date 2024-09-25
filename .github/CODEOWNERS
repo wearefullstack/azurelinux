@@ -62,6 +62,8 @@
 /SPECS/virtiofsd/* @microsoft/cbl-mariner-kata-containers
 
 /SPECS/cloud-hypervisor-cvm/* @microsoft/cbl-mariner-kata-containers
+/SPECS/hvloader/* @microsoft/cbl-mariner-kata-containers
+/SPECS-SIGNED/hvloader-signed/* @microsoft/cbl-mariner-kata-containers
 
 /SPECS/cloud-init/* @microsoft/cbl-mariner-provisioning
 /SPECS/walinuxagent/* @microsoft/cbl-mariner-provisioning
