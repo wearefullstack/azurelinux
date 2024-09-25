@@ -21,6 +21,7 @@
 /SPECS/kernel-uvm/* @microsoft/cbl-mariner-kata-containers
 /SPECS-SIGNED/kernel-signed/* @microsoft/cbl-mariner-kernel
 /SPECS-SIGNED/kernel-mstflint-signed/* @microsoft/cbl-mariner-kernel
+/SPECS-SIGNED/kernel-mshv-signed/* @microsoft/cbl-mariner-kata-containers
 
 /SPECS/grub2/* @microsoft/cbl-mariner-bootloader
 /SPECS/grubby/* @microsoft/cbl-mariner-bootloader
