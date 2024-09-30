@@ -330,8 +330,8 @@ done
 /usr/share/makedumpfile/
 
 %changelog
-* Mon Sep 30 2024 Nicholas Angelastro <nangelastro@microsoft.com> - 2.0.27-8
-- Add kdump option to disable rebooting after saving crash dump
+* Mon Oct 21 2024 Nicholas Angelastro <nangelastro@microsoft.com> - 2.0.27-8
+- Support saving crash dumps on systems hosted in RAM
 
 * Tue Jul 09 2024 Chris Co <chrco@microsoft.com> - 2.0.27-7
 - Remove requires on dhcp-client
