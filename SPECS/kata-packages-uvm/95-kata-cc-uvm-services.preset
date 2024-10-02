@@ -1,0 +1,14 @@
+enable blk-availability.service
+enable chronyd.service
+enable getty@.service
+enable iptables.service
+enable irqbalance.service
+enable systemd-confext.service
+enable systemd-network-generator.service
+enable systemd-networkd-wait-online.service
+enable systemd-resolved.service
+enable systemd-sysext.service
+
+enable dbus.service
+enable kata-agnet.service
+enable systemd-journald.service

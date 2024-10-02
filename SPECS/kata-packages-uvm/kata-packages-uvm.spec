@@ -1,7 +1,7 @@
 Summary:        Metapackage for Kata UVM components
 Name:           kata-packages-uvm
 Version:        1.0.0
-Release:        5%{?dist}
+Release:        6%{?dist}
 License:        MIT
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -9,6 +9,8 @@ Group:          System Environment/Base
 URL:            https://aka.ms/mariner
 
 ExclusiveArch:  x86_64
+
+Source1:        95-kata-cc-uvm-services.preset
 
 Requires:       bash
 Requires:       ca-certificates
@@ -92,15 +94,27 @@ Requires:       golang
 
 %build
 
+%install
+install -Dm0644 %{SOURCE1} -t %{buildroot}/usr/lib/systemd/system-preset
+
+%post coco
+if [ $1 -eq 1 ]; then # Package install
+    systemctl preset-all &>/dev/null || :
+fi
+
 %files
 
 %files coco
+/usr/lib/systemd/system-preset/95-kata-cc-uvm-services.preset
 
 %files build
 
 %files coco-sign
 
 %changelog
+* Wed Oct 02 2024 Mitch Zhu <mitchzhu@microsoft.com> - 1.0.0-6
+- Add Kata-CC UVM preset file
+
 * Wed Jun 19 2024 Cameron Baird <cameronbaird@microsoft.com> - 1.0.0-5
 - Add explicit systemd dependencies for UVM
 
