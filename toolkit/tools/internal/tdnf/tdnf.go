@@ -28,7 +28,8 @@ var (
 	//		Repo	: [repo_name]
 	//
 	// NOTE: we ignore packages installed in the build environment denoted by "Repo	: @System".
-	PackageProvidesRegex = regexp.MustCompile(`(\S+)\s+:[^\n]*\nRepo\s+:\s+[^@]`)
+	PackageLookupNameMatchRegex = regexp.MustCompile(`([^:\s]+(x86_64|aarch64|noarch))\s*:[^\n]*\nRepo\s+:\s+[^@]`)
+	PackageNameIndex            = 1
 
 	// Tdnf may opt to ignore case when doing a provides lookup. While this is useful for a user, it will give
 	// bad results when we're trying to match a package name to a package in the repo. This regex will match the
@@ -62,27 +63,21 @@ var (
 )
 
 const (
-	InstallPackageMatchSubString = iota
-	InstallPackageName           = iota
-	InstallPackageArch           = iota
-	InstallPackageVersion        = iota
-	InstallPackageDist           = iota
-	InstallPackageMaxMatchLen    = iota
+	InstallMatchSubString = iota
+	InstallPackageName    = iota
+	InstallPackageArch    = iota
+	InstallPackageVersion = iota
+	InstallPackageDist    = iota
+	InstallMaxMatchLen    = iota
 )
 
 const (
-	PackageProvidesMatchSubString = iota
-	PackageProvidesNameIndex      = iota
-	PackageProvidesMaxMatchLen    = iota
-)
-
-const (
-	ListedPackageMatchSubString = iota
-	ListedPackageName           = iota
-	ListedPackageArch           = iota
-	ListedPackageVersion        = iota
-	ListedPackageDist           = iota
-	ListedPackageMaxMatchLen    = iota
+	ListMatchSubString = iota
+	ListPackageName    = iota
+	ListPackageArch    = iota
+	ListPackageVersion = iota
+	ListPackageDist    = iota
+	ListMaxMatchLen    = iota
 )
 
 const (
