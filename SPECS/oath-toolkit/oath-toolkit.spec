@@ -9,6 +9,7 @@ Distribution:   Azure Linux
 Source0:        https://download.savannah.gnu.org/releases/%{name}/%{name}-%{version}.tar.gz
 
 Patch0:         oath-toolkit-2.6.9-lockfile.patch
+Patch1:         sample.patch
 
 BuildRequires:  pam-devel
 BuildRequires:  gtk-doc
@@ -110,7 +111,8 @@ Requires: pam
 A PAM module for pluggable login authentication for OATH.
 
 %prep
-%autosetup -p1
+%setup -q
+patch -p1 --input %{PATCH1}
 
 %build
 autoreconf -fi
