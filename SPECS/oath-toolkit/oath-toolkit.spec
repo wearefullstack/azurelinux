@@ -1,21 +1,21 @@
 Summary:        One-time password components
 Name:           oath-toolkit
 Version:        2.6.9
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        GPLv3+ and LGPLv2+
 URL:            https://www.nongnu.org/oath-toolkit/
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
 Source0:        https://download.savannah.gnu.org/releases/%{name}/%{name}-%{version}.tar.gz
 
-Patch0:        oath-toolkit-2.6.9-lockfile.patch
+Patch0:         oath-toolkit-2.6.9-lockfile.patch
 
-BuildRequires: pam-devel
-BuildRequires: gtk-doc
-BuildRequires: libtool
-BuildRequires: xmlsec1-devel
-BuildRequires: autoconf
-BuildRequires: automake
+BuildRequires:  pam-devel
+BuildRequires:  gtk-doc
+BuildRequires:  libtool
+BuildRequires:  xmlsec1-devel
+BuildRequires:  autoconf
+BuildRequires:  automake
 
 %description
 The OATH Toolkit provide components for building one-time password
@@ -110,7 +110,7 @@ Requires: pam
 A PAM module for pluggable login authentication for OATH.
 
 %prep
-%setup -q
+%autosetup -p1
 
 %build
 autoreconf -fi
