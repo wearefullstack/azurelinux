@@ -114,6 +114,7 @@ mkdir -pv /var/lib/hwclock
             --disable-runuser    \
             --disable-pylibmount \
             --disable-static     \
+            --disable-liblastlog2 \
             --without-python
 make -j$(nproc)
 make install
@@ -838,6 +839,7 @@ pushd util-linux-2.40.2
             --disable-runuser    \
             --disable-pylibmount \
             --disable-static     \
+            --disable-liblastlog2 \
             --without-python     \
             --without-systemd    \
             --without-systemdsystemunitdir \
