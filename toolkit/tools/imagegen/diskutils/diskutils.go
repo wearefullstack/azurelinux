@@ -65,6 +65,7 @@ type partitionInfoOutput struct {
 
 type PartitionInfo struct {
 	Name              string `json:"name"`       // Example: nbd0p1
+	MajMin            string `json:"maj:min"`    // Example: 1:2
 	Path              string `json:"path"`       // Example: /dev/nbd0p1
 	PartitionTypeUuid string `json:"parttype"`   // Example: c12a7328-f81f-11d2-ba4b-00a0c93ec93b
 	FileSystemType    string `json:"fstype"`     // Example: vfat
@@ -301,10 +302,20 @@ func GetDiskIds(diskDevPath string) (maj string, min string, err error) {
 		err = fmt.Errorf("couldn't find disk IDs for %s (%s), expecting only one result", diskDevPath, rawDiskOutput)
 		return
 	}
+
+	maj, min, err = ParseMajMin(blockDevices.Devices[0].MajMin)
+	if err != nil {
+		err = fmt.Errorf("couldn't find disk IDs for %s (%s):\n%w", diskDevPath, rawDiskOutput, err)
+		return
+	}
+	return
+}
+
+func ParseMajMin(majmin string) (maj string, min string, err error) {
 	// MAJ:MIN is returned in the form "1:2"
-	diskIDs := strings.Split(blockDevices.Devices[0].MajMin, ":")
+	diskIDs := strings.Split(majmin, ":")
 	if len(diskIDs) != 2 {
-		err = fmt.Errorf("couldn't find disk IDs for %s (%s), couldn't parse MAJ:MIN", diskDevPath, rawDiskOutput)
+		err = fmt.Errorf("couldn't parse MAJ:MIN (%s)", majmin)
 		return
 	}
 	maj = diskIDs[0]
@@ -682,13 +693,18 @@ func InitializeSinglePartition(diskDevPath string, partitionNumber int,
 	partitionNumberStr := strconv.Itoa(partitionNumber)
 
 	// There are two primary partition naming conventions:
-	// /dev/sdN<y> style or /dev/loopNp<x> style
+	// - /dev/sdN<y> style
+	// - /dev/loopNp<x> style
 	// Detect the exact one we are using.
-	// Make sure we check for /dev/loopNp<x> FIRST, since /dev/loop1 would generate /dev/loop11 as a partition
-	// device which may be a valid device. We want to select /dev/loop1p1 first.
 	testPartDevPaths := []string{
 		fmt.Sprintf("%sp%s", diskDevPath, partitionNumberStr),
-		fmt.Sprintf("%s%s", diskDevPath, partitionNumberStr),
+	}
+
+	// If the disk block device path ends in a digit, then the p<x> style must be used.
+	// In this case, don't check the other style to avoid ambiguities (e.g. /dev/loop1 vs. /dev/loop11)
+	if !isDigit(diskDevPath[len(diskDevPath)-1]) {
+		devPath := fmt.Sprintf("%s%s", diskDevPath, partitionNumberStr)
+		testPartDevPaths = append(testPartDevPaths, devPath)
 	}
 
 	err = retry.Run(func() error {
@@ -757,6 +773,10 @@ func InitializeSinglePartition(diskDevPath string, partitionNumber int,
 	logger.Log.Debugf("Partprobe -s returned: %s", stdout)
 
 	return
+}
+
+func isDigit(c byte) bool {
+	return c >= '0' && c <= '9'
 }
 
 func setGptPartitionType(partition configuration.Partition, timeoutInSeconds, diskDevPath, partitionNumberStr string) (err error) {
@@ -893,14 +913,9 @@ func SystemBlockDevices() (systemDevices []SystemBlockDevice, err error) {
 }
 
 func GetDiskPartitions(diskDevPath string) ([]PartitionInfo, error) {
-	// Just in case the disk was only recently connected, wait for the OS to finish processing it.
-	err := WaitForDevicesToSettle()
-	if err != nil {
-		return nil, fmt.Errorf("failed to list disk (%s) partitions:\n%w", diskDevPath, err)
-	}
-
 	// Read the disk's partitions.
-	jsonString, _, err := shell.Execute("lsblk", diskDevPath, "--output", "NAME,PATH,PARTTYPE,FSTYPE,UUID,MOUNTPOINT,PARTUUID,PARTLABEL,TYPE", "--json", "--list")
+	jsonString, _, err := shell.Execute("lsblk", diskDevPath, "--output",
+		"NAME,MAJ:MIN,PATH,PARTTYPE,FSTYPE,UUID,MOUNTPOINT,PARTUUID,PARTLABEL,TYPE", "--json", "--list")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list disk (%s) partitions:\n%w", diskDevPath, err)
 	}
