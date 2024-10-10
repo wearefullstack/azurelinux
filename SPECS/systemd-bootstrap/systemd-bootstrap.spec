@@ -1,6 +1,3 @@
-# Disable provides/requires generators, unless we explicitly demand it we always want to prefer systemd proper
-%global
-
 Summary:        Bootstrap version of systemd. Workaround for systemd circular dependency.
 Name:           systemd-bootstrap
 Version:        250.3
