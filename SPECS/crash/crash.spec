@@ -1,6 +1,6 @@
 Name:          crash
 Version:       8.0.1
-Release:       3%{?dist}
+Release:       4%{?dist}
 Summary:       kernel crash analysis utility for live systems, netdump, diskdump, kdump, LKCD or mcore dumpfiles
 Group:         Development/Tools
 Vendor:        Microsoft Corporation
@@ -9,6 +9,9 @@ URL:           https://github.com/crash-utility/crash
 Source0:       https://github.com/crash-utility/%{name}/archive/%{version}.tar.gz#/%{name}-%{version}.tar.gz
 # crash requires gdb tarball for the build. There is no option to use the host gdb. For crash 8.0.1 the newest supported gdb version is 10.2.
 Source1:       https://ftp.gnu.org/gnu/gdb/gdb-10.2.tar.gz
+Source2:       CVE-2023-39128.patch
+Source3:       CVE-2023-39129.patch
+Source4:       CVE-2023-39130.patch
 # lzo patch sourced from https://src.fedoraproject.org/rpms/crash/blob/rawhide/f/lzo_snappy_zstd.patch
 Patch0:        lzo_snappy_zstd.patch
 License:       GPLv3+
@@ -38,6 +41,16 @@ This package contains libraries and header files need for development.
 %autosetup -n %{name}-%{version}
 cp %{SOURCE1} .
 
+# extract gdb tarball to apply patch
+mkdir gdb
+tar -xzf %{SOURCE1} -C gdb --strip-components=1
+cd gdb
+ls %{_sourcedir}
+patch -p1 < %{SOURCE2}
+patch -p1 < %{SOURCE3}
+patch -p1 < %{SOURCE4}
+cd ..
+
 %build
 make RPMPKG=%{version}-%{release}
 
@@ -63,6 +76,9 @@ cp -p defs.h %{buildroot}%{_includedir}/crash
 %{_includedir}/crash/*.h
 
 %changelog
+* Fri Oct 11 2024 Mitch Zhu <mitchzhu@microsoft.com> - 8.0.1-4
+- Add patch to gdb
+
 * Mon Oct 09 2023 Chris Co <chrco@microsoft.com> - 8.0.1-3
 - Add patch from Fedora to enable lzo, snappy, zstd compression support
 - Remove unused crash printk fix patch
