@@ -446,12 +446,7 @@ func getDiskPartitionsMap(devicePath string) (map[int]diskutils.PartitionInfo, e
 			continue
 		}
 
-		num, err := getPartitionNum(partition.Path)
-		if err != nil {
-			return nil, err
-		}
-
-		partitionsMap[num] = partition
+		partitionsMap[partition.PartNum] = partition
 	}
 
 	return partitionsMap, nil

@@ -39,6 +39,9 @@ var (
 
 	// The default partition name used when the version of `parted` is too old (<3.5).
 	LegacyDefaultParitionName = "primary"
+
+	// Regex for parsing the partition number from the device path.
+	partitionNumberRegex = regexp.MustCompile(`^/dev/[a-zA-Z0-9]*[a-zA-Z]+([0-9]+)$`)
 )
 
 type blockDevicesOutput struct {
@@ -73,6 +76,7 @@ type PartitionInfo struct {
 	Mountpoint        string `json:"mountpoint"` // Example: /mnt/os/boot
 	PartLabel         string `json:"partlabel"`  // Example: boot
 	Type              string `json:"type"`       // Example: part
+	PartNum           int    `json:"partn"`      // Example: 1
 }
 
 type loopbackListOutput struct {
@@ -421,15 +425,44 @@ func WaitForLoopbackToDetach(devicePath string, diskPath string) error {
 	return fmt.Errorf("timed out waiting for loopback device (%s) for disk (%s) to close", devicePath, diskPath)
 }
 
-// WaitForDevicesToSettle waits for all udev events to be processed on the system.
+// WaitForDeviceToSettle waits for a device to be initialized.
 // This can be used to wait for partitions to be discovered after mounting a disk.
-func WaitForDevicesToSettle() error {
-	logger.Log.Debugf("Waiting for devices to settle")
-	_, _, err := shell.Execute("udevadm", "settle")
+func WaitForDeviceToSettle(diskDevPath string) error {
+	logger.Log.Debugf("Waiting for device (%s) to settle", diskDevPath)
+
+	udevadmVersion, err := GetUdevadmVersion()
 	if err != nil {
-		return fmt.Errorf("failed to wait for devices to settle:\n%w", err)
+		return err
 	}
+
+	if udevadmVersion >= 251 {
+		err = shell.ExecuteLiveWithErr(1, "udevadm", "wait", "--timeout", "120", diskDevPath)
+		if err != nil {
+			return fmt.Errorf("failed to wait for devices to settle:\n%w", err)
+		}
+	} else {
+		// 'udevadm wait' is not available. 'udevadm settle' is the next best thing.
+		err = shell.ExecuteLiveWithErr(1, "udevadm", "settle")
+		if err != nil {
+			return fmt.Errorf("failed to wait for devices to settle:\n%w", err)
+		}
+	}
+
 	return nil
+}
+
+func GetUdevadmVersion() (int, error) {
+	versionStr, _, err := shell.Execute("udevadm", "--version")
+	if err != nil {
+		return 0, fmt.Errorf("failed to get udevadm version:\n%w", err)
+	}
+
+	version, err := strconv.Atoi(strings.TrimSpace(versionStr))
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse udevadm version:\n%w", err)
+	}
+
+	return version, nil
 }
 
 // CreatePartitions creates partitions on the specified disk according to the disk config
@@ -518,6 +551,13 @@ func CreatePartitions(diskDevPath string, disk configuration.Disk, rootEncryptio
 
 		partIDToFsTypeMap[partition.ID] = partFsType
 	}
+
+	// Wait for the partition changes to be populated.
+	err = WaitForDeviceToSettle(diskDevPath)
+	if err != nil {
+		return
+	}
+
 	return
 }
 
@@ -611,19 +651,37 @@ func createSinglePartition(diskDevPath string, partitionNumber int, partitionTab
 	// So to deal with this, we call partprobe here to query and flush the
 	// partition table information, which should enforce that the devtmpfs
 	// files are created when partprobe returns control.
-	//
+	err = RefreshPartitionTable(diskDevPath)
+	if err != nil {
+		return "", err
+	}
+
+	return InitializeSinglePartition(diskDevPath, partitionNumber, partitionTableType, partition)
+}
+
+func RefreshPartitionTable(diskDevPath string) error {
+	const (
+		timeoutInSeconds = "5"
+	)
+
 	// Added flock because "partprobe -s" apparently doesn't always block.
 	// flock is part of the util-linux package and helps to synchronize access
 	// with other cooperating processes. The important part is it will block
 	// if the fd is busy, and then execute the command. Adding a timeout
 	// to prevent us from possibly waiting forever.
-	stdout, stderr, err := shell.Execute("flock", "--timeout", timeoutInSeconds, diskDevPath, "partprobe", "-s", diskDevPath)
+	err := shell.ExecuteLiveWithErr(3, "flock", "--timeout", timeoutInSeconds, diskDevPath, "partprobe", "-s",
+		diskDevPath)
 	if err != nil {
-		err = fmt.Errorf("failed to execute partprobe:\n%v\n%w", stderr, err)
-		return "", err
+		return fmt.Errorf("partprobe failed:\n%w", err)
 	}
-	logger.Log.Debugf("Partprobe -s returned: %s", stdout)
-	return InitializeSinglePartition(diskDevPath, partitionNumber, partitionTableType, partition)
+
+	// Wait for the partitions to be populated.
+	err = WaitForDeviceToSettle(diskDevPath)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Returns true if the version of 'parted' supports the 'type' session command.
@@ -681,31 +739,20 @@ func InitializeSinglePartition(diskDevPath string, partitionNumber int,
 
 	partitionNumberStr := strconv.Itoa(partitionNumber)
 
-	// There are two primary partition naming conventions:
-	// /dev/sdN<y> style or /dev/loopNp<x> style
-	// Detect the exact one we are using.
-	// Make sure we check for /dev/loopNp<x> FIRST, since /dev/loop1 would generate /dev/loop11 as a partition
-	// device which may be a valid device. We want to select /dev/loop1p1 first.
-	testPartDevPaths := []string{
-		fmt.Sprintf("%sp%s", diskDevPath, partitionNumberStr),
-		fmt.Sprintf("%s%s", diskDevPath, partitionNumberStr),
-	}
-
+	// It can take a little bit for the partition to show up under /dev after the 'partprobe' call.
 	err = retry.Run(func() error {
-		for _, testPartDevPath := range testPartDevPaths {
-			exists, err := file.PathExists(testPartDevPath)
-			if err != nil {
-				err = fmt.Errorf("failed to find device path (%s):\n%w", testPartDevPath, err)
-				return err
-			}
-			if exists {
-				partDevPath = testPartDevPath
+		partitions, err := GetDiskPartitions(diskDevPath)
+		if err != nil {
+			return err
+		}
+
+		for _, partition := range partitions {
+			if partition.PartNum == partitionNumber {
+				partDevPath = partition.Path
 				return nil
 			}
-			logger.Log.Debugf("Could not find partition path (%s). Checking other naming convention", testPartDevPath)
 		}
-		logger.Log.Warnf("Could not find any valid partition paths. Will retry up to %d times", totalAttempts)
-		err = fmt.Errorf("could not find partition to initialize in /dev")
+		err = fmt.Errorf("could not find partition (%d) to initialize", partitionNumber)
 		return err
 	}, totalAttempts, retryDuration)
 
@@ -803,6 +850,7 @@ func FormatSinglePartition(partDevPath string, partition configuration.Partition
 			fsType = "vfat"
 		}
 
+		// TODO: Add flock.
 		mkfsArgs := []string{"-t", fsType}
 		mkfsArgs = append(mkfsArgs, mkfsOptions...)
 		mkfsArgs = append(mkfsArgs, partDevPath)
@@ -893,14 +941,9 @@ func SystemBlockDevices() (systemDevices []SystemBlockDevice, err error) {
 }
 
 func GetDiskPartitions(diskDevPath string) ([]PartitionInfo, error) {
-	// Just in case the disk was only recently connected, wait for the OS to finish processing it.
-	err := WaitForDevicesToSettle()
-	if err != nil {
-		return nil, fmt.Errorf("failed to list disk (%s) partitions:\n%w", diskDevPath, err)
-	}
-
 	// Read the disk's partitions.
-	jsonString, _, err := shell.Execute("lsblk", diskDevPath, "--output", "NAME,PATH,PARTTYPE,FSTYPE,UUID,MOUNTPOINT,PARTUUID,PARTLABEL,TYPE", "--json", "--list")
+	jsonString, _, err := shell.Execute("lsblk", diskDevPath, "--output",
+		"NAME,PATH,PARTTYPE,FSTYPE,UUID,MOUNTPOINT,PARTUUID,PARTLABEL,TYPE", "--json", "--list")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list disk (%s) partitions:\n%w", diskDevPath, err)
 	}
@@ -910,6 +953,27 @@ func GetDiskPartitions(diskDevPath string) ([]PartitionInfo, error) {
 		err = json.Unmarshal([]byte(jsonString), &output)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse disk (%s) partitions JSON:\n%w", diskDevPath, err)
+		}
+
+		// Parse and fill in the partition number.
+		// Ideally, we would use the 'PARTN' column. But that is only available in util-linux v2.39+.
+		for i := range output.Devices {
+			device := &output.Devices[i]
+			if device.Type == "part" {
+				match := partitionNumberRegex.FindStringSubmatch(device.Path)
+				if match == nil {
+					return nil, fmt.Errorf("failed to find partition number in partition dev path (%s)", device.Path)
+				}
+
+				partNumStr := match[1]
+
+				partNum, err := strconv.Atoi(partNumStr)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse partition number (%s):\n%w", partNumStr, err)
+				}
+
+				device.PartNum = partNum
+			}
 		}
 	}
 

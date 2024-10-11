@@ -80,6 +80,7 @@ func resetPartitionsUuids(buildImageFile string, buildDir string) error {
 }
 
 func resetFileSystemUuid(partition diskutils.PartitionInfo) (string, error) {
+	// TODO: Add flock.
 	newUuid := ""
 	switch partition.FileSystemType {
 	case "ext2", "ext3", "ext4":
@@ -128,7 +129,8 @@ func resetFileSystemUuid(partition diskutils.PartitionInfo) (string, error) {
 
 func resetPartitionUuid(device string, partNum int) (string, error) {
 	newUuid := uuid.NewString()
-	err := shell.ExecuteLive(true /*squashErrors*/, "sfdisk", "--part-uuid", device, strconv.Itoa(partNum), newUuid)
+	err := shell.ExecuteLive(true /*squashErrors*/, "sfdisk", "--lock", "--part-uuid", device, strconv.Itoa(partNum),
+		newUuid)
 	if err != nil {
 		return "", err
 	}

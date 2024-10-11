@@ -49,12 +49,7 @@ func extractPartitions(imageLoopDevice string, outDir string, basename string, p
 			continue
 		}
 
-		partitionNum, err := getPartitionNum(partition.Path)
-		if err != nil {
-			return err
-		}
-
-		partitionFilename := basename + "_" + strconv.Itoa(partitionNum)
+		partitionFilename := basename + "_" + strconv.Itoa(partition.PartNum)
 		rawFilename := partitionFilename + ".raw"
 
 		partitionFilepath, err := copyBlockDeviceToFile(outDir, partition.Path, rawFilename)
@@ -85,7 +80,7 @@ func extractPartitions(imageLoopDevice string, outDir string, basename string, p
 			return fmt.Errorf("unsupported partition format (supported: raw, raw-zst): %s", partitionFormat)
 		}
 
-		partitionMetadata, err := constructOutputPartitionMetadata(partition, partitionNum, partitionFilepath)
+		partitionMetadata, err := constructOutputPartitionMetadata(partition, partition.PartNum, partitionFilepath)
 		if err != nil {
 			return fmt.Errorf("failed to construct partition metadata:\n%w", err)
 		}

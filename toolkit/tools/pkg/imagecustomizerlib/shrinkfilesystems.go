@@ -73,11 +73,6 @@ func shrinkFilesystems(imageLoopDevice string, verityHashPartition *imagecustomi
 			return fmt.Errorf("failed to find start sector for partition (%s)", partitionLoopDevice)
 		}
 
-		partitionNumber, err := getPartitionNum(partitionLoopDevice)
-		if err != nil {
-			return err
-		}
-
 		// Check the file system with e2fsck
 		err = shell.ExecuteLive(true /*squashErrors*/, "sudo", "e2fsck", "-fy", partitionLoopDevice)
 		if err != nil {
@@ -85,6 +80,7 @@ func shrinkFilesystems(imageLoopDevice string, verityHashPartition *imagecustomi
 		}
 
 		// Shrink the file system with resize2fs -M
+		// TODO: Add flock.
 		stdout, stderr, err := shell.Execute("sudo", "resize2fs", "-M", partitionLoopDevice)
 		if err != nil {
 			return fmt.Errorf("failed to resize %s with resize2fs:\n%v", partitionLoopDevice, stderr)
@@ -103,16 +99,17 @@ func shrinkFilesystems(imageLoopDevice string, verityHashPartition *imagecustomi
 		}
 
 		// Resize the partition with parted resizepart
+		// TODO: Add flock.
 		_, stderr, err = shell.ExecuteWithStdin("yes" /*stdin*/, "sudo", "parted", "---pretend-input-tty",
-			imageLoopDevice, "resizepart", strconv.Itoa(partitionNumber), end)
+			imageLoopDevice, "resizepart", strconv.Itoa(diskPartition.PartNum), end)
 		if err != nil {
 			return fmt.Errorf("failed to resizepart %s with parted:\n%v", partitionLoopDevice, stderr)
 		}
 
-		// Re-read the partition table
-		err = shell.ExecuteLive(true, "flock", "--timeout", "5", imageLoopDevice, "partprobe", "-s", imageLoopDevice)
+		// Re-read the partition table.
+		err = diskutils.RefreshPartitionTable(imageLoopDevice)
 		if err != nil {
-			return fmt.Errorf("partprobe failed:\n%w", err)
+			return err
 		}
 	}
 	return nil
