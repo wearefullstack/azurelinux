@@ -16,14 +16,48 @@ touch $LFS/logs/temptoolchain/status_temp_toolchain_build_started
 cat /home/lfs/.bashrc
 LFS_TGT=$(uname -m)-lfs-linux-gnu
 
-echo building stage0-posix
-pushd /temptoolchain/lfs/stage0boot/stage0-posix/
-ls -la .
+echo Building stage0-posix from source tarball
+tar xf stage0-posix-1.7.0.tar.gz
+pushd stage0-posix-1.7.0
+chmod +x ./kaem.amd64
 ./kaem.amd64
-ls -la ./AMD64/bin/
 ./AMD64/bin/sha256sum ./kaem.amd64
 ./AMD64/bin/M2-Planet --version
-./AMD64/artifact/cc_amd64 --version
+popd
+
+echo building bootstrap tinycc
+tar xf tinycc-master.tar.gz
+pushd tinycc-master
+mkdir -v build
+cd       build
+cp -vr /temptoolchain/lfs/sources/stage0-posix-1.7.0/M2libc/* .
+../configure \
+    --prefix=$LFS/tools
+make
+make install
+popd
+
+echo building tinycc
+#find / -name stdlib.h
+#/usr/include/c++/11.2.0/stdlib.h
+#/usr/include/c++/11.2.0/tr1/stdlib.h
+#/temptoolchain/lfs/sources/stage0-posix-1.7.0/mescc-tools-extra/M2libc/stdlib.h
+#/temptoolchain/lfs/sources/stage0-posix-1.7.0/M2-Planet/M2libc/stdlib.h
+#/temptoolchain/lfs/sources/stage0-posix-1.7.0/M2libc/stdlib.h
+#/temptoolchain/lfs/sources/stage0-posix-1.7.0/mescc-tools/M2libc/stdlib.h
+#http://download.savannah.gnu.org/releases/tinycc/tcc-0.9.26.tar.bz2
+tar xjf tcc-0.9.26.tar.bz2
+pushd tcc-0.9.26
+mkdir -v build
+cd       build
+../configure \
+    --prefix=$LFS/tools
+#    --sysincludepaths="/temptoolchain/lfs/sources/stage0-posix-1.7.0/M2libc/"
+#    --sysincludepaths="/usr/include/c++/11.2.0"
+make
+make install
+popd
+
 exit 1
 
 echo Binutils-2.41 - Pass 1

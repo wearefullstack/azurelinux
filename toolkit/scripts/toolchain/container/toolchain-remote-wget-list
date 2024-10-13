@@ -28,6 +28,8 @@ https://www.lua.org/ftp/lua-5.4.6.tar.gz
 http://ftp.rpm.org/popt/releases/popt-1.x/popt-1.19.tar.gz
 http://ftp.rpm.org/releases/rpm-4.18.x/rpm-4.18.2.tar.bz2
 https://www.linuxfromscratch.org/patches/downloads/lua/lua-5.4.6-shared_library-1.patch
+https://ftp.gnu.org/gnu/gcc/gcc-2.95.3.tar.gz
+https://ftp.gnu.org/gnu/gcc/gcc-4.6.4/gcc-4.6.4.tar.gz
 https://ftp.gnu.org/gnu/gcc/gcc-13.2.0/gcc-13.2.0.tar.xz
 https://ftp.gnu.org/gnu/glibc/glibc-2.38.tar.xz
 https://www.linuxfromscratch.org/patches/downloads/glibc/glibc-2.38-fhs-1.patch
@@ -54,6 +56,9 @@ https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-2.69.t
 https://download.savannah.gnu.org/releases/libpipeline/libpipeline-1.5.7.tar.gz
 https://www.openssl.org/source/openssl-3.1.4.tar.gz
 https://pypi.org/packages/source/s/setuptools/setuptools-69.0.3.tar.gz
+https://github.com/oriansj/stage0-posix/releases/download/Release_1.7.0/stage0-posix-1.7.0.tar.gz
+https://gitlab.com/janneke/tinycc/-/archive/master/tinycc-master.tar.gz
+http://download.savannah.gnu.org/releases/tinycc/tcc-0.9.26.tar.bz2
 https://pypi.org/packages/source/w/wheel/wheel-0.42.0.tar.gz
 https://pypi.org/packages/source/f/flit-core/flit_core-3.9.0.tar.gz
 https://ftp.gnu.org/gnu/sed/sed-4.9.tar.xz
