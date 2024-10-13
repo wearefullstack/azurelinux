@@ -16,6 +16,16 @@ touch $LFS/logs/temptoolchain/status_temp_toolchain_build_started
 cat /home/lfs/.bashrc
 LFS_TGT=$(uname -m)-lfs-linux-gnu
 
+echo building stage0-posix
+pushd /temptoolchain/lfs/stage0boot/stage0-posix/
+ls -la .
+./kaem.amd64
+ls -la ./AMD64/bin/
+./AMD64/bin/sha256sum ./kaem.amd64
+./AMD64/bin/M2-Planet --version
+./AMD64/artifact/cc_amd64 --version
+exit 1
+
 echo Binutils-2.41 - Pass 1
 tar xf binutils-2.41.tar.xz
 pushd binutils-2.41

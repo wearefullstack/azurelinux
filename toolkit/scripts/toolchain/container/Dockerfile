@@ -20,7 +20,6 @@ COPY [ "./version-check-container.sh", \
 # Install toolchain build dependencies
 RUN tdnf install -y \
     bison \
-    build-essential \
     byacc \
     ca-certificates \
     ccache \
@@ -28,7 +27,7 @@ RUN tdnf install -y \
     file \
     flex \
     gawk \
-    gcc \
+    git \
     make \
     patch \
     perl \
@@ -46,13 +45,27 @@ RUN tdnf install -y \
     chmod -v a+wt $LFS/sources && \
     mkdir -pv $LFS/logs/temptoolchain && \
     mkdir -pv $LFS/tools && \
+    mkdir -pv $LFS/stage0boot && \
     ln    -sv $LFS/tools / && \
     $LFS/tools/version-check-container.sh
+# TODO: explicit removal of toolchain?
+# tdnf erase -y gcc build-essential && \
 
 COPY [ "./toolchain-sha256sums", \
        "./toolchain-remote-wget-list", \
        "./toolchain-local-wget-list", \
        "$LFS/tools/" ]
+
+#sudo tdnf install git
+#git clone --recurse-submodules -j8 https://github.com/oriansj/stage0-posix.git
+#cd stage0-posix
+#chmod +x ./kaem.amd64
+#./kaem.amd64
+#ls ./AMD64/bin/
+USER root
+WORKDIR $LFS/stage0boot
+RUN git clone --recurse-submodules -j8 https://github.com/oriansj/stage0-posix.git
+RUN chmod +x $LFS/stage0boot/stage0-posix/kaem.amd64
 
 # Download source, then create lfs user and group.
 # Append "; exit 0" after wget commands to ignore download errors that might be expected. The sha256sum command will verify all downloads.
@@ -83,6 +96,7 @@ RUN sha256sum -c $LFS/tools/toolchain-sha256sums && \
     chown -v lfs $LFS/lib64 && \
     chown -v lfs $LFS/sources && \
     chown -Rv lfs $LFS/logs && \
+    chown -Rv lfs $LFS/stage0boot && \
     echo "lfs ALL = NOPASSWD : ALL" >> /etc/sudoers && \
     echo 'Defaults env_keep += "LFS LC_ALL LFS_TGT PATH MAKEFLAGS FETCH_TOOLCHAIN_MODE LFS_TEST LFS_DOCS JOB_COUNT LOOP IMAGE_SIZE INITRD_TREE IMAGE"' >> /etc/sudoers
 
