@@ -180,7 +180,7 @@ steps:
 
   - ${{ each inputCacheArtifact in parameters.inputCacheArtifacts }}:
       - task: DownloadPipelineArtifact@2
-        displayName: "Download input cache RPM from ${{ inputCacheArtifact.name }}"
+        displayName: "Download input cache RPMs ${{ inputCacheArtifact.rpmsTarball }} from ${{ inputCacheArtifact.name }}"
         inputs:
           artifact: "${{ inputCacheArtifact.name }}"
           patterns: "**/${{ inputCacheArtifact.rpmsTarball }}"
