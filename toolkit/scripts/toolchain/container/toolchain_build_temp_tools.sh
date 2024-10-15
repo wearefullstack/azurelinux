@@ -19,10 +19,24 @@ LFS_TGT=$(uname -m)-lfs-linux-gnu
 echo Building stage0-posix from source tarball
 tar xf stage0-posix-1.7.0.tar.gz
 pushd stage0-posix-1.7.0
-chmod +x ./kaem.amd64
-./kaem.amd64
-./AMD64/bin/sha256sum ./kaem.amd64
-./AMD64/bin/M2-Planet --version
+make test-amd64
+# Hack: copy the stage0 toolchain binaries to system /usr/bin directory, to satisfy mes configure script
+chmod -R 0777 ./AMD64/bin/
+# Remove tools we can't currently break
+rm $LFS/sources/stage0-posix-1.7.0/AMD64/bin/cp
+rm $LFS/sources/stage0-posix-1.7.0/AMD64/bin/mkdir
+rm $LFS/sources/stage0-posix-1.7.0/AMD64/bin/chmod
+sudo cp -vr $LFS/sources/stage0-posix-1.7.0/AMD64/bin/* /usr/bin
+popd
+
+echo Building mes
+tar xf mes-0.27.tar.gz
+pushd mes-0.27
+mkdir -v build
+cd       build
+# strace ../configure --bindir=$LFS/sources/stage0-posix-1.7.0/AMD64/bin
+../configure
+make
 popd
 
 echo building bootstrap tinycc
@@ -38,6 +52,10 @@ make install
 popd
 
 echo building tinycc
+#find / -name limits.h || true
+#/usr/include/c++/11.2.0/tr1/limits.h
+#/usr/lib/gcc/x86_64-pc-linux-gnu/11.2.0/install-tools/include/limits.h
+#/usr/lib/gcc/x86_64-pc-linux-gnu/11.2.0/include-fixed/limits.h
 #find / -name stdlib.h
 #/usr/include/c++/11.2.0/stdlib.h
 #/usr/include/c++/11.2.0/tr1/stdlib.h

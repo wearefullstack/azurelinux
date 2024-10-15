@@ -26,7 +26,9 @@ RUN tdnf install -y \
     cpio \
     file \
     flex \
+    file \
     gawk \
+    guile \
     git \
     make \
     patch \
@@ -39,6 +41,7 @@ RUN tdnf install -y \
     util-linux \
     vim \
     wget \
+    strace \
     zip && \
     ln    -sf bash /bin/sh && \
     mkdir -pv $LFS/sources && \
