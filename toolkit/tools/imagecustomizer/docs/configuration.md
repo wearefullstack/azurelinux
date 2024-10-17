@@ -26,7 +26,7 @@ The Azure Linux Image Customizer is configured using a YAML (or JSON) file.
 
 4. Update hostname. ([hostname](#hostname-string))
 
-5. Copy additional files. ([additionalFiles](#additionalfiles-mapstring-fileconfig))
+5. Copy additional files. ([additionalFiles](#os-additionalfiles))
   
 6. Copy additional directories. ([additionalDirs](#additionaldirs-dirconfig))
 
@@ -47,8 +47,8 @@ The Azure Linux Image Customizer is configured using a YAML (or JSON) file.
 
 12. Update the SELinux mode. [mode](#mode-string)
 
-13. If ([overlays](#overlay-type)) are specified, then add the overlays dracut module
-    and update the grub config.
+13. If ([overlays](#overlay-type)) are specified, then add the overlay driver
+    and update the fstab file with the overlay mount information.
 
 14. If ([verity](#verity-type)) is specified, then add the dm-verity dracut driver
     and update the grub config.
@@ -134,18 +134,20 @@ os:
             - [idType](#idtype-string)
             - [options](#options-string)
             - [path](#mountpoint-path)
-  - [resetPartitionsUuidsType](#resetpartitionsuuidstype-string)
+    - [resetPartitionsUuidsType](#resetpartitionsuuidstype-string)
   - [iso](#iso-type)
-    - [additionalFiles](#additionalfiles-mapstring-fileconfig)
-      - [fileConfig type](#fileconfig-type)
-        - [path](#fileconfig-path)
+    - [additionalFiles](#iso-additionalfiles)
+      - [additionalFile type](#additionalfile-type)
+        - [source](#source-string)
+        - [content](#content-string)
+        - [destination](#destination-string)
         - [permissions](#permissions-string)
-    - [kernelCommandLine](#kernelcommandline-type)
+    - [kernelCommandLine](#iso-kernelcommandline)
       - [extraCommandLine](#extracommandline-string)
   - [os type](#os-type)
     - [resetBootLoaderType](#resetbootloadertype-string)
     - [hostname](#hostname-string)
-    - [kernelCommandLine](#kernelcommandline-type)
+    - [kernelCommandLine](#os-kernelcommandline)
       - [extraCommandLine](#extracommandline-string)
     - [packages](#packages-packages)
       - [packages type](#packages-type)
@@ -160,14 +162,16 @@ os:
         - [remove](#remove-string)
         - [updateLists](#updatelists-string)
         - [update](#update-string)
-    - [additionalFiles](#additionalfiles-mapstring-fileconfig)
-      - [fileConfig type](#fileconfig-type)
-        - [path](#fileconfig-path)
+    - [additionalFiles](#os-additionalfiles)
+      - [additionalFile type](#additionalfile-type)
+        - [source](#source-string)
+        - [content](#content-string)
+        - [destination](#destination-string)
         - [permissions](#permissions-string)
     - [additionalDirs](#additionaldirs-dirconfig)
       - [dirConfig](#dirconfig-type)
-        - [sourcePath](#dirconfig-sourcePath)
-        - [destinationPath](#dirconfig-destinationPath)
+        - [source](#dirconfig-source)
+        - [destination](#dirconfig-destination)
         - [newDirPermissions](#newdirpermissions-string)
         - [mergedDirPermissions](#mergeddirpermissions-string)
         - [childFilePermissions](#childfilepermissions-string)
@@ -261,31 +265,6 @@ os:
   resetBootLoaderType: hard-reset
 ```
 
-### resetPartitionsUuidsType [string]
-
-Specifies that the partition UUIDs and filesystem UUIDs should be reset.
-
-Value is optional.
-
-This value cannot be specified if [storage](#storage-storage) is specified (since
-customizing the partition layout resets all the UUIDs anyway).
-
-If this value is specified, then [os.resetBootLoaderType](#resetbootloadertype-string)
-must also be specified.
-
-Supported options:
-
-- `reset-all`: Resets the partition UUIDs and filesystem UUIDs for all the partitions.
-
-Example:
-
-```yaml
-resetPartitionsUuidsType: reset-all
-
-os:
-  resetBootLoaderType: hard-reset
-```
-
 ### iso [[iso](#iso-type)]
 
 Specifies the configuration for the generated ISO media.
@@ -334,13 +313,17 @@ The partitions to provision on the disk.
 
 Specifies the configuration for the generated ISO media.
 
-### kernelExtraCommandLine [string]
+<div id="iso-kernelcommandline"></div>
 
-- See [extraCommandLine](#extracommandline-string).
+### kernelCommandLine [[kernelCommandLine](#kernelcommandline-type)]
 
-### additionalFiles
+Specifies extra kernel command line options.
 
-- See [additionalFiles](#additionalfiles-mapstring-fileconfig).
+<div id="iso-additionalfiles"></div>
+
+### additionalFiles [[additionalFile](#additionalfile-type)[]>]
+
+Adds files to the ISO.
 
 ## overlay type
 
@@ -397,7 +380,7 @@ os:
       - /etc
       upperDir: /var/overlays/etc/upper
       workDir: /var/overlays/etc/work
-      isRootfsOverlay: true
+      isInitrdOverlay: true
       mountDependencies:
       - /var
     - mountPoint: /media
@@ -449,7 +432,7 @@ operations. The workDir is not directly accessible to users.
   
 Example: `/var/overlays/etc/work`
 
-### `isRootfsOverlay` [bool]
+### `isInitrdOverlay` [bool]
 
 A boolean flag indicating whether this overlay is part of the root filesystem.
 If set to `true`, specific adjustments will be made, such as prefixing certain
@@ -500,19 +483,14 @@ Example: `noatime,nodiratime`
 
 ## verity type
 
-Specifies the configuration for dm-verity root integrity verification. Please
-execute `sudo modprobe nbd` before building the image with verity enablement.
-
-Please enable overlays for the `/var/lib` and `/var/log` directories, along with
-verity enablement, to ensure proper functioning of services. For an example,
-please refer to the [overlay type](#overlay-type) section.
+Specifies the configuration for dm-verity root integrity verification.
 
 - `dataPartition`: A partition configured with dm-verity, which verifies integrity
   at each system boot.
 
   - `idType`: Specifies the type of id for the partition. The options are
-    `part-label` (partition label), `uuid` (filesystem UUID), and `part-uuid`
-    (partition UUID).
+    `id` (partition [id](#id-string)), `part-label` (partition label),
+    `uuid` (filesystem UUID), and `part-uuid` (partition UUID).
 
   - `id`: The unique identifier value of the partition, corresponding to the
     specified IdType.
@@ -542,17 +520,18 @@ os:
     corruptionOption: panic
 ```
 
-## fileConfig type
+There are multiple ways to configure a verity enabled image. For
+recommendations, see [Verity Image Recommendations](./verity.md).
+
+## additionalFile type
 
 Specifies options for placing a file in the OS.
 
-Type is used by: [additionalFiles](#additionalfiles-mapstring-fileconfig)
+Type is used by: [additionalFiles](#additionalfiles-additionalfile)
 
-<div id="fileconfig-path"></div>
+### source [string]
 
-### path [string]
-
-The absolute path of the destination file.
+The path of the source file to copy to the destination path.
 
 Example:
 
@@ -561,6 +540,33 @@ os:
   additionalFiles:
     files/a.txt:
     - path: /a.txt
+```
+
+### content [string]
+
+The contents of the file to write to the destination path.
+
+Example:
+
+```yaml
+os:
+  additionalFiles:
+  - content: |
+      abc
+    destination: /a.txt
+```
+
+### destination [string]
+
+The absolute path of the destination file.
+
+Example:
+
+```yaml
+os:
+  additionalFiles:
+  - source: files/a.txt
+    destination: /a.txt
 ```
 
 ### permissions [string]
@@ -576,9 +582,9 @@ Example:
 ```yaml
 os:
   additionalFiles:
-    files/a.txt:
-    - path: /a.txt
-      permissions: "664"
+  - source: files/a.txt
+    destination: /a.txt
+    permissions: "664"
 ```
 
 ## dirConfig type
@@ -587,15 +593,15 @@ Specifies options for placing a directory in the OS.
 
 Type is used by: [additionalDirs](#additionaldirs-dirconfig)
 
-<div id="dirconfig-sourcePath"></div>
+<div id="dirconfig-source"></div>
 
-### sourcePath [string]
+### source [string]
 
 The absolute path to the source directory that will be copied.
 
-<div id="dirconfig-destinationPath"></div>
+<div id="dirconfig-destination"></div>
 
-### destinationPath [string]
+### destination [string]
 
 The absolute path in the target OS that the source directory will be copied to.
 
@@ -604,8 +610,8 @@ Example:
 ```yaml
 os:
   additionalDirs:
-    - sourcePath: "home/files/targetDir"
-      destinationPath: "usr/project/targetDir"
+    - source: "home/files/targetDir"
+      destination: "usr/project/targetDir"
 ```
 
 ### newDirPermissions [string]
@@ -633,8 +639,8 @@ Example:
 ```yaml
 os:
   additionalDirs:
-    - sourcePath: "home/files/targetDir"
-      destinationPath: "usr/project/targetDir"
+    - source: "home/files/targetDir"
+      destination: "usr/project/targetDir"
       newDirPermissions: "644"
       mergedDirPermissions: "777"
       childFilePermissions: "644"
@@ -1251,45 +1257,32 @@ os:
   hostname: example-image
 ```
 
+<div id="os-kernelcommandline"></div>
+
 ### kernelCommandLine [[kernelCommandLine](#kernelcommandline-type)]
 
-Specifies extra kernel command line options, as well as other configuration values
-relating to the kernel.
+Specifies extra kernel command line options.
 
 ### packages [packages](#packages-type)
 
 Remove, update, and install packages on the system.
 
-### additionalFiles [map\<string, [fileConfig](#fileconfig-type)[]>]
+<div id="os-additionalfiles"></div>
+
+### additionalFiles [[additionalFile](#additionalfile-type)[]>]
 
 Copy files into the OS image.
-
-This property is a dictionary of source file paths to destination files.
-
-The destination files value can be one of:
-
-- The absolute path of a destination file.
-- A [fileConfig](#fileconfig-type) object.
-- A list containing a mixture of paths and [fileConfig](#fileconfig-type) objects.
-
-Example:
 
 ```yaml
 os:
   additionalFiles:
-    # Single destination.
-    files/a.txt: /a.txt
+  - source: files/a.txt
+    destination: /a.txt
 
-    # Single destinations with options.
-    files/b.txt:
-      path: /b.txt
-      permissions: "664"
-
-    # Multiple destinations.
-    files/c.txt:
-    - /c1.txt
-    - path: /c2.txt
-      permissions: "664"
+  - content: |
+      abc
+    destination: /b.txt
+    permissions: "664"
 ```
 
 ### additionalDirs [[dirConfig](#dirconfig-type)[]]
@@ -1304,11 +1297,11 @@ Example:
 os:
   additionalDirs:
     # Copying directory with default permission options.
-    - sourcePath: "path/to/local/directory/"
-      destinationPath: "/path/to/destination/directory/"
+    - source: "path/to/local/directory/"
+      destination: "/path/to/destination/directory/"
     # Copying directory with specific permission options.
-    - sourcePath: "path/to/local/directory/"
-      destinationPath: "/path/to/destination/directory/"
+    - source: "path/to/local/directory/"
+      destination: "/path/to/destination/directory/"
       newDirPermissions: 0644
       mergedDirPermissions: 0777
       childFilePermissions: 0644
@@ -1582,3 +1575,29 @@ Contains the options for provisioning disks and their partitions.
 ### filesystems [[filesystem](#filesystem-type)[]]
 
 Specifies the mount options of the partitions.
+
+### resetPartitionsUuidsType [string]
+
+Specifies that the partition UUIDs and filesystem UUIDs should be reset.
+
+Value is optional.
+
+This value cannot be specified if [storage](#storage-storage) is specified (since
+customizing the partition layout resets all the UUIDs anyway).
+
+If this value is specified, then [os.resetBootLoaderType](#resetbootloadertype-string)
+must also be specified.
+
+Supported options:
+
+- `reset-all`: Resets the partition UUIDs and filesystem UUIDs for all the partitions.
+
+Example:
+
+```yaml
+storage:
+  resetPartitionsUuidsType: reset-all
+
+os:
+  resetBootLoaderType: hard-reset
+```

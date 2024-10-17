@@ -116,6 +116,35 @@ func TestStorageIsValidUnsupportedFileSystem(t *testing.T) {
 	assert.ErrorContains(t, err, "invalid fileSystemType value (ntfs)")
 }
 
+func TestStorageIsValidMountPointWithoutFileSystem(t *testing.T) {
+	storage := Storage{
+		Disks: []Disk{{
+			PartitionTableType: PartitionTableTypeGpt,
+			MaxSize:            ptrutils.PtrTo(DiskSize(2 * diskutils.GiB)),
+			Partitions: []Partition{
+				{
+					Id:    "a",
+					Start: ptrutils.PtrTo(DiskSize(1 * diskutils.MiB)),
+					End:   nil,
+				},
+			},
+		}},
+		BootType: BootTypeEfi,
+		FileSystems: []FileSystem{
+			{
+				DeviceId: "a",
+				MountPoint: &MountPoint{
+					Path: "/",
+				},
+			},
+		},
+	}
+
+	err := storage.IsValid()
+	assert.Error(t, err)
+	assert.ErrorContains(t, err, "filesystem with 'mountPoint' must have a 'type'")
+}
+
 func TestStorageIsValidMissingFileSystemEntry(t *testing.T) {
 	storage := Storage{
 		Disks: []Disk{{
@@ -135,8 +164,7 @@ func TestStorageIsValidMissingFileSystemEntry(t *testing.T) {
 
 	err := storage.IsValid()
 	assert.Error(t, err)
-	assert.ErrorContains(t, err, "invalid disk at index 0")
-	assert.ErrorContains(t, err, "partition (esp) at index 0 must have a corresponding filesystem entry")
+	assert.ErrorContains(t, err, "ESP partition (esp) must have 'fat32' or 'vfat' filesystem type")
 }
 
 func TestStorageIsValidBadEspFsType(t *testing.T) {
@@ -164,7 +192,7 @@ func TestStorageIsValidBadEspFsType(t *testing.T) {
 
 	err := storage.IsValid()
 	assert.Error(t, err)
-	assert.ErrorContains(t, err, "ESP partition must have 'fat32' or 'vfat' filesystem type")
+	assert.ErrorContains(t, err, "ESP partition (esp) must have 'fat32' or 'vfat' filesystem type")
 }
 
 func TestStorageIsValidBadBiosBootFsType(t *testing.T) {
@@ -192,7 +220,37 @@ func TestStorageIsValidBadBiosBootFsType(t *testing.T) {
 
 	err := storage.IsValid()
 	assert.Error(t, err)
-	assert.ErrorContains(t, err, "BIOS boot partition must have 'fat32' or 'vfat' filesystem type")
+	assert.ErrorContains(t, err, "BIOS boot partition (bios) must not have a filesystem 'type'")
+}
+
+func TestStorageIsValidBiosWithMountPoint(t *testing.T) {
+	storage := Storage{
+		Disks: []Disk{{
+			PartitionTableType: PartitionTableTypeGpt,
+			MaxSize:            ptrutils.PtrTo(DiskSize(2 * diskutils.GiB)),
+			Partitions: []Partition{
+				{
+					Id:    "bios",
+					Start: ptrutils.PtrTo(DiskSize(1 * diskutils.MiB)),
+					End:   nil,
+					Type:  PartitionTypeBiosGrub,
+				},
+			},
+		}},
+		BootType: BootTypeEfi,
+		FileSystems: []FileSystem{
+			{
+				DeviceId: "bios",
+				MountPoint: &MountPoint{
+					Path: "/boot/bios",
+				},
+			},
+		},
+	}
+
+	err := storage.IsValid()
+	assert.Error(t, err)
+	assert.ErrorContains(t, err, "BIOS boot partition (bios) must not have a 'mountPoint'")
 }
 
 func TestStorageIsValidBadBiosBootStart(t *testing.T) {
@@ -416,4 +474,71 @@ func TestStorageIsValidDuplicateLabel(t *testing.T) {
 	err := storage.IsValid()
 	assert.ErrorContains(t, err, "invalid fileSystem at index 0")
 	assert.ErrorContains(t, err, "more than one partition has a label of (a)")
+}
+
+func TestStorageIsValidBothDisksAndResetUuid(t *testing.T) {
+	value := Storage{
+		Disks: []Disk{{
+			PartitionTableType: "gpt",
+			MaxSize:            ptrutils.PtrTo(DiskSize(4 * diskutils.GiB)),
+			Partitions: []Partition{
+				{
+					Id:    "esp",
+					Start: ptrutils.PtrTo(DiskSize(1 * diskutils.MiB)),
+					End:   ptrutils.PtrTo(DiskSize(9 * diskutils.MiB)),
+					Type:  PartitionTypeESP,
+				},
+				{
+					Id:    "rootfs",
+					Start: ptrutils.PtrTo(DiskSize(9 * diskutils.MiB)),
+				},
+			},
+		}},
+		BootType: "efi",
+		FileSystems: []FileSystem{
+			{
+				DeviceId: "esp",
+				Type:     "vfat",
+				MountPoint: &MountPoint{
+					Path: "/boot/efi",
+				},
+			},
+			{
+				DeviceId: "rootfs",
+				Type:     "ext4",
+				MountPoint: &MountPoint{
+					Path: "/",
+				},
+			},
+		},
+		ResetPartitionsUuidsType: ResetPartitionsUuidsTypeAll,
+	}
+
+	err := value.IsValid()
+	assert.ErrorContains(t, err, "cannot specify both 'resetPartitionsUuidsType' and 'disks'")
+}
+
+func TestStorageIsValidFileSystemsWithoutDisks(t *testing.T) {
+	value := Storage{
+		FileSystems: []FileSystem{
+			{
+				DeviceId: "esp",
+				Type:     "vfat",
+				MountPoint: &MountPoint{
+					Path: "/boot/efi",
+				},
+			},
+			{
+				DeviceId: "rootfs",
+				Type:     "ext4",
+				MountPoint: &MountPoint{
+					Path: "/",
+				},
+			},
+		},
+		ResetPartitionsUuidsType: ResetPartitionsUuidsTypeAll,
+	}
+
+	err := value.IsValid()
+	assert.ErrorContains(t, err, "cannot specify 'filesystems' without specifying 'disks'")
 }

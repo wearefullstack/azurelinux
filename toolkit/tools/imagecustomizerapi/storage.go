@@ -8,22 +8,25 @@ import (
 )
 
 type Storage struct {
-	BootType    BootType     `yaml:"bootType"`
-	Disks       []Disk       `yaml:"disks"`
-	FileSystems []FileSystem `yaml:"filesystems"`
+	ResetPartitionsUuidsType ResetPartitionsUuidsType `yaml:"resetPartitionsUuidsType"`
+	BootType                 BootType                 `yaml:"bootType"`
+	Disks                    []Disk                   `yaml:"disks"`
+	FileSystems              []FileSystem             `yaml:"filesystems"`
 }
 
 func (s *Storage) IsValid() error {
 	var err error
+
+	err = s.ResetPartitionsUuidsType.IsValid()
+	if err != nil {
+		return err
+	}
 
 	err = s.BootType.IsValid()
 	if err != nil {
 		return err
 	}
 
-	if len(s.Disks) < 1 {
-		return fmt.Errorf("at least 1 disk must be specified")
-	}
 	if len(s.Disks) > 1 {
 		return fmt.Errorf("defining multiple disks is not currently supported")
 	}
@@ -51,6 +54,27 @@ func (s *Storage) IsValid() error {
 		fileSystemSet[fileSystem.DeviceId] = fileSystem
 	}
 
+	hasResetUuids := s.ResetPartitionsUuidsType != ResetPartitionsUuidsTypeDefault
+	hasBootType := s.BootType != BootTypeNone
+	hasDisks := len(s.Disks) > 0
+	hasFileSystems := len(s.FileSystems) > 0
+
+	if hasResetUuids && hasDisks {
+		return fmt.Errorf("cannot specify both 'resetPartitionsUuidsType' and 'disks'")
+	}
+
+	if !hasBootType && hasDisks {
+		return fmt.Errorf("must specify 'bootType' if 'disks' are specified")
+	}
+
+	if hasBootType && !hasDisks {
+		return fmt.Errorf("cannot specify 'bootType' without specifying 'disks'")
+	}
+
+	if hasFileSystems && !hasDisks {
+		return fmt.Errorf("cannot specify 'filesystems' without specifying 'disks'")
+	}
+
 	partitionSet := make(map[string]Partition)
 	espPartitionExists := false
 	biosBootPartitionExists := false
@@ -66,26 +90,34 @@ func (s *Storage) IsValid() error {
 			partitionSet[partition.Id] = partition
 
 			fileSystem, hasFileSystem := fileSystemSet[partition.Id]
-			if !hasFileSystem {
-				return fmt.Errorf("invalid disk at index %d:\npartition (%s) at index %d must have a corresponding filesystem entry",
-					i, partition.Id, j)
-			}
 
 			// Ensure special partitions have the correct filesystem type.
-			if partition.IsESP() {
+			switch partition.Type {
+			case PartitionTypeESP:
 				espPartitionExists = true
 
-				if fileSystem.Type != FileSystemTypeFat32 && fileSystem.Type != FileSystemTypeVfat {
-					return fmt.Errorf("ESP partition must have 'fat32' or 'vfat' filesystem type")
+				if !hasFileSystem || (fileSystem.Type != FileSystemTypeFat32 && fileSystem.Type != FileSystemTypeVfat) {
+					return fmt.Errorf("ESP partition (%s) must have 'fat32' or 'vfat' filesystem type", partition.Id)
+				}
+
+			case PartitionTypeBiosGrub:
+				biosBootPartitionExists = true
+
+				if hasFileSystem {
+					if fileSystem.Type != "" {
+						return fmt.Errorf("BIOS boot partition (%s) must not have a filesystem 'type'",
+							partition.Id)
+					}
+
+					if fileSystem.MountPoint != nil {
+						return fmt.Errorf("BIOS boot partition (%s) must not have a 'mountPoint'", partition.Id)
+					}
 				}
 			}
 
-			if partition.IsBiosBoot() {
-				biosBootPartitionExists = true
-
-				if fileSystem.Type != FileSystemTypeFat32 && fileSystem.Type != FileSystemTypeVfat {
-					return fmt.Errorf("BIOS boot partition must have 'fat32' or 'vfat' filesystem type")
-				}
+			// Ensure filesystem entires with a mountPoint also have a filesystem type value.
+			if hasFileSystem && fileSystem.MountPoint != nil && fileSystem.Type == FileSystemTypeNone {
+				return fmt.Errorf("filesystem with 'mountPoint' must have a 'type'")
 			}
 
 			// Count the number of partitions that use each label.
@@ -129,4 +161,8 @@ func (s *Storage) IsValid() error {
 	}
 
 	return nil
+}
+
+func (s *Storage) CustomizePartitions() bool {
+	return len(s.Disks) > 0
 }
