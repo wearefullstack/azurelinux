@@ -1,10 +1,10 @@
 %global debug_package %{nil}
 %define commit_hash fa5bf66fdff44846dc475c022bf6b47197febffd
-%define upstream_rc 2.0.0-rc.4
+%define upstream_rc 2.0.0-rc.5
 
 Summary: Industry-standard container runtime
 Name: containerd
-Version: 2.0.0.rc.4
+Version: 2.0.0.rc.5
 Release: 1%{?dist}
 License: ASL 2.0
 Group: Tools/Container
@@ -84,6 +84,9 @@ fi
 %dir /opt/containerd/lib
 
 %changelog
+* Thu Oct 17 2024 Mitch Zhu <mitchzhu@microsoft.com> - 2.0.0.rc.5-1
+- Bump version to 2.0.0-rc.5
+
 * Wed Sep 11 2024 Nan Liu <liunan@microsoft.com> - 2.0.0.rc.4-1
 - Bump version to 2.0.0-rc.4
 - Remove unused patches
