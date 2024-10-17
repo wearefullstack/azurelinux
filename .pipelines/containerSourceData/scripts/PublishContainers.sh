@@ -4,6 +4,7 @@
 
 set -e
 
+# todo
 # This script is used to publish the multi-arch tags for the container images.
 # Note that this script assumes that 'az login' has already been done.
 
