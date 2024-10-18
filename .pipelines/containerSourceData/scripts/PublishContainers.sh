@@ -287,7 +287,7 @@ do
             docker image push "$amd64_retagged_image_name"
             oras_attach "$amd64_retagged_image_name"
             echo "Proto2: tagging complete. Now delete preview image x64: container_registry $container_registry + amd64_retagged_image_name $amd64_retagged_image_name"
-
+            echo "Proto2: acr delete $image_name"
             if [[ $ARCHITECTURE_TO_BUILD == *"ARM64"*  ]]; then
                 arm64_retagged_image_name=${arm64_image/"$container_registry"/"$TARGET_ACR"}
                 echo "Retagged arm64 image: $arm64_retagged_image_name"
@@ -296,6 +296,7 @@ do
                 docker image push "$arm64_retagged_image_name"
                 oras_attach "$arm64_retagged_image_name"
                 echo "Proto2: tagging complete. Now delete preview image arm64: container_registry $container_registry"
+                echo "Proto2: acr delete arm64: $image_name"
             fi
 
             image_name=$amd64_retagged_image_name
