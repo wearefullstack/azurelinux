@@ -276,7 +276,7 @@ do
 
         if [[ $container_registry != "$TARGET_ACR" ]]; then
             acr_login "$TARGET_ACR"
-            echo "Retagging the images to $TARGET_ACR"
+            echo "Proto2: Retagging the images to $TARGET_ACR"
             # E.g., If container_registry is azurelinuxdevpreview and TARGET_ACR is azurelinuxpreview, then
             # azurelinuxdevpreview.azurecr.io/base/core:3.0 -> azurelinuxpreview.azurecr.io/base/core:3.0
 
@@ -286,6 +286,7 @@ do
             docker rmi "$amd64_image"
             docker image push "$amd64_retagged_image_name"
             oras_attach "$amd64_retagged_image_name"
+            echo "Proto2: tagging complete. Now delete preview image x64: container_registry $container_registry + amd64_retagged_image_name $amd64_retagged_image_name"
 
             if [[ $ARCHITECTURE_TO_BUILD == *"ARM64"*  ]]; then
                 arm64_retagged_image_name=${arm64_image/"$container_registry"/"$TARGET_ACR"}
@@ -294,6 +295,7 @@ do
                 docker rmi "$arm64_image"
                 docker image push "$arm64_retagged_image_name"
                 oras_attach "$arm64_retagged_image_name"
+                echo "Proto2: tagging complete. Now delete preview image arm64: container_registry $container_registry"
             fi
 
             image_name=$amd64_retagged_image_name
