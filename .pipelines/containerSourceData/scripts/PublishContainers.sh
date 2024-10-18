@@ -236,8 +236,8 @@ do
     IS_NVIDIA_GOLDEN_IMAGE=$(jq -r '.data_is_nvidia_golden_image' "$TEMP_FILE")
     ARCHITECTURE_TO_BUILD=$(jq -r '.data_architecture_to_build' "$TEMP_FILE")
     TARGET_ACR=$(jq -r '.data_target_acr' "$TEMP_FILE")
-    echo "Proto2: force TARGET_ACR to main"
-    TARGET_ACR="main"
+    #echo "Proto2: force TARGET_ACR to main"
+    #TARGET_ACR="main"
     
     if [[ -z $TARGET_ACR ]]; then
         echo "##vso[task.logissue type=warning]Target ACR not found for image $container_type"
