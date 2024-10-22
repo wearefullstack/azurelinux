@@ -50,7 +50,8 @@ make VERSION="%{version}" REVISION="%{commit_hash}" binaries man
 %check
 export BUILDTAGS="-mod=vendor"
 make VERSION="%{version}" REVISION="%{commit_hash}" test
-su - make VERSION="%{version}" REVISION="%{commit_hash}" root-test
+make VERSION="%{version}" REVISION="%{commit_hash}" root-test
+make VERSION="%{version}" REVISION="%{commit_hash}" integration
 
 %install
 make VERSION="%{version}" REVISION="%{commit_hash}" DESTDIR="%{buildroot}" PREFIX="/usr" install install-man
