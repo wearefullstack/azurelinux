@@ -14,7 +14,7 @@
 
 Name:         kata-containers-cc
 Version:      3.2.0.azl2
-Release:      7%{?dist}
+Release:      8%{?dist}
 Summary:      Kata Confidential Containers package developed for Confidential Containers on AKS
 License:      ASL 2.0
 URL:          https://github.com/microsoft/kata-containers
@@ -23,6 +23,7 @@ Distribution: Azure Linux
 Source0:      https://github.com/microsoft/kata-containers/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz
 Source1:      %{name}-%{version}-cargo.tar.gz
 Source2:      mariner-coco-build-uvm.sh
+Patch0:       pause.patch
 
 ExclusiveArch: x86_64
 
@@ -294,6 +295,9 @@ fi
 %exclude %{osbuilder}/tools/osbuilder/rootfs-builder/ubuntu
 
 %changelog
+* Mon Oct 21 2024 Mitch Zhu <mitchzhu@microsoft.com> 3.2.0.azl2-8
+- Add pause version patch
+
 * Tue Sep 03 2024 Neha Agarwal <nehaagarwal@microsoft.com> - 3.2.0.azl2-7
 - Add missing Distribution tag.
 

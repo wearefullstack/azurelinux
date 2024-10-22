@@ -1,0 +1,38 @@
+From 341c356e5af6c37900cc4f6b4f2f940f583445dc Mon Sep 17 00:00:00 2001
+From: Mitch Zhu <mitchzhu@microsoft.com>
+Date: Tue, 22 Oct 2024 03:42:15 +0000
+Subject: [PATCH] Update pause image version to 3.10
+
+---
+ src/tools/genpolicy/src/pod.rs                           | 2 +-
+ tools/osbuilder/rootfs-builder/cbl-mariner/rootfs_lib.sh | 2 ++
+ 2 files changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/tools/genpolicy/src/pod.rs b/src/tools/genpolicy/src/pod.rs
+index 16d633aa2..3426ffcf7 100644
+--- a/src/tools/genpolicy/src/pod.rs
++++ b/src/tools/genpolicy/src/pod.rs
+@@ -973,7 +973,7 @@ pub async fn add_pause_container(containers: &mut Vec<Container>, config: &Confi
+     debug!("Adding pause container...");
+     let mut pause_container = Container {
+         // TODO: load this path from the settings file.
+-        image: "mcr.microsoft.com/oss/kubernetes/pause:3.6".to_string(),
++        image: "mcr.microsoft.com/oss/kubernetes/pause:3.10".to_string(),
+ 
+         name: String::new(),
+         imagePullPolicy: None,
+diff --git a/tools/osbuilder/rootfs-builder/cbl-mariner/rootfs_lib.sh b/tools/osbuilder/rootfs-builder/cbl-mariner/rootfs_lib.sh
+index 0288d4d77..5c3d86f0b 100644
+--- a/tools/osbuilder/rootfs-builder/cbl-mariner/rootfs_lib.sh
++++ b/tools/osbuilder/rootfs-builder/cbl-mariner/rootfs_lib.sh
+@@ -22,5 +22,7 @@ build_rootfs()
+ 	info "install packages for rootfs"
+ 	$DNF install ${EXTRA_PKGS} ${PACKAGES}
+ 
++	# here?
++
+ 	rm -rf ${ROOTFS_DIR}/usr/share/{bash-completion,cracklib,doc,info,locale,man,misc,pixmaps,terminfo,zoneinfo,zsh}
+ }
+-- 
+2.34.1
+
