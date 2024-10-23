@@ -5,7 +5,7 @@
 Name:           cloud-hypervisor-cvm
 Summary:        Cloud Hypervisor CVM is an open source Virtual Machine Monitor (VMM) that enables running SEV SNP enabled VMs on top of MSHV using the IGVM file format as payload.
 Version:        38.0.72.2
-Release:        2%{?dist}
+Release:        3%{?dist}
 License:        ASL 2.0 OR BSD-3-clause
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -17,20 +17,12 @@ Source0:        https://github.com/microsoft/cloud-hypervisor/archive/refs/tags/
 # To update the cache and config.toml run:
 #   tar -xf %%{name}-%%{version}.tar.gz
 #   cd %%{name}-%%{version}
-#   patch -u -p0 < ../upgrade-openssl-to-3.3.2-to-address-CVE-2024-6119.patch
 #   cargo vendor > config.toml
 #   tar -czf %%{name}-%%{version}-cargo.tar.gz vendor/
-# rename the tarball to %%{name}-%%{version}-2-cargo.tar.gz when updating version
-# (feel free to drop -2 and this comment on version change)
-Source1:        %{name}-%{version}-2-cargo.tar.gz
+# rename the tarball to %%{name}-%%{version}-cargo.tar.gz when updating version
+Source1:        %{name}-%{version}-cargo.tar.gz
 Source2:        config.toml
 %endif
-# Generated using:
-#   tar -xf %%{name}-%%{version}.tar.gz
-#   cd %%{name}-%%{version}
-#   cargo update -p openssl-src --precise 300.3.2+3.3.2
-#   diff -u ../cloud-hypervisor-msft-v38.0.72.2.backup/Cargo.lock Cargo.lock > ../upgrade-openssl-to-3.3.2-to-address-CVE-2024-6119.patch
-Patch0:         upgrade-openssl-to-3.3.2-to-address-CVE-2024-6119.patch
 
 BuildRequires:  binutils
 BuildRequires:  gcc
@@ -83,9 +75,6 @@ tar xf %{SOURCE1}
 mkdir -p .cargo
 cp %{SOURCE2} .cargo/
 %endif
-# The vendored archive has been populated based on the patch, so we need to
-# repatch here as well in order to use the same versions
-%autopatch -p0
 
 %install
 install -d %{buildroot}%{_bindir}
@@ -136,6 +125,18 @@ cargo build --release --target=%{rust_def_target} %{cargo_pkg_feature_opts} %{ca
 cargo build --release --target=%{rust_musl_target} %{cargo_pkg_feature_opts} %{cargo_offline}
 %endif
 
+
+%check
+%if 0%{?using_vendored_crates}
+# For vendored build, prepend this so openssl-sys doesn't trigger full OpenSSL build
+export OPENSSL_NO_VENDOR=1
+%endif
+cargo test --bins --release --target=%{rust_def_target} %{cargo_pkg_feature_opts} %{cargo_offline}
+%if 0%{?using_musl_libc}
+cargo test --bins --release --target=%{rust_musl_target} %{cargo_pkg_feature_opts} %{cargo_offline}
+%endif
+
+
 %files
 %defattr(-,root,root,-)
 %caps(cap_net_admin=ep) %{_bindir}/cloud-hypervisor
@@ -147,6 +148,9 @@ cargo build --release --target=%{rust_musl_target} %{cargo_pkg_feature_opts} %{c
 %license LICENSE-BSD-3-Clause
 
 %changelog
+* Wed Oct 23 2024 Tobias Brick <tobiasb@microsoft.com> - 38.0.72.2-3
+- Undo patch openssl in the vendored archive to 3.3.2 to address CVE-2024-6119 because we configure openssl-src to use system openssl
+
 * Tue Sep 17 2024 Jiri Appl <jiria@microsoft.com> - 38.0.72.2-2
 - Patch openssl in the vendored archive to 3.3.2 to address CVE-2024-6119
 
@@ -209,10 +213,10 @@ cargo build --release --target=%{rust_musl_target} %{cargo_pkg_feature_opts} %{c
 * Wed Aug 17 2022 Anatol Belski <anbelski@linux.microsoft.com> - 26.0-1
 - Pull release 26.0 for Mariner from upstream
 
-* Tue May 16 2022 Anatol Belski <anbelski@linux.microsoft.com> - 23.1-0
+* Mon May 16 2022 Anatol Belski <anbelski@linux.microsoft.com> - 23.1-0
 - Initial import 23.1 for Mariner from upstream
 
-*   Thu Apr 13 2022 Rob Bradford <robert.bradford@intel.com> 23.0-0
+*   Wed Apr 13 2022 Rob Bradford <robert.bradford@intel.com> 23.0-0
 -   Update to 23.0
 
 *   Thu Mar 03 2022 Rob Bradford <robert.bradford@intel.com> 22.0-0
