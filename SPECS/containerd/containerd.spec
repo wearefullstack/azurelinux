@@ -50,6 +50,7 @@ make VERSION="%{version}" REVISION="%{commit_hash}" binaries man
 %check
 export BUILDTAGS="-mod=vendor"
 make VERSION="%{version}" REVISION="%{commit_hash}" test
+git init
 make root-test
 
 %install
