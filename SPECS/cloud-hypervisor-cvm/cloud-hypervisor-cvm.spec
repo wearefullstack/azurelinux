@@ -131,9 +131,9 @@ cargo build --release --target=%{rust_musl_target} %{cargo_pkg_feature_opts} %{c
 # For vendored build, prepend this so openssl-sys doesn't trigger full OpenSSL build
 export OPENSSL_NO_VENDOR=1
 %endif
-cargo test --bins --release --target=%{rust_def_target} %{cargo_pkg_feature_opts} %{cargo_offline}
+cargo test --release --target=%{rust_def_target} %{cargo_pkg_feature_opts} %{cargo_offline}
 %if 0%{?using_musl_libc}
-cargo test --bins --release --target=%{rust_musl_target} %{cargo_pkg_feature_opts} %{cargo_offline}
+cargo test --release --target=%{rust_musl_target} %{cargo_pkg_feature_opts} %{cargo_offline}
 %endif
 
 
