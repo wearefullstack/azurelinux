@@ -1,7 +1,7 @@
 Summary:        MySQL.
 Name:           mysql
 Version:        8.0.40
-Release:        1%{?dist}
+Release:        2%{?dist}
 License:        GPLv2 with exceptions AND LGPLv2 AND BSD
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -12,6 +12,7 @@ Patch0:         CVE-2012-5627.nopatch
 BuildRequires:  cmake
 BuildRequires:  libtirpc-devel
 BuildRequires:  openssl-devel
+BuildRequires:  protobuf-devel
 BuildRequires:  rpcsvc-proto-devel
 BuildRequires:  zlib-devel
 
@@ -28,10 +29,15 @@ Development headers for developing applications linking to maridb
 %prep
 %autosetup -p1
 
+# Remove unused, bundled version of protobuf.
+# We're building with the '-DWITH_PROTOBUF=system' option.
+rm -r extra/protobuf
+
 %build
 cmake . \
       -DCMAKE_INSTALL_PREFIX=%{_prefix}   \
       -DWITH_BOOST=boost/boost_1_77_0 \
+      -DWITH_PROTOBUF=system \
       -DINSTALL_MANDIR=share/man \
       -DINSTALL_DOCDIR=share/doc \
       -DINSTALL_DOCREADMEDIR=share/doc \
@@ -83,6 +89,9 @@ make test
 %{_libdir}/pkgconfig/mysqlclient.pc
 
 %changelog
+* Mon Oct 28 2024 Pawel Winogrodzki <pawelwi@microsoft.com> - 8.0.40-2
+- Switch to ALZ version of protobuf instead of using the bundled one.
+
 * Fri Oct 18 2024 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 8.0.40-1
 - Auto-upgrade to 8.0.40 - Fix multiple CVEs -- CVE-2024-21193, CVE-2024-21194, CVE-2024-21162, CVE-2024-21157, CVE-2024-21130,
   CVE-2024-20996, CVE-2024-21129, CVE-2024-21159, CVE-2024-21135, CVE-2024-21173, CVE-2024-21160, CVE-2024-21125, CVE-2024-21134,
