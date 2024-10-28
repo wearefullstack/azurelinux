@@ -13502,8 +13502,8 @@
         "type": "other",
         "other": {
           "name": "mysql",
-          "version": "8.0.40",
-          "downloadUrl": "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-boost-8.0.40.tar.gz"
+          "version": "8.4.3",
+          "downloadUrl": "https://dev.mysql.com/get/Downloads/MySQL-8.4/mysql-8.4.3.tar.gz"
         }
       }
     },
@@ -22735,6 +22735,16 @@
           "name": "python-incremental",
           "version": "22.10.0",
           "downloadUrl": "https://files.pythonhosted.org/packages/source/i/incremental/incremental-22.10.0.tar.gz"
+        }
+      }
+    },
+    {
+      "component": {
+        "type": "other",
+        "other": {
+          "name": "python-iniconfig",
+          "version": "1.1.1",
+          "downloadUrl": "https://files.pythonhosted.org/packages/23/a2/97899f6bd0e873fed3a7e67ae8d3a08b21799430fb4da15cfedf10d6e2c2/iniconfig-1.1.1.tar.gz"
         }
       }
     },

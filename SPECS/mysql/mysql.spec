@@ -1,13 +1,15 @@
+%define majmin %(echo %{version} | cut -d. -f1-2)
+
 Summary:        MySQL.
 Name:           mysql
-Version:        8.0.40
-Release:        2%{?dist}
+Version:        8.4.3
+Release:        1%{?dist}
 License:        GPLv2 with exceptions AND LGPLv2 AND BSD
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
 Group:          Applications/Databases
 URL:            https://www.mysql.com
-Source0:        https://dev.mysql.com/get/Downloads/MySQL-8.0/%{name}-boost-%{version}.tar.gz
+Source0:        https://dev.mysql.com/get/Downloads/MySQL-%{majmin}/%{name}-%{version}.tar.gz
 Patch0:         CVE-2012-5627.nopatch
 BuildRequires:  cmake
 BuildRequires:  libtirpc-devel
@@ -36,7 +38,6 @@ rm -r extra/protobuf
 %build
 cmake . \
       -DCMAKE_INSTALL_PREFIX=%{_prefix}   \
-      -DWITH_BOOST=boost/boost_1_77_0 \
       -DWITH_PROTOBUF=system \
       -DINSTALL_MANDIR=share/man \
       -DINSTALL_DOCDIR=share/doc \
@@ -45,7 +46,6 @@ cmake . \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_C_FLAGS=-fPIC \
       -DCMAKE_CXX_FLAGS=-fPIC \
-      -DWITH_EMBEDDED_SERVER=OFF \
       -DFORCE_INSOURCE_BUILD=1
 
 make %{?_smp_mflags}
@@ -64,7 +64,6 @@ make test
 %{_libdir}/*.so.*
 %{_libdir}/mysqlrouter/*.so*
 %{_libdir}/mysqlrouter/private/*.so*
-%{_libdir}/private/*.so*
 %{_bindir}/*
 %{_mandir}/man1/*
 %{_mandir}/man8/*
@@ -89,7 +88,8 @@ make test
 %{_libdir}/pkgconfig/mysqlclient.pc
 
 %changelog
-* Mon Oct 28 2024 Pawel Winogrodzki <pawelwi@microsoft.com> - 8.0.40-2
+* Mon Oct 28 2024 Pawel Winogrodzki <pawelwi@microsoft.com> - 8.4.3-1
+- Upgrade to 8.4.3.
 - Switch to ALZ version of protobuf instead of using the bundled one.
 
 * Fri Oct 18 2024 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 8.0.40-1
