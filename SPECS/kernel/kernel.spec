@@ -121,13 +121,13 @@ Requires:       %{name} = %{version}-%{release}
 %description drivers-gpu
 This package contains the Linux kernel gpu support
 
-%package drivers-sound
-Summary:        Kernel Sound modules
-Group:          System Environment/Kernel
-Requires:       %{name} = %{version}-%{release}
-
-%description drivers-sound
-This package contains the Linux kernel sound support
+#%package drivers-sound
+#Summary:        Kernel Sound modules
+#Group:          System Environment/Kernel
+#Requires:       %{name} = %{version}-%{release}
+#
+#%description drivers-sound
+#This package contains the Linux kernel sound support
 
 %package docs
 Summary:        Kernel docs
@@ -327,8 +327,8 @@ echo "initrd of kernel %{uname_r} removed" >&2
 %post drivers-gpu
 /sbin/depmod -a %{uname_r}
 
-%post drivers-sound
-/sbin/depmod -a %{uname_r}
+#%post drivers-sound
+#/sbin/depmod -a %{uname_r}
 
 %post tools
 %systemd_post cpupower.service
@@ -347,7 +347,7 @@ echo "initrd of kernel %{uname_r} removed" >&2
 %exclude /lib/modules/%{uname_r}/build
 %exclude /lib/modules/%{uname_r}/kernel/drivers/accessibility
 %exclude /lib/modules/%{uname_r}/kernel/drivers/gpu
-%exclude /lib/modules/%{uname_r}/kernel/sound
+#%exclude /lib/modules/%{uname_r}/kernel/sound
 
 %files docs
 %defattr(-,root,root)
@@ -366,9 +366,9 @@ echo "initrd of kernel %{uname_r} removed" >&2
 %defattr(-,root,root)
 /lib/modules/%{uname_r}/kernel/drivers/gpu
 
-%files drivers-sound
-%defattr(-,root,root)
-/lib/modules/%{uname_r}/kernel/sound
+#%files drivers-sound
+#%defattr(-,root,root)
+#/lib/modules/%{uname_r}/kernel/sound
 
 %files tools
 %defattr(-,root,root)
