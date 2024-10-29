@@ -1,17 +1,20 @@
+%define majmin %(echo %{version} | cut -d. -f1-2)
+
 Summary:        MySQL.
 Name:           mysql
-Version:        8.0.40
+Version:        8.4.3
 Release:        1%{?dist}
 License:        GPLv2 with exceptions AND LGPLv2 AND BSD
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
 Group:          Applications/Databases
 URL:            https://www.mysql.com
-Source0:        https://dev.mysql.com/get/Downloads/MySQL-8.0/%{name}-boost-%{version}.tar.gz
+Source0:        https://dev.mysql.com/get/Downloads/MySQL-%{majmin}/%{name}-%{version}.tar.gz
 Patch0:         CVE-2012-5627.nopatch
 BuildRequires:  cmake
 BuildRequires:  libtirpc-devel
 BuildRequires:  openssl-devel
+BuildRequires:  protobuf-devel
 BuildRequires:  rpcsvc-proto-devel
 BuildRequires:  zlib-devel
 Requires(postun): shadow-utils
@@ -30,10 +33,14 @@ Development headers for developing applications linking to maridb
 %prep
 %autosetup -p1
 
+# Remove unused, bundled version of protobuf.
+# We're building with the '-DWITH_PROTOBUF=system' option.
+rm -r extra/protobuf
+
 %build
 cmake . \
       -DCMAKE_INSTALL_PREFIX=%{_prefix}   \
-      -DWITH_BOOST=boost/boost_1_77_0 \
+      -DWITH_PROTOBUF=system \
       -DINSTALL_MANDIR=share/man \
       -DINSTALL_DOCDIR=share/doc \
       -DINSTALL_DOCREADMEDIR=share/doc \
@@ -41,7 +48,6 @@ cmake . \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_C_FLAGS=-fPIC \
       -DCMAKE_CXX_FLAGS=-fPIC \
-      -DWITH_EMBEDDED_SERVER=OFF \
       -DFORCE_INSOURCE_BUILD=1
 
 make %{?_smp_mflags}
@@ -50,7 +56,8 @@ make %{?_smp_mflags}
 make DESTDIR=%{buildroot} install
 
 %check
-make test
+# In case of failure, print the test log.
+make test || { cat Testing/Temporary/LastTest.log; false; }
 
 %pre
 getent group  mysql  >/dev/null || groupadd -r mysql
@@ -72,7 +79,6 @@ fi
 %{_libdir}/*.so.*
 %{_libdir}/mysqlrouter/*.so*
 %{_libdir}/mysqlrouter/private/*.so*
-%{_libdir}/private/*.so*
 %{_bindir}/*
 %{_mandir}/man1/*
 %{_mandir}/man8/*
@@ -90,13 +96,18 @@ fi
 %{_libdir}/private/icudt73l/brkitr/*.brk
 %{_libdir}/private/icudt73l/brkitr/*.dict
 %{_libdir}/private/icudt73l/unames.icu
-%{_libdir}/private/icudt73l/cnvalias.icu
-%{_libdir}/private/icudt73l/uemoji.icu
 %{_libdir}/private/icudt73l/ulayout.icu
+%{_libdir}/private/icudt73l/uemoji.icu
+%{_libdir}/private/icudt73l/cnvalias.icu
 %{_includedir}/*
 %{_libdir}/pkgconfig/mysqlclient.pc
 
 %changelog
+* Mon Oct 28 2024 Pawel Winogrodzki <pawelwi@microsoft.com> - 8.4.3-1
+- Upgrade to 8.4.3.
+- Switch to ALZ version of protobuf instead of using the bundled one.
+- Removed unused CMake options: WITH_BOOST and WITH_EMBEDDED_SERVER.
+
 * Fri Oct 18 2024 Sudipta Pandit <sudpandit@microsoft.com> - 8.0.40-1
 - Upgrade to 8.0.40 to fix multiple CVEs -- CVE-2024-21193, CVE-2024-21194, CVE-2024-21162, CVE-2024-21157, CVE-2024-21130,
   CVE-2024-20996, CVE-2024-21129, CVE-2024-21159, CVE-2024-21135, CVE-2024-21173, CVE-2024-21160, CVE-2024-21125, CVE-2024-21134,
