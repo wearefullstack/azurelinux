@@ -54,7 +54,8 @@ make %{?_smp_mflags}
 make DESTDIR=%{buildroot} install
 
 %check
-make test
+# In case of failure, print the test log.
+make test || { cat Testing/Temporary/LastTest.log; false; }
 
 %files
 %defattr(-,root,root)
