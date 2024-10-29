@@ -91,6 +91,7 @@ make test
 * Mon Oct 28 2024 Pawel Winogrodzki <pawelwi@microsoft.com> - 8.4.3-1
 - Upgrade to 8.4.3.
 - Switch to ALZ version of protobuf instead of using the bundled one.
+- Removed unused CMake options: WITH_BOOST and WITH_EMBEDDED_SERVER.
 
 * Fri Oct 18 2024 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 8.0.40-1
 - Auto-upgrade to 8.0.40 - Fix multiple CVEs -- CVE-2024-21193, CVE-2024-21194, CVE-2024-21162, CVE-2024-21157, CVE-2024-21130,
