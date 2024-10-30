@@ -17,7 +17,7 @@
 
 Summary:        Unified Kernel Image
 Name:           kernel-uki
-Version:        6.6.47.1
+Version:        6.6.57.1
 Release:        2%{?dist}
 License:        GPLv2
 Vendor:         Microsoft Corporation
@@ -65,11 +65,67 @@ install -vdm 700 %{buildroot}/lib/modules/%{kernelver}
 install -vm 600 vmlinuz-uki.efi %{buildroot}/boot/vmlinuz-uki-%{kernelver}.efi
 ln -s /boot/vmlinuz-uki-%{kernelver}.efi %{buildroot}/lib/modules/%{kernelver}/vmlinuz-uki.efi
 
+# install to ESP
+install -vdm 700 %{buildroot}/boot/efi/EFI/Linux
+cp %{buildroot}/boot/vmlinuz-uki-%{kernelver}.efi %{buildroot}/boot/efi/EFI/Linux/vmlinuz-uki-%{kernelver}.efi
+
 %files
 /boot/vmlinuz-uki-%{kernelver}.efi
 /lib/modules/%{kernelver}/vmlinuz-uki.efi
+/boot/efi/EFI/Linux/vmlinuz-uki-%{kernelver}.efi
 
 %changelog
+* Wed Oct 30 2024 Pawel Winogrodzki <pawelwi@microsoft.com> - 6.6.57.1-2
+- Dummy bump.
+
+* Tue Oct 29 2024 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 6.6.57.1-1
+- Auto-upgrade to 6.6.57.1
+
+* Thu Oct 24 2024 Rachel Menge <rachelmenge@microsoft.com> - 6.6.56.1-5
+- Bump release to match kernel
+
+* Wed Oct 23 2024 Rachel Menge <rachelmenge@microsoft.com> - 6.6.56.1-4
+- Bump release to match kernel
+
+* Wed Oct 23 2024 Rachel Menge <rachelmenge@microsoft.com> - 6.6.56.1-3
+- Bump release to match kernel
+
+* Tue Oct 22 2024 Rachel Menge <rachelmenge@microsoft.com> - 6.6.56.1-2
+- Bump release to match kernel
+
+* Thu Oct 17 2024 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 6.6.56.1-1
+- Auto-upgrade to 6.6.56.1
+
+* Thu Oct 03 2024 Rachel Menge <rachelmenge@microsoft.com> - 6.6.51.1-5
+- Bump release to match kernel
+
+* Wed Oct 02 2024 Rachel Menge <rachelmenge@microsoft.com> - 6.6.51.1-4
+- Bump release to match kernel
+
+* Tue Sep 24 2024 Jo Zzsi <jozzsicsataban@gmail.com> - 6.6.51.1-3
+- Remove dbus from initrd
+
+* Fri Sep 20 2024 Chris Co <chrco@microsoft.com> - 6.6.51.1-2
+- Bump release to match kernel
+
+* Wed Sep 18 2024 CBL-Mariner Servicing Account <cblmargh@microsoft.com> - 6.6.51.1-1
+- Auto-upgrade to 6.6.51.1
+
+* Fri Sep 13 2024 Thien Trung Vuong <tvuong@microsoft.com> - 6.6.47.1-7
+- Install binary to ESP
+
+* Fri Sep 13 2024 Rachel Menge <rachelmenge@microsoft.com> - 6.6.47.1-6
+- Bump release to match kernel
+
+* Thu Sep 12 2024 Rachel Menge <rachelmenge@microsoft.com> - 6.6.47.1-5
+- Bump release to match kernel
+
+* Thu Sep 12 2024 Rachel Menge <rachelmenge@microsoft.com> - 6.6.47.1-4
+- Bump release to match kernel
+
+* Wed Sep 04 2024 Rachel Menge <rachelmenge@microsoft.com> - 6.6.47.1-3
+- Bump release to match kernel
+
 * Thu Aug 29 2024 Jo Zzsi <jozzsicsataban@gmail.com> - 6.6.47.1-2
 - Remove usrmount from initrd
 

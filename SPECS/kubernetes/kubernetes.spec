@@ -10,7 +10,7 @@
 Summary:        Microsoft Kubernetes
 Name:           kubernetes
 Version:        1.30.1
-Release:        2%{?dist}
+Release:        4%{?dist}
 License:        ASL 2.0
 Vendor:         Microsoft Corporation
 Distribution:   Azure Linux
@@ -18,8 +18,9 @@ Group:          Microsoft Kubernetes
 URL:            https://kubernetes.io/
 Source0:        https://dl.k8s.io/v%{version}/kubernetes-src.tar.gz#/%{name}-v%{version}.tar.gz
 Source1:        kubelet.service
+Patch0:         CVE-2024-28180.patch
 BuildRequires:  flex-devel
-BuildRequires:  glibc-static >= 2.38-7%{?dist}
+BuildRequires:  glibc-static >= 2.38-8%{?dist}
 BuildRequires:  golang
 BuildRequires:  rsync
 BuildRequires:  systemd-devel
@@ -91,6 +92,7 @@ Pause component for Microsoft Kubernetes %{version}.
 
 %prep
 %setup -q -c -n %{name}
+%autopatch -p1
 
 %build
 # set version information
@@ -269,6 +271,12 @@ fi
 %{_exec_prefix}/local/bin/pause
 
 %changelog
+* Tue Oct 01 2024 Henry Li <lihl@microsoft.com> - 1.30.1-4
+- Add patch to resolve CVE-2024-28180
+
+* Mon Aug 26 2024 Rachel Menge <rachelmenge@microsoft.com> - 1.30.1-3
+- Update to build dep latest glibc-static version
+
 * Wed Aug 21 2024 Chris Co <chrco@microsoft.com> - 1.30.1-2
 - Bump to rebuild with updated glibc
 
@@ -465,5 +473,3 @@ fi
 
 * Wed Dec 02 2020 Nicolas Guibourge <nicolasg@microsoft.com> - 1.19.1-1
 - Original version for CBL-Mariner
-
-

@@ -75,12 +75,12 @@ func doOsCustomizations(buildDir string, baseConfigPath string, config *imagecus
 		return err
 	}
 
-	overlayUpdated, err := enableOverlays(config.OS.Overlays, imageChroot)
+	overlayUpdated, err := enableOverlays(config.OS.Overlays, selinuxMode, imageChroot)
 	if err != nil {
 		return err
 	}
 
-	verityUpdated, err := enableVerityPartition(buildDir, config.OS.Verity, imageChroot)
+	verityUpdated, err := enableVerityPartition(config.Storage.Verity, imageChroot)
 	if err != nil {
 		return err
 	}
@@ -92,11 +92,9 @@ func doOsCustomizations(buildDir string, baseConfigPath string, config *imagecus
 		}
 	}
 
-	if config.Scripts != nil {
-		err = runUserScripts(baseConfigPath, config.Scripts.PostCustomization, "postCustomization", imageChroot)
-		if err != nil {
-			return err
-		}
+	err = runUserScripts(baseConfigPath, config.Scripts.PostCustomization, "postCustomization", imageChroot)
+	if err != nil {
+		return err
 	}
 
 	err = restoreResolvConf(resolvConf, imageChroot)
@@ -109,11 +107,9 @@ func doOsCustomizations(buildDir string, baseConfigPath string, config *imagecus
 		return err
 	}
 
-	if config.Scripts != nil {
-		err = runUserScripts(baseConfigPath, config.Scripts.FinalizeCustomization, "finalizeCustomization", imageChroot)
-		if err != nil {
-			return err
-		}
+	err = runUserScripts(baseConfigPath, config.Scripts.FinalizeCustomization, "finalizeCustomization", imageChroot)
+	if err != nil {
+		return err
 	}
 
 	err = checkForInstalledKernel(imageChroot)
