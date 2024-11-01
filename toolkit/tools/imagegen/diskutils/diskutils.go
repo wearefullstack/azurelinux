@@ -611,19 +611,27 @@ func createSinglePartition(diskDevPath string, partitionNumber int, partitionTab
 	// So to deal with this, we call partprobe here to query and flush the
 	// partition table information, which should enforce that the devtmpfs
 	// files are created when partprobe returns control.
-	//
+	err = RefreshPartitions(diskDevPath)
+	if err != nil {
+		err = fmt.Errorf("failed to refresh partitions after partition creation:\n%w", err)
+		return "", err
+	}
+	return InitializeSinglePartition(diskDevPath, partitionNumber, partitionTableType, partition)
+}
+
+func RefreshPartitions(diskDevPath string) error {
 	// Added flock because "partprobe -s" apparently doesn't always block.
 	// flock is part of the util-linux package and helps to synchronize access
 	// with other cooperating processes. The important part is it will block
 	// if the fd is busy, and then execute the command. Adding a timeout
 	// to prevent us from possibly waiting forever.
-	stdout, stderr, err := shell.Execute("flock", "--timeout", timeoutInSeconds, diskDevPath, "partprobe", "-s", diskDevPath)
+	err := shell.ExecuteLiveWithErr(1 /*stderrLines*/, "flock", "--timeout", "5", diskDevPath,
+		"partprobe", "-s", diskDevPath)
 	if err != nil {
-		err = fmt.Errorf("failed to execute partprobe:\n%v\n%w", stderr, err)
-		return "", err
+		return fmt.Errorf("partprobe failed:\n%w", err)
 	}
-	logger.Log.Debugf("Partprobe -s returned: %s", stdout)
-	return InitializeSinglePartition(diskDevPath, partitionNumber, partitionTableType, partition)
+
+	return nil
 }
 
 // Returns true if the version of 'parted' supports the 'type' session command.
@@ -755,12 +763,11 @@ func InitializeSinglePartition(diskDevPath string, partitionNumber int,
 	}
 
 	// Make sure all partition information is actually updated.
-	stdout, stderr, err := shell.Execute("flock", "--timeout", timeoutInSeconds, diskDevPath, "partprobe", "-s", diskDevPath)
+	err = RefreshPartitions(diskDevPath)
 	if err != nil {
-		err = fmt.Errorf("failed to execute partprobe after partition initialization:\n%v\n%w", stderr, err)
+		err = fmt.Errorf("failed to refresh partitions after partition initialization:\n%w", err)
 		return "", err
 	}
-	logger.Log.Debugf("Partprobe -s returned: %s", stdout)
 
 	return
 }
@@ -829,6 +836,13 @@ func formatSinglePartition(diskDevPath string, partDevPath string, partition con
 		}, totalAttempts, retryDuration)
 		if err != nil {
 			err = fmt.Errorf("could not format partition with type %v after %v retries", fsType, totalAttempts)
+			return "", err
+		}
+
+		err = RefreshPartitions(diskDevPath)
+		if err != nil {
+			err = fmt.Errorf("failed to refresh partitions after filesystem format:\n%w", err)
+			return "", err
 		}
 	case "linux-swap":
 		err = retry.Run(func() error {
